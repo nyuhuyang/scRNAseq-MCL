@@ -14,6 +14,9 @@
 # Output files from R CMD check
 /*.Rcheck/
 
+# Mac folder
+.DS_Store
+
 # RStudio files
 .Rproj.user/
 
@@ -34,3 +37,4 @@ vignettes/*.pdf
 
 # Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
 rsconnect/
+.Rproj.user

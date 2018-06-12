@@ -6,11 +6,11 @@ source("./R/Seurat_functions.R")
 lnames = load(file = "./data/MCL_alignment.Rda")
 lnames
 
-Featureplot <- function(x){
-    p <- FeaturePlot(object = MCL, 
+Featureplot <- function(x,object = object,...){
+    p <- FeaturePlot(object = object, 
                      reduction.use = "tsne",
                      features.plot = x, min.cutoff = NA, 
-                     cols.use = c("lightgrey","blue"), pt.size = 0.5)
+                     cols.use = c("lightgrey","blue"), pt.size = 0.5,...)
     return(p)
 }
 #------
@@ -28,6 +28,7 @@ Hematopoietic <- HumanGenes(MCL,c("PTPRC","LAPTM5","SRGN"))
 megakaryocytes <-  HumanGenes(MCL,c("PPBP","GNG11"))
 erythrocyte <-  HumanGenes(MCL,c("HBA2","HBB"))
 MastCells <- HumanGenes(MCL,c("Cma1","Mcpt4","Tpsb2","Cpa3"))
+Neutrophil <- HumanGenes(MCL,c("ADAM8","MSMO1","FUT4","FCGR3A"))
 CD14_Monocytes <-  HumanGenes(MCL,c("CD14","LYZ","S100A9","CCL2"))
 CD16_Monocytes <- HumanGenes(MCL,c("FCGR3A","MS4A7","VMO1"))
 Macrophages <- HumanGenes(MCL,c("LYZ","CD68","MARCO","Emr1"))
@@ -40,6 +41,8 @@ Lymphoid <- HumanGenes(MCL,c("Cd19","CD79A","MS4A1",
                                "GNLY","Ncr1","CCL5","KLRD1","NKG7"))
 # T cell
 T_Cell <- HumanGenes(MCL,c("CD2","CD3G","CD3D","CD8A","IL2RA","FOXP3"))
+Treg <- HumanGenes(MCL,c("FOXP3","CTLA4","PDCD1","ENTPD1","CD38",
+                         "ICOS","TNFSF9","TNFRSF9"))
 CD4_Naive_T <- HumanGenes(MCL,c("CD4","IL7R","GIMAP5","SELL","IL2RG"))
 NK <- HumanGenes(MCL,c("NKG7","CCL5"))
 Regulatory_T <-  HumanGenes(MCL,c("CD4","IL2RA","FOXP3"))
@@ -87,6 +90,7 @@ Featureplot(Myeloid[c(5:7,9:11,13:14,18:20)]) # Myeloid cells
 
 Featureplot(erythrocyte)
 Featureplot(MastCells)
+Featureplot(Neutrophil)
 Featureplot(c(CD14_Monocytes,CD16_Monocytes))
 Featureplot(Macrophages)
 Featureplot(DendriticCells)
@@ -95,6 +99,7 @@ Featureplot(Lymphoid) # Lymphoid cells
 Featureplot(NK)
 # T cell
 Featureplot(c(T_Cell[1:6],Natural_killer_T))
+Featureplot(Treg)
 Featureplot(CD4_Naive_T)
 Featureplot(c(Regulatory_T,Natural_killer_T))
 # B cell
@@ -127,7 +132,7 @@ markers.to.plot <- c(CD14_Monocytes[c(1:3)],DendriticCells[c(3,5)],
 markers.to.plot <- c("CD14","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2")
-markers.to.plot <- unique(markers.to.plot)
+markers.to.plot <- HumanGenes(MCL,markers.to.plot,unique=T)
 DotPlot(MCL, genes.plot = rev(markers.to.plot),
         cols.use = c("blue","red"), x.lab.rot = T, plot.legend = F,
         dot.scale = 8, do.return = T)
@@ -178,9 +183,14 @@ new.cluster.ids <- c("T cells",
 MCL@ident <- plyr::mapvalues(x = MCL@ident,
                                     from = old.ident.ids,
                                     to = new.cluster.ids)
-DotPlot(MCL, genes.plot = rev(markers.to.plot),
+DotPlot(MCL.normal, genes.plot = rev(markers.to.plot),
         cols.use = c("blue","red"), x.lab.rot = T, plot.legend = T,
         dot.scale = 8, do.return = T)
+MCL@meta.data$conditions <- sub("_",".",MCL@meta.data$conditions)
+SplitDotPlotGG.1(object=MCL, genes.plot = rev(markers.to.plot),
+               cols.use = c("blue","red"), x.lab.rot = T, 
+               plot.legend = T, dot.scale = 8, do.return = T, 
+               grouping.var = "conditions")
 
 TSNEPlot(object = MCL, no.legend = TRUE, do.label = TRUE,
          do.return = TRUE, label.size = 5)+
@@ -202,3 +212,14 @@ SplitTSNEPlot(object = MCL)
 AllMarkers_cells <- FindAllMarkers.UMI(MCL)
 AllMarkers_cells <- AllMarkers_cells[AllMarkers_cells$avg_logFC > 0,]
 write.csv(AllMarkers_cells,"./output/AllMarkers_cells.csv")
+
+#===========answer to 6/1's email
+MCL.subsets <- SplitCells(MCL)
+MCL.subsets[[3]]
+MCL.patient <- MCL.subsets[[1]]
+MCL.normal <- MCL.subsets[[2]]
+g1 <- Featureplot(Treg[1:2],object=MCL.patient,do.return=T)
+g2 <- Featureplot(Treg[1:2],object=MCL.normal,do.return=T)
+g <- list()
+g[[1]] <- g1[[1]];g[[2]] <- g1[[2]];g[[3]] <- g2[[1]];g[[4]] <- g2[[2]];
+do.call(plot_grid, g)

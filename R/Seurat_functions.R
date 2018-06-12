@@ -834,3 +834,105 @@ GC <- function()
     }
 }
 
+
+SplitDotPlotGG.1 <- function (object, grouping.var, genes.plot,
+                              gene.groups, cols.use = c("blue","red"),
+                              col.min = -2.5, col.max = 2.5, 
+                              dot.min = 0, dot.scale = 6,
+                              group.by, plot.legend = FALSE,
+                              do.return = FALSE, x.lab.rot = FALSE) 
+{
+        if (!missing(x = group.by)) {
+                object <- SetAllIdent(object = object, id = group.by)
+        }
+        grouping.data <- FetchData(object = object, vars.all = grouping.var)[names(x = object@ident), 
+                                                                             1]
+        ncolor <- length(x = cols.use)
+        ngroups <- length(x = unique(x = grouping.data))
+        if (ncolor < ngroups) {
+                stop(paste("Not enough colors supplied for number of grouping variables. Need", 
+                           ngroups, "got", ncolor, "colors"))
+        }
+        else if (ncolor > ngroups) {
+                cols.use <- cols.use[1:ngroups]
+        }
+        idents.old <- levels(x = object@ident)
+        idents.new <- paste(object@ident, grouping.data, sep = "_")
+        colorlist <- cols.use
+        names(x = colorlist) <- levels(x = grouping.data)
+        object@ident <- factor(x = idents.new, levels = unlist(x = lapply(X = idents.old, 
+                                                                          FUN = function(x) {
+                                                                                  lvls <- list()
+                                                                                  for (i in seq_along(along.with = levels(x = grouping.data))) {
+                                                                                          lvls[[i]] <- paste(x, levels(x = grouping.data)[i], 
+                                                                                                             sep = "_")
+                                                                                  }
+                                                                                  return(unlist(x = lvls))
+                                                                          })), ordered = TRUE)
+        data.to.plot <- data.frame(FetchData(object = object, vars.all = genes.plot))
+        data.to.plot$cell <- rownames(x = data.to.plot)
+        data.to.plot$id <- object@ident
+        data.to.plot <- data.to.plot %>% tidyr::gather(key = genes.plot, 
+                                                value = expression, -c(cell, id))
+        data.to.plot <- data.to.plot %>% group_by(id, genes.plot) %>% 
+                summarize(avg.exp = ExpMean(x = expression), pct.exp = Seurat:::PercentAbove(x = expression, 
+                                                                                    threshold = 0))
+        data.to.plot <- data.to.plot %>% ungroup() %>% group_by(genes.plot) %>% 
+                mutate(avg.exp = scale(x = avg.exp)) %>% mutate(avg.exp.scale = as.numeric(x = cut(x = MinMax(data = avg.exp, 
+                                                                                                              max = col.max, min = col.min), breaks = 20)))
+        data.to.plot <- data.to.plot %>% tidyr::separate(col = id, into = c("ident1", 
+                                                                     "ident2"), sep = "_") %>% rowwise() %>% mutate(palette.use = colorlist[[ident2]], 
+                                                                                                                    ptcolor = colorRampPalette(colors = c("grey", palette.use))(20)[avg.exp.scale]) %>% 
+                tidyr::unite("id", c("ident1", "ident2"), sep = "_")
+        data.to.plot$genes.plot <- factor(x = data.to.plot$genes.plot, 
+                                          levels = rev(x = sub(pattern = "-", replacement = ".", 
+                                                               x = genes.plot)))
+        data.to.plot$pct.exp[data.to.plot$pct.exp < dot.min] <- NA
+        data.to.plot$id <- factor(x = data.to.plot$id, levels = levels(object@ident))
+        palette.use <- unique(x = data.to.plot$palette.use)
+        if (!missing(x = gene.groups)) {
+                names(x = gene.groups) <- genes.plot
+                data.to.plot <- data.to.plot %>% mutate(gene.groups = gene.groups[genes.plot])
+        }
+        p <- ggplot(data = data.to.plot, mapping = aes(x = genes.plot, 
+                                                       y = id)) + geom_point(mapping = aes(size = pct.exp, 
+                                                                                           color = ptcolor)) + scale_radius(range = c(0, dot.scale)) + 
+                scale_color_identity() + theme(axis.title.x = element_blank(), 
+                                               axis.title.y = element_blank())
+        if (!missing(x = gene.groups)) {
+                p <- p + facet_grid(facets = ~gene.groups, scales = "free_x", 
+                                    space = "free_x", switch = "y") + theme(panel.spacing = unit(x = 1, 
+                                                                                                 units = "lines"), strip.background = element_blank(), 
+                                                                            strip.placement = "outside")
+        }
+        if (x.lab.rot) {
+                p <- p + theme(axis.text.x = element_text(angle = 90, 
+                                                          vjust = 0.5))
+        }
+        if (!plot.legend) {
+                p <- p + theme(legend.position = "none")
+        }
+        else if (plot.legend) {
+                plot.legend <- cowplot::get_legend(plot = p)
+                palettes <- list()
+                for (i in seq_along(along.with = colorlist)) {
+                        palettes[[names(colorlist[i])]] <- colorRampPalette(colors = c("grey", 
+                                                                                       colorlist[[i]]))(20)
+                }
+                gradient.legends <- mapply(FUN = Seurat:::GetGradientLegend, 
+                                           palette = palettes, group = names(x = palettes), 
+                                           SIMPLIFY = FALSE, USE.NAMES = FALSE)
+                p <- p + theme(legend.position = "none")
+                legends <- cowplot::plot_grid(plotlist = gradient.legends, 
+                                              plot.legend, ncol = 1, rel_heights = c(1, rep.int(x = 0.5, 
+                                                                                                times = length(x = gradient.legends))), scale = rep(0.5, 
+                                                                                                                                                    length(gradient.legends)), align = "hv")
+                p <- cowplot::plot_grid(p, legends, ncol = 2, rel_widths = c(1, 
+                                                                             0.3), scale = c(1, 0.8))
+        }
+        suppressWarnings(print(p))
+        if (do.return) {
+                return(p)
+        }
+}
+

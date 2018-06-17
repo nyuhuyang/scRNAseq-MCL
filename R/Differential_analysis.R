@@ -57,3 +57,6 @@ SplitDotPlotGG.1(object=MCL, genes.plot = rev(cellcycle.to.plot),
                  cols.use = c("blue","red"), x.lab.rot = T, 
                  plot.legend = T, dot.scale = 8, do.return = T, 
                  grouping.var = "conditions")
+
+gde.all <- FindAllMarkersAcrossConditions(MCL)
+write.csv(gde.all,"./doc/MCL_patient_vs_normal.csv")

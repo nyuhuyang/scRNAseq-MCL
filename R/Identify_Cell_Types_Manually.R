@@ -6,7 +6,7 @@ source("./R/Seurat_functions.R")
 lnames = load(file = "./data/MCL_alignment.Rda")
 lnames
 
-Featureplot <- function(x,object = object,...){
+Featureplot <- function(x,object = MCL,...){
     p <- FeaturePlot(object = object, 
                      reduction.use = "tsne",
                      features.plot = x, min.cutoff = NA, 
@@ -28,7 +28,7 @@ Hematopoietic <- HumanGenes(MCL,c("PTPRC","LAPTM5","SRGN"))
 megakaryocytes <-  HumanGenes(MCL,c("PPBP","GNG11"))
 erythrocyte <-  HumanGenes(MCL,c("HBA2","HBB"))
 MastCells <- HumanGenes(MCL,c("Cma1","Mcpt4","Tpsb2","Cpa3"))
-Neutrophil <- HumanGenes(MCL,c("ADAM8","MSMO1","FUT4","FCGR3A"))
+Neutrophil <- HumanGenes(MCL,c("ADAM8","MSMO1","FUT4","FCGR3A","CEACAM8"))
 CD14_Monocytes <-  HumanGenes(MCL,c("CD14","LYZ","S100A9","CCL2"))
 CD16_Monocytes <- HumanGenes(MCL,c("FCGR3A","MS4A7","VMO1"))
 Macrophages <- HumanGenes(MCL,c("LYZ","CD68","MARCO","Emr1"))
@@ -187,11 +187,11 @@ DotPlot(MCL.normal, genes.plot = rev(markers.to.plot),
         cols.use = c("blue","red"), x.lab.rot = T, plot.legend = T,
         dot.scale = 8, do.return = T)
 MCL@meta.data$conditions <- sub("_",".",MCL@meta.data$conditions)
-SplitDotPlotGG.1(object=MCL, genes.plot = rev(markers.to.plot),
+SplitDotPlotGG(object=MCL, genes.plot = rev(markers.to.plot),
                cols.use = c("blue","red"), x.lab.rot = T, 
                plot.legend = T, dot.scale = 8, do.return = T, 
                grouping.var = "conditions")
-
+FindMarkers()
 TSNEPlot(object = MCL, no.legend = TRUE, do.label = TRUE,
          do.return = TRUE, label.size = 5)+
         ggtitle("TSNE plot of major cell types")+

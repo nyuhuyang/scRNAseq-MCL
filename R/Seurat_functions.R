@@ -1,7 +1,7 @@
 # combine FindAllMarkers and calculate average UMI
 
 FindAllMarkers.UMI <- function (object, genes.use = NULL, logfc.threshold = 0.25, 
-          test.use = "bimod", min.pct = 0.1, min.diff.pct = -Inf, 
+          test.use = "wilcox", min.pct = 0.1, min.diff.pct = -Inf, 
           print.bar = TRUE, only.pos = FALSE, max.cells.per.ident = Inf, 
           return.thresh = 0.01, do.print = FALSE, random.seed = 1, 
           min.cells = 3, latent.vars = "nUMI", assay.type = "RNA", 
@@ -224,7 +224,7 @@ FindMarkers.1 <- function (object, ident.1, ident.2 = NULL, genes.use = NULL,
         to.return[, "avg_logFC"] <- total.diff[rownames(x = to.return)]
         to.return <- cbind(to.return, data.alpha[rownames(x = to.return), 
                                                  ])
-        to.return$p_val_adj = p.adjust(p = to.return$p_val, method = "BH", 
+        to.return$p_val_adj = p.adjust(p = to.return$p_val, method = "bonferroni", 
                                        n = nrow(GetAssayData(object = object, assay.type = assay.type, 
                                                              slot = "data")))
         if (test.use == "roc") {
@@ -284,13 +284,14 @@ SplitFindAllMarkers <- function(object,split.by = "conditions", write.csv = TRUE
 
 # find and print differentially expressed genes across conditions ================
 # combine SetIdent,indMarkers and avg_UMI
-FindAllMarkersbyAge<- function(object, genes.use = NULL, logfc.threshold = -Inf, 
-                              test.use = "bimod", min.pct = -Inf, min.diff.pct = -Inf, 
+FindAllMarkersAcrossConditions<- function(object, genes.use = NULL, logfc.threshold = 0.25, 
+                              test.use = "wilcox", min.pct = 0.1, min.diff.pct = -Inf, 
                               print.bar = TRUE, only.pos = FALSE, max.cells.per.ident = Inf, 
-                              return.thresh = 1, do.print = FALSE, random.seed = 1, 
-                              min.cells = -Inf, latent.vars = "nUMI", assay.type = "RNA", 
+                              return.thresh = 0.01, do.print = FALSE, random.seed = 1,
+                              latent.vars = "nUMI", assay.type = "RNA", 
                               ...) 
 {   
+        "find and print differentially expressed genes across conditions"
         cells <- FetchData(object,"conditions")
         cells$ident <- object@ident
         cells$new.ident <- paste0(cells$ident,"_",cells$conditions)
@@ -299,21 +300,21 @@ FindAllMarkersbyAge<- function(object, genes.use = NULL, logfc.threshold = -Inf,
         idents.all <- sort(x = unique(x = cells$ident))
         genes.de <- list()
         avg_UMI <- list()
+        conditions <- levels(cells$conditions)
         for (i in 1:length(x = idents.all)) {
             genes.de[[i]] <- tryCatch({
                 FindMarkers(object = object, 
-                            ident.1 = paste0(idents.all[i],"_","young"),
-                            ident.2 = paste0(idents.all[i],"_","aged"), 
+                            ident.1 = paste0(idents.all[i],"_",conditions[1]),
+                            ident.2 = paste0(idents.all[i],"_",conditions[2]), 
                             logfc.threshold = logfc.threshold, test.use = test.use, 
-                            min.pct = min.pct, min.diff.pct = min.diff.pct, 
-                            min.cells = min.cells,...)
+                            min.pct = min.pct, min.diff.pct = min.diff.pct,...)
             }, error = function(cond) {
                 return(NULL)
             })
             pct.1_UMI <-rowMeans(as.matrix(x = object@data[, WhichCells(object = object,
-                                            ident = paste0(idents.all[i],"_","young"))]))
+                                            ident = paste0(idents.all[i],"_",conditions[1]))]))
             pct.2_UMI <-rowMeans(as.matrix(x = object@data[, WhichCells(object = object,
-                                            ident = paste0(idents.all[i],"_","aged"))]))
+                                            ident = paste0(idents.all[i],"_",conditions[2]))]))
             avg_UMI[[i]] <-data.frame(pct.1_UMI, pct.2_UMI)
             genes.de[[i]] <- cbind(genes.de[[i]],
                                    avg_UMI[[i]][match(rownames(genes.de[[i]]), 
@@ -336,13 +337,17 @@ FindAllMarkersbyAge<- function(object, genes.use = NULL, logfc.threshold = -Inf,
                     gde <- subset(x = gde, subset = p_val < return.thresh)
                 }
                 if (nrow(x = gde) > 0) {
-                    gde$cluster <- paste0(idents.all[i],"_","young_vs_aged")
+                    gde$cluster <- paste(idents.all[i],conditions[1],"vs",
+                                         conditions[2],sep = "_")
                     gde$gene <- rownames(x = gde)
                 }
                 if (nrow(x = gde) > 0) {
                     gde.all <- rbind(gde.all, gde)
                 }
             }
+        }
+        if (only.pos) {
+                return(subset(x = gde.all, subset = avg_logFC > 0))
         }
         rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$gene))
     #    object.name <- 
@@ -842,6 +847,7 @@ SplitDotPlotGG.1 <- function (object, grouping.var, genes.plot,
                               group.by, plot.legend = FALSE,
                               do.return = FALSE, x.lab.rot = FALSE) 
 {
+        "Fix the mutate_impl error in orignal function"
         if (!missing(x = group.by)) {
                 object <- SetAllIdent(object = object, id = group.by)
         }

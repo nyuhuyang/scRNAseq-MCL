@@ -77,6 +77,8 @@ Stem_cell <- HumanGenes(MCL,c("POU5F1","FUT4","CD34","PROM1","ABCG2","Runx1","AT
                                 "Nes","NCAM","NGFR"))
 Stromal_fibroblasts <- HumanGenes(MCL,c("DCN","COL6A1","TIMP3","PDGFRA"))
 Neurons <- HumanGenes(MCL,c("Ihh","Gli1", "Ptch1", "Hhip"))
+cellcycle <- HumanGenes(MCL,c("CCND1","CCND2", "CCND3", "CDK4",
+                              "CDK6","PCNA","SOX11"))
 # Featureplot
 Featureplot(Adipocytes) # Adipocytes
 Featureplot(Endothelium) # Endothelial Cells

@@ -35,18 +35,16 @@ Macrophages <- HumanGenes(MCL,c("LYZ","CD68","MARCO","Emr1"))
 DendriticCells <- HumanGenes(MCL,c("Itgax","GPR183","CST3","HLA-DQA1","FCER1A","TSPAN13",
                                      "IL3RA","IGJ"))
 Myeloid <-  HumanGenes(MCL,c(megakaryocytes,erythrocyte,MastCells,
-                               Monocytes,Macrophages,DendriticCells))
+                             CD14_Monocytes,CD16_Monocytes,Macrophages,DendriticCells),unique=T)
 #------Lymphoid----
 Lymphoid <- HumanGenes(MCL,c("Cd19","CD79A","MS4A1",
                                "GNLY","Ncr1","CCL5","KLRD1","NKG7"))
 # T cell
-T_Cell <- HumanGenes(MCL,c("CD2","CD3G","CD3D","CD8A","IL2RA","FOXP3"))
-Treg <- HumanGenes(MCL,c("FOXP3","CTLA4","PDCD1","ENTPD1","CD38",
+T_Cell <- HumanGenes(MCL,c("CD2","CD3G","CD3D","CD4","CD8A","IL2RA","FOXP3"))
+Treg <- HumanGenes(MCL,c("FOXP3","CD4","IL2RA","CTLA4","PDCD1","ENTPD1","CD38",
                          "ICOS","TNFSF9","TNFRSF9"))
 CD4_Naive_T <- HumanGenes(MCL,c("CD4","IL7R","GIMAP5","SELL","IL2RG"))
-NK <- HumanGenes(MCL,c("NKG7","CCL5"))
-Regulatory_T <-  HumanGenes(MCL,c("CD4","IL2RA","FOXP3"))
-Natural_killer_T <-  HumanGenes(MCL,c("NCAM1","FCGR3A"))
+NK <- HumanGenes(MCL,c("NKG7","CCL5","NCAM1","FCGR3A","Ncr1","KLRD1"))
 # B cell
 B_Cell <-HumanGenes(MCL,c("CD19","MS4A1","CD79A","CD40","CD22","FCER2",
                           "HLA-DRB1","CXCR4"))
@@ -79,6 +77,7 @@ Stromal_fibroblasts <- HumanGenes(MCL,c("DCN","COL6A1","TIMP3","PDGFRA"))
 Neurons <- HumanGenes(MCL,c("Ihh","Gli1", "Ptch1", "Hhip"))
 cellcycle <- HumanGenes(MCL,c("CCND1","CCND2", "CCND3", "CDK4",
                               "CDK6","PCNA","SOX11"))
+
 # Featureplot
 Featureplot(Adipocytes) # Adipocytes
 Featureplot(Endothelium) # Endothelial Cells
@@ -88,8 +87,8 @@ Featureplot(Fibroblast) # Fibroblasts
 
 #==================
 Featureplot(Hematopoietic) # Hematopoietic cells
-Featureplot(Myeloid[c(5:7,9:11,13:14,18:20)]) # Myeloid cells
-
+Featureplot(Myeloid[1:9]) # Myeloid cells
+Featureplot(Myeloid[10:18]) # Myeloid cells
 Featureplot(erythrocyte)
 Featureplot(MastCells)
 Featureplot(Neutrophil)

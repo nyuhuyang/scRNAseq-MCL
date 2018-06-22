@@ -116,7 +116,8 @@ MCL <- FindClusters(object = MCL, reduction.type = "cca.aligned", dims.use = 1:2
 
 MCL <- RunTSNE(object = MCL, reduction.use = "cca.aligned", dims.use = 1:20, 
                       do.fast = TRUE)
-
+MCL <- RunPCA(object = MCL, pcs.compute = 30, do.print = TRUE, 
+              pcs.print = 1:5, genes.print = 5)
 p1 <- TSNEPlot(MCL, do.return = T, pt.size = 1, group.by = "conditions")
 p2 <- TSNEPlot(MCL, do.label = F, do.return = T, pt.size = 1)
 #png('./output/TSNESplot_alignment.png')

@@ -103,3 +103,34 @@ Featureplot(c(CD14_Monocytes[-4],CD16_Monocytes),MCL.normal)
 
 Featureplot(Stem_cell,MCL.patient) 
 Featureplot(Stem_cell,MCL.normal)
+#===========answer to 6/24's email=====
+# Featureplot
+Featureplot(c("CCND1","CDK4","CCND2","CDK6","CCND3","RB1"),MCL.patient,nCol = 2) # cellcycle
+Featureplot(c("CCND1","CDK4","CCND2","CDK6","CCND3","RB1"),MCL.normal,nCol = 2) # cellcycle
+
+Featureplot(c("E2F1","TK1","CCNA2","MKI67","PCNA","CDK1"),MCL.patient,nCol = 2) # cellcycle
+Featureplot(c("E2F1","TK1","CCNA2","MKI67","PCNA","CDK1"),MCL.normal,nCol = 2) # cellcycle
+
+Featureplot(c("SOX11","MS4A1","CD19","CD79A","CD5","CD40"),MCL.patient) # B cells
+Featureplot(c("SOX11","MS4A1","CD19","CD79A","CD5","CD40"),MCL.normal) # B cells
+
+Featureplot(c("CD22","PAX5","FCER2","CXCR4","CD27","IL4R"),MCL.patient) # B cells-2
+Featureplot(c("CD22","PAX5","FCER2","CXCR4","CD27","IL4R"),MCL.normal) # B cells-2
+
+Featureplot(c("CD3D","CD4","CD3G","CD8A","CD2","IL2RA"),MCL.patient) # T cells
+Featureplot(c("CD3D","CD4","CD3G","CD8A","CD2","IL2RA"),MCL.normal) # T cells
+
+Featureplot(c("IL7R","SELL","IL2RG","GIMAP5","GIMAP5","GIMAP5"),MCL.patient) # T cells -2
+Featureplot(c("IL7R","SELL","IL2RG","GIMAP5","GIMAP5","GIMAP5"),MCL.normal) # T cells -2
+
+Featureplot(c("CD14","LYZ","FCGR3A","S100A9","MS4A7","VMO1"),MCL.patient) # Monocytes
+Featureplot(c("CD14","LYZ","FCGR3A","S100A9","MS4A7","VMO1"),MCL.normal) # Monocytes
+
+Featureplot(c("ITGAM","CEACAM1","ITGAX","ITGAX","CD38","CD8B"),MCL.patient)
+Featureplot(c("ITGAM","CEACAM1","ITGAX","ITGAX","CD38","CD8B"),MCL.normal)
+
+Featureplot(DendriticCells[c(-6,-8)],MCL.patient)
+Featureplot(DendriticCells[c(-6,-8)],MCL.normal)
+
+Featureplot(c(Macrophages,Macrophages[1:2]),MCL.patient)
+Featureplot(c(Macrophages,Macrophages[1:2]),MCL.normal)

@@ -31,7 +31,7 @@ MastCells <- HumanGenes(MCL,c("Cma1","Mcpt4","Tpsb2","Cpa3"))
 Neutrophil <- HumanGenes(MCL,c("ADAM8","MSMO1","FUT4","FCGR3A","CEACAM8"))
 CD14_Monocytes <-  HumanGenes(MCL,c("CD14","LYZ","S100A9","CCL2"))
 CD16_Monocytes <- HumanGenes(MCL,c("FCGR3A","MS4A7","VMO1"))
-Macrophages <- HumanGenes(MCL,c("LYZ","CD68","MARCO","Emr1"))
+Macrophages <- HumanGenes(MCL,c("LYZ","CD68","MARCO","EMR1"))
 DendriticCells <- HumanGenes(MCL,c("Itgax","GPR183","CST3","HLA-DQA1","FCER1A","TSPAN13",
                                      "IL3RA","IGJ"))
 Myeloid <-  HumanGenes(MCL,c(megakaryocytes,erythrocyte,MastCells,
@@ -40,14 +40,17 @@ Myeloid <-  HumanGenes(MCL,c(megakaryocytes,erythrocyte,MastCells,
 Lymphoid <- HumanGenes(MCL,c("Cd19","CD79A","MS4A1",
                                "GNLY","Ncr1","CCL5","KLRD1","NKG7"))
 # T cell
-T_Cell <- HumanGenes(MCL,c("CD2","CD3G","CD3D","CD4","CD8A","IL2RA","FOXP3"))
+T_Cell <- HumanGenes(MCL,c("CD2","CD3G","CD3D","CD4","CD8A","IL2RA","FOXP3",
+                           "IL7R","SELL","IL2RG","GIMAP5"))
+
 Treg <- HumanGenes(MCL,c("FOXP3","CD4","IL2RA","CTLA4","PDCD1","ENTPD1","CD38",
                          "ICOS","TNFSF9","TNFRSF9"))
 CD4_Naive_T <- HumanGenes(MCL,c("CD4","IL7R","GIMAP5","SELL","IL2RG"))
 NK <- HumanGenes(MCL,c("NKG7","CCL5","NCAM1","FCGR3A","Ncr1","KLRD1"))
 # B cell
-B_Cell <-HumanGenes(MCL,c("CD19","MS4A1","CD79A","CD40","CD22","FCER2",
-                          "HLA-DRB1","CXCR4"))
+B_Cell <-HumanGenes(MCL,c("CD19","MS4A1","CD79A","CD40","CD22","FCER2","HLA-DRB1",
+                          "CXCR4","SOX11","CD5","PAX5","CD27","IL4R"))
+
 B_StemCell <- HumanGenes(MCL,c("SPN","CD20"))
 Pre_Pro_B <- HumanGenes(MCL,c("CD34","MME","CD38"))
 Pro_B <- HumanGenes(MCL,c("MME","CD19","SPN","CD38","CD24","IL7","IL3RA"))
@@ -75,8 +78,8 @@ Stem_cell <- HumanGenes(MCL,c("POU5F1","FUT4","CD34","PROM1","ABCG2","Runx1","AT
                                 "Nes","NCAM","NGFR"))
 Stromal_fibroblasts <- HumanGenes(MCL,c("DCN","COL6A1","TIMP3","PDGFRA"))
 Neurons <- HumanGenes(MCL,c("Ihh","Gli1", "Ptch1", "Hhip"))
-cellcycle <- HumanGenes(MCL,c("CCND1","CCND2", "CCND3", "CDK4",
-                              "CDK6","PCNA","SOX11"))
+cellcycle <- HumanGenes(MCL,c("CCND1","CCND2","CCND3","CDK4","CDK6","PCNA","SOX11",
+                              "RB1","E2F1","TK1","CCNA2","MKI67","CDK1"),unique = T)
 
 # Featureplot
 Featureplot(Adipocytes) # Adipocytes

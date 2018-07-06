@@ -10,7 +10,7 @@ Featureplot <- function(x,object = MCL,...){
     p <- FeaturePlot(object = object, 
                      reduction.use = "tsne",
                      features.plot = x, min.cutoff = NA, 
-                     cols.use = c("lightgrey","blue"), pt.size = 0.5,...)
+                     cols.use = c("lightgrey","blue"), pt.size = 1,...)
     return(p)
 }
 #------

@@ -58,14 +58,14 @@ SplitDotPlotGG.1(object=MCL, genes.plot = rev(cellcycle.to.plot),
                  plot.legend = T, dot.scale = 8, do.return = T, 
                  grouping.var = "conditions")
 
-gde.all <- FindAllMarkersAcrossConditions(MCL)
+gde.all <- FindAllMarkersAcrossConditions(MCL,return.thresh = 0.01)
 write.csv(gde.all,"./doc/MCL_patient_vs_normal.csv")
 #===========answer to 6/17 & 6/21's email=====
 Featureplot <- function(x,object = object,...){
         p <- FeaturePlot(object = object, 
                          reduction.use = "tsne",
                          features.plot = x, min.cutoff = NA, 
-                         cols.use = c("lightgrey","blue"), pt.size = 0.5,...)
+                         cols.use = c("lightgrey","blue"), ...)
         return(p)
 }
 markers.to.plot <- HumanGenes(MCL,c("CD79A","CD3G","CD8A","CD40","CXCR4","CEACAM1"))
@@ -134,3 +134,13 @@ Featureplot(DendriticCells[c(-6,-8)],MCL.normal)
 
 Featureplot(c(Macrophages,Macrophages[1:2]),MCL.patient)
 Featureplot(c(Macrophages,Macrophages[1:2]),MCL.normal)
+
+#===========answer to 7/4's email=====
+# Featureplot
+markers.to.plot <- HumanGenes(MCL,c("EZH2","SETD2","EZH1","CTCF","NSD1","WHSC1L1"),unique=T)
+Featureplot(markers.to.plot,MCL.patient,pt.size = 1)
+Featureplot(markers.to.plot,MCL.normal,pt.size = 1)
+
+markers.to.plot <- HumanGenes(MCL,c("TP53","BCL6","ATM","PIK3CA","Myc","PIK3CD"),unique=T)
+Featureplot(markers.to.plot,MCL.patient,pt.size = 1)
+Featureplot(markers.to.plot,MCL.normal,pt.size = 1)

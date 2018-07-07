@@ -144,3 +144,11 @@ Featureplot(markers.to.plot,MCL.normal,pt.size = 1)
 markers.to.plot <- HumanGenes(MCL,c("TP53","BCL6","ATM","PIK3CA","Myc","PIK3CD"),unique=T)
 Featureplot(markers.to.plot,MCL.patient,pt.size = 1)
 Featureplot(markers.to.plot,MCL.normal,pt.size = 1)
+
+#===========answer to 7/6's email=====
+# Featureplot
+markers.to.plot <- HumanGenes(MCL,c("PLK1","DNMT1","FOXO1","DNMT3A","FOXO3","DNMT3L"),unique=T)
+Featureplot(markers.to.plot,MCL.patient,pt.size = 1)
+Featureplot(markers.to.plot,MCL.normal,pt.size = 1)
+
+grepl("FOXO",MCL@raw.data@Dimnames[1])

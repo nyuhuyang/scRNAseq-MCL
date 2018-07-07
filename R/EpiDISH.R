@@ -1,4 +1,4 @@
-#source("https://bioconductor.org/biocLite.R")
+source("https://bioconductor.org/biocLite.R")
 biocLite(c("EpiDISH","GEOquery"))
 ## ----download, eval=F, echo=T, message=FALSE, warning=FALSE----------------
 require(GEOquery)

@@ -195,7 +195,6 @@ SplitDotPlotGG(object=MCL, genes.plot = rev(markers.to.plot),
                cols.use = c("blue","red"), x.lab.rot = T, 
                plot.legend = T, dot.scale = 8, do.return = T, 
                grouping.var = "conditions")
-FindMarkers()
 TSNEPlot(object = MCL, no.legend = TRUE, do.label = TRUE,
          do.return = TRUE, label.size = 5)+
         ggtitle("TSNE plot of major cell types")+

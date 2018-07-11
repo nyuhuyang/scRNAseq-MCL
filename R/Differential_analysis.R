@@ -152,3 +152,13 @@ Featureplot(markers.to.plot,MCL.patient,pt.size = 1)
 Featureplot(markers.to.plot,MCL.normal,pt.size = 1)
 
 grepl("FOXO",MCL@raw.data@Dimnames[1])
+
+#==========7/10=======
+Featureplot(interferon,MCL.patient,pt.size = 1)
+Featureplot(interferon,MCL.normal,pt.size = 1)
+
+Featureplot(DendriticCells,MCL.patient,pt.size = 1)
+Featureplot(DendriticCells,MCL.normal,pt.size = 1)
+
+Featureplot(c(CD14_Monocytes,CD16_Monocytes),MCL.patient,pt.size = 1)
+Featureplot(c(CD14_Monocytes,CD16_Monocytes),MCL.normal,pt.size = 1)

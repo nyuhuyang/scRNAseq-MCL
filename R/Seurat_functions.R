@@ -942,3 +942,67 @@ SplitDotPlotGG.1 <- function (object, grouping.var, genes.plot,
         }
 }
 
+rawEnrichmentAnalysis.1 <- function (expr, signatures, genes, file.name = NULL, parallel.sz = 4) 
+{
+        shared.genes <- intersect(rownames(expr), genes)
+        print(paste("Num. of genes:", length(shared.genes)))
+        expr <- expr[shared.genes, ]
+        if (dim(expr)[1] < 5000) {
+                print(paste("ERROR: not enough genes"))
+                return - 1
+        }
+        expr <- apply(expr, 2, rank)
+        scores <- GSVA::gsva(expr, signatures, method = "ssgsea", 
+                             ssgsea.norm = FALSE, parallel.sz = parallel.sz)
+        scores = scores - apply(scores, 1, min)
+        cell_types <- unlist(strsplit(rownames(scores), "%"))
+        #cell_types <- cell_types[seq(1, length(cell_types), 3)] # don't know why so remove
+        agg <- aggregate(scores ~ cell_types, FUN = mean)
+        rownames(agg) <- agg[, 1]
+        scores <- agg[, -1]
+        if (!is.null(file.name)) {
+                write.table(scores, file = file.name, sep = "\t", col.names = NA, 
+                            quote = FALSE)
+        }
+        return(scores)
+}
+
+
+# slightly modified rawEnrichmentAnalysis function
+xCellAnalysis.1 <- function (expr, signatures = NULL, genes = NULL, spill = NULL, 
+          rnaseq = TRUE, file.name = NULL, scale = TRUE, alpha = 0.5, 
+          save.raw = FALSE, parallel.sz = 4) 
+{
+        if (is.null(signatures)) 
+                signatures = xCell.data$signatures
+        if (is.null(genes)) 
+                genes = xCell.data$genes
+        if (is.null(spill)) {
+                if (rnaseq == TRUE) {
+                        spill = xCell.data$spill
+                }
+                else {
+                        spill = xCell.data$spill.array
+                }
+        }
+        if (is.null(file.name) || save.raw == FALSE) {
+                fn <- NULL
+        }
+        else {
+                fn <- paste0(file.name, "_RAW.txt")
+        }
+        scores <- rawEnrichmentAnalysis.1(expr, signatures, genes, 
+                                        fn, parallel.sz = parallel.sz)
+#        scores.transformed <- transformScores(scores, spill$fv, 
+#                                              scale)
+#        if (is.null(file.name)) {
+#                fn <- NULL
+#        }
+#        else {
+#                fn <- file.name
+#        }
+#        scores.adjusted <- spillOver(scores.transformed, spill$K, 
+#                                     alpha, fn)
+#        scores.adjusted = microenvironmentScores(scores.adjusted)
+        return(scores)
+}

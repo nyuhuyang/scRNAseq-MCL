@@ -96,21 +96,38 @@ t(results_Decon)[1:5,]
 library(xCell)
 par(mar=c(14,3,3,3))
 MCL.expression <- read.delim2("./output/MCL_expression.txt",row.names = 1)
-results_xCell <- xCellAnalysis(expr=MCL.expression)
+LM22 <- read.delim2("./data/LM22.txt",row.names = 1)
+LM22 <- data.matrix(LM22) # convert dataframe to matrix
+head(sapply(LM22,class))
+
+# convert dataframe column to list r
+genes <- rownames(LM22)
+LM22.list <- lapply(1:ncol(LM22), function(x) LM22[,x])
+LM22.list <- setNames(LM22.list, colnames(LM22))
+lapply(LM22.list,head)
+LM22.list <- lapply(LM22.list, function(x) x[order(x,decreasing = T)])
+lapply(LM22.list,head)
+LM22.list <- lapply(LM22.list, function(x) names(x[1:300]))
+lapply(LM22.list,length)
+genes <-unique(unlist(LM22.list))
+length(genes)
+results_xCell <- xCellAnalysis.1(expr=MCL.expression, signatures = LM22.list)
+# divide each row of a matrix by elements of a vector in R
+results_xCell <- t(t(results_xCell)/colSums(results_xCell))
+colSums(results_xCell)
 results_xCell1 <- results_xCell[-((nrow(results_xCell)-2):nrow(results_xCell)),]
 results_xCell1 <- melt(results_xCell1)
-colnames(results_xCell1) <- c("Cell_Types","patient_vs_normal","p_value")
-results_xCell1 <- results_xCell1[results_xCell1$p_value<0.01,]
-ggplot(results_xCell1,aes(x = Cell_Types, y = p_value,
+colnames(results_xCell1) <- c("Cell_Types","patient_vs_normal","percentage")
+results_xCell1 <- results_xCell1[results_xCell1$percentage>0.01,]
+ggplot(results_xCell1,aes(x = Cell_Types, y = percentage,
                           group=patient_vs_normal))+
         geom_col(aes(fill = Cell_Types))+
         facet_grid(.~patient_vs_normal)+
-        scale_colour_gradient(limits=c(0, 0.1),low="black", high="black") +
-        scale_y_reverse()+
-        #geom_text(aes(label = p_value), vjust = -.5)+
+        scale_y_continuous(labels = scales::percent_format())+
+        geom_text(aes(label = scales::percent(percentage)), vjust = -.5)+
         theme(axis.text.x = element_text(angle = 90, hjust = 1),
               legend.position="none") #remove legend
-         
+
 # 5.1.5 DeMixT
 library("DeMixT")
 MCL.expression <- read.delim2("./output/MCL_expression.txt",row.names = 1)
@@ -126,8 +143,15 @@ MCL.expression <- MCL.expression[CommonGenes,]
 LM22 <- LM22[CommonGenes,]
 dim(MCL.expression)
 dim(LM22)
+gene.use <- apply(LM22,1,sd)
+gene.use <- gene.use[order(gene.use,decreasing = T)]
+plot(gene.use)
+LM22.highsd <- LM22[gene.use[1:100],]
+MCL.expression.highsd <- MCL.expression[gene.use[1:100],]
+dim(MCL.expression.highsd)
+dim(LM22.highsd)
 
-results_DeMixT <- DeMixT(data.Y = MCL.expression, data.comp1 = LM22,
+results_DeMixT <- DeMixT(data.Y = MCL.expression.highsd, data.comp1 = LM22.highsd,
                          if.filter = FALSE) 
 results_DeMixT <- DeMixT.S1(data.Y = MCL.expression, data.comp1 = LM22, if.filter = FALSE) 
 

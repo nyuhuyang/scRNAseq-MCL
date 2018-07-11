@@ -31,5 +31,6 @@ LM22.list <- lapply(LM22.list, function(x) x[order(x,decreasing = T)])
 lapply(LM22.list,head)
 LM22.list <- lapply(LM22.list, function(x) names(x[1:300]))
 lapply(LM22.list,length)
-
-results_xCell <- xCellAnalysis(expr=MCL.expression, signatures = LM22.list)
+genes <-unique(unlist(LM22.list))
+length(genes)
+results_xCell <- xCellAnalysis.1(expr=MCL.expression, signatures = LM22.list)

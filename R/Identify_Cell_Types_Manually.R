@@ -6,8 +6,8 @@ source("./R/Seurat_functions.R")
 lnames = load(file = "./data/MCL_alignment.Rda")
 lnames
 
-Featureplot <- function(x,object = MCL,...){
-    p <- FeaturePlot(object = object, 
+featureplot <- function(x,object = MCL,...){
+    p <- featureplot(object = object, 
                      reduction.use = "tsne",
                      features.plot = x, min.cutoff = NA, 
                      cols.use = c("lightgrey","blue"), pt.size = 1,...)
@@ -29,11 +29,12 @@ megakaryocytes <-  HumanGenes(MCL,c("PPBP","GNG11"))
 erythrocyte <-  HumanGenes(MCL,c("HBA2","HBB"))
 MastCells <- HumanGenes(MCL,c("Cma1","Mcpt4","Tpsb2","Cpa3"))
 Neutrophil <- HumanGenes(MCL,c("ADAM8","MSMO1","FUT4","FCGR3A","CEACAM8"))
-CD14_Monocytes <-  HumanGenes(MCL,c("CD14","LYZ","S100A9","CCL2"))
-CD16_Monocytes <- HumanGenes(MCL,c("FCGR3A","MS4A7","VMO1"))
+CD14_Monocytes <-  HumanGenes(MCL,c("CD14","LYZ","S100A9","CCL2","CCR2"))
+CD16_Monocytes <- HumanGenes(MCL,c("FCGR3A","MS4A7","VMO1","CCR2"))
 Macrophages <- HumanGenes(MCL,c("LYZ","CD68","MARCO","EMR1"))
-DendriticCells <- HumanGenes(MCL,c("Itgax","GPR183","CST3","HLA-DQA1","FCER1A","TSPAN13",
-                                     "IL3RA","IGJ"))
+DendriticCells <- HumanGenes(MCL,c("Itgax","TGAM","GPR183","CST3","HLA-DQA1","FCER1A","TSPAN13",
+                                     "IL3RA","IGJ","TLR7","ZBTB46","CD1C"))
+interferon <- HumanGenes(MCL,c("IFNG","IFNA1","IFNGR1","IRF1","IRF7"))
 Myeloid <-  HumanGenes(MCL,c(megakaryocytes,erythrocyte,MastCells,
                              CD14_Monocytes,CD16_Monocytes,Macrophages,DendriticCells),unique=T)
 #------Lymphoid----
@@ -76,59 +77,61 @@ Pericytes <- HumanGenes(MCL,c("Pdgfrb","Cspg4","Anpep","Rgs5",
 Smooth_muscle_cells <- HumanGenes(MCL,c("Acta2","Myh11"))
 Stem_cell <- HumanGenes(MCL,c("POU5F1","FUT4","CD34","PROM1","ABCG2","Runx1","ATXN1",
                                 "Nes","NCAM","NGFR"))
+GP38,PODP
 Stromal_fibroblasts <- HumanGenes(MCL,c("DCN","COL6A1","TIMP3","PDGFRA"))
 Neurons <- HumanGenes(MCL,c("Ihh","Gli1", "Ptch1", "Hhip"))
 cellcycle <- HumanGenes(MCL,c("CCND1","CCND2","CCND3","CDK4","CDK6","PCNA","SOX11",
                               "RB1","E2F1","TK1","CCNA2","MKI67","CDK1"),unique = T)
 
-# Featureplot
-Featureplot(Adipocytes) # Adipocytes
-Featureplot(Endothelium) # Endothelial Cells
-Featureplot(Epithelium) # Epithelium
-Featureplot(c(RPE,Melanocytes,Myelinating_Schwann_cells)) # RPE, Melanocytes, Myelinating Schwann cells
-Featureplot(Fibroblast) # Fibroblasts
+# featureplot
+featureplot(Adipocytes) # Adipocytes
+featureplot(Endothelium) # Endothelial Cells
+featureplot(Epithelium) # Epithelium
+featureplot(c(RPE,Melanocytes,Myelinating_Schwann_cells)) # RPE, Melanocytes, Myelinating Schwann cells
+featureplot(Fibroblast) # Fibroblasts
 
 #==================
-Featureplot(Hematopoietic) # Hematopoietic cells
-Featureplot(Myeloid[1:9]) # Myeloid cells
-Featureplot(Myeloid[10:18]) # Myeloid cells
-Featureplot(erythrocyte)
-Featureplot(MastCells)
-Featureplot(Neutrophil)
-Featureplot(c(CD14_Monocytes,CD16_Monocytes))
-Featureplot(Macrophages)
-Featureplot(DendriticCells)
+featureplot(Hematopoietic) # Hematopoietic cells
+featureplot(Myeloid[1:9]) # Myeloid cells
+featureplot(Myeloid[10:18]) # Myeloid cells
+featureplot(erythrocyte)
+featureplot(MastCells)
+featureplot(Neutrophil)
+featureplot(c(CD14_Monocytes,CD16_Monocytes[]))
+featureplot(Macrophages)
+featureplot(DendriticCells)
+featureplot(interferon)
 #=====================
-Featureplot(Lymphoid) # Lymphoid cells
-Featureplot(NK)
+featureplot(Lymphoid) # Lymphoid cells
+featureplot(NK)
 # T cell
-Featureplot(c(T_Cell[1:6],Natural_killer_T))
-Featureplot(Treg)
-Featureplot(CD4_Naive_T)
-Featureplot(c(Regulatory_T,Natural_killer_T))
+featureplot(c(T_Cell[1:6],Natural_killer_T))
+featureplot(Treg)
+featureplot(CD4_Naive_T)
+featureplot(c(Regulatory_T,Natural_killer_T))
 # B cell
-Featureplot(B_Cell)
-Featureplot(unique(c(B_StemCell,
+featureplot(B_Cell)
+featureplot(unique(c(B_StemCell,
                      Pre_Pro_B,
                      Pro_B,
                      Pre_B)))
-Featureplot(unique(c(Immature_B,
+featureplot(unique(c(Immature_B,
                      Transitional_B)))
-Featureplot(Marginal_zone_B)
-Featureplot(unique(c(Regulatory_B,
+featureplot(Marginal_zone_B)
+featureplot(unique(c(Regulatory_B,
                      Activated_B)))
-Featureplot(Follicular_B)
-Featureplot(Germinal_center_B)
-Featureplot(unique(c(Plasma_blast,
+featureplot(Follicular_B)
+featureplot(Germinal_center_B)
+featureplot(unique(c(Plasma_blast,
                      Plasma_cell_long_lived,
                      Memory_B)))
 
-Featureplot(Mesenchymal) # Mesenchymal cells
-Featureplot(Pericytes) # Pericytes
-Featureplot(Smooth_muscle_cells)
-Featureplot(Stem_cell)
-Featureplot(Stromal_fibroblasts)
-Featureplot(Neurons)
+featureplot(Mesenchymal) # Mesenchymal cells
+featureplot(Pericytes) # Pericytes
+featureplot(Smooth_muscle_cells)
+featureplot(Stem_cell)
+featureplot(Stromal_fibroblasts)
+featureplot(Neurons)
 
 markers.to.plot <- c(CD14_Monocytes[c(1:3)],DendriticCells[c(3,5)],
                      Macrophages[2],Natural_killer_T[2],
@@ -221,8 +224,8 @@ MCL.subsets <- SplitCells(MCL)
 MCL.subsets[[3]]
 MCL.patient <- MCL.subsets[[1]]
 MCL.normal <- MCL.subsets[[2]]
-g1 <- Featureplot(Treg[1:2],object=MCL.patient,do.return=T)
-g2 <- Featureplot(Treg[1:2],object=MCL.normal,do.return=T)
+g1 <- featureplot(Treg[1:2],object=MCL.patient,do.return=T)
+g2 <- featureplot(Treg[1:2],object=MCL.normal,do.return=T)
 g <- list()
 g[[1]] <- g1[[1]];g[[2]] <- g1[[2]];g[[3]] <- g2[[1]];g[[4]] <- g2[[2]];
 do.call(plot_grid, g)

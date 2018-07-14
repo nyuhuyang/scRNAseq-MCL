@@ -111,7 +111,7 @@ LM22.list <- lapply(LM22.list, function(x) names(x[1:300]))
 lapply(LM22.list,length)
 genes <-unique(unlist(LM22.list))
 length(genes)
-results_xCell <- xCellAnalysis.1(expr=MCL.expression, signatures = LM22.list)
+results_xCell <- xCellAnalysis(expr=MCL.expression, signatures = LM22.list)
 # divide each row of a matrix by elements of a vector in R
 results_xCell <- t(t(results_xCell)/colSums(results_xCell))
 colSums(results_xCell)

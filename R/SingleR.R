@@ -41,16 +41,18 @@ SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single, top.n = 50,
 SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single,top.n = 50,
                     normalize = F,clusters = singler$meta.data$orig.ident)
 #Next, we can use the fine-tuned labels to color the t-SNE plot:
-        
-out = SingleR.PlotTsne(singler$singler[[1]]$SingleR.single,
+       
+out = SingleR.PlotTsne.1(singler$singler[[1]]$SingleR.single,
                        singler$meta.data$xy,do.label=T,
                        do.letters = F,labels = singler$singler[[1]]$SingleR.single$labels,
-                       label.size = 4, dot.size = 3,do.legend = TRUE)
+                       label.size = 4, dot.size = 3,do.legend = F,alpha = 1,force=2)
 out$p
 
-SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",do.label=T,do.legend = FALSE)
+SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",do.label=T,
+                      do.letters = T,do.legend = FALSE,force=2)
 output <- SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",
-                              return.plots=T,do.label=T,do.legend = T)
+                              return.plots=T,do.label=T,do.legend = F,alpha = 1,
+                              text.repel = F, label.repel = TRUE, force=2)
 output[[1]]
 output[[2]]
 #Finally, we can also view the labeling as a table compared to the original identities:

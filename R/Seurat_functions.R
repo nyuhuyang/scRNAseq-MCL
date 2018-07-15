@@ -756,7 +756,7 @@ SingleFeaturePlot.1 <- function (object = object, feature = feature, pt.size = 1
 SingleR.PlotTsne.1 <- function (SingleR, xy, labels = SingleR$labels, clusters = NULL, 
           do.letters = TRUE, dot.size = 1, do.labels = FALSE, do.legend = TRUE, 
           label.size = 3, title = "", colors = singler.colors, font.size = NULL, 
-          alpha = 0.5) 
+          alpha = 0.5,text.repel = TRUE, label.repel = FALSE,force=1) 
 {
         # rewrite function to add label and legend
         if (do.labels == TRUE) 
@@ -778,7 +778,7 @@ SingleR.PlotTsne.1 <- function (SingleR, xy, labels = SingleR$labels, clusters =
         num.levels = length(levels(df$ident))
         if (num.levels < 0) 
                 colors = getcol(c(1:length(unique(labels))))
-        p = ggplot(df, aes(x = x, y = y))
+        p = ggplot(df, aes(x = x, y = y,color = ident))
         p = p + geom_point(aes(color = ident), size = dot.size, 
                            alpha = alpha)
         if (do.letters == TRUE) {
@@ -792,8 +792,18 @@ SingleR.PlotTsne.1 <- function (SingleR, xy, labels = SingleR$labels, clusters =
                 centers <- df %>% dplyr::group_by(ident) %>% dplyr::summarize(x = median(x), 
                                                                        y = median(y))
                 p = p + geom_point(data = centers, aes(x = x, y = y), 
-                                   size = 0, alpha = 0) + geom_text(data = centers, 
-                                                                    aes(label = ident), size = label.size, fontface = "bold")
+                                   size = 0, alpha = 0)
+                if (label.repel == TRUE) {
+                        p = p + ggrepel::geom_label_repel(data = centers, 
+                                                          aes(label = ident),
+                                                          fontface = "bold",
+                                                          force = force)
+                        
+                }
+                else if (text.repel == TRUE){
+                        p = p + ggrepel::geom_text_repel(data = centers, aes(label = ident),
+                                                         fontface = "bold",force = force)     
+                        }
                 p = p + guides(colour = FALSE)
                 x.range = layer_scales(p)$x$range$range
                 add_to_x = sum(abs(x.range)) * 0.03

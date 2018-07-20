@@ -796,13 +796,14 @@ SingleR.PlotTsne.1 <- function (SingleR, xy, labels = SingleR$labels, clusters =
                 if (label.repel == TRUE) {
                         p = p + ggrepel::geom_label_repel(data = centers, 
                                                           aes(label = ident),
-                                                          fontface = "bold",
                                                           force = force)
-                        
                 }
                 else if (text.repel == TRUE){
-                        p = p + ggrepel::geom_text_repel(data = centers, aes(label = ident),
-                                                         fontface = "bold",force = force)     
+                        p = p + ggrepel::geom_text_repel(data = centers, aes(x = x,
+                                                                             y = y,
+                                                                             label = ident),
+                                                         force = force,
+                                                         inherit.aes = FALSE)     
                         }
                 p = p + guides(colour = FALSE)
                 x.range = layer_scales(p)$x$range$range
@@ -966,8 +967,8 @@ SplitTSNEPlot <- function(object = object, split.by = "conditions",
 
 SplitSingleR.PlotTsne <- function(singler = singler, split.by = "conditions",
                           select.plots = NULL, return.plots = FALSE,
-                          do.label=T,do.letters = F,
-                          label.size = 4, dot.size = 3,... ){
+                          do.label= TRUE,do.letters = FALSE,show.subtype = TRUE,
+                          label.size = 4, dot.size = 3,legend.size = NULL,... ){
         "
         split singler by certein criteria, and generate TSNE plot
         
@@ -975,8 +976,9 @@ SplitSingleR.PlotTsne <- function(singler = singler, split.by = "conditions",
         -------------------
         singler: singler object with seurat
         split.by: the criteria to split
-        select.plots：select first several plots
+        select.plots：change order to output, such as c(2,1)
         return.data: TRUE/FASLE, return splited ojbect or not.
+        show.subtype: TRUE/FASLE, show sub cell type or not.
         
         Outputs
         --------------------
@@ -988,17 +990,21 @@ SplitSingleR.PlotTsne <- function(singler = singler, split.by = "conditions",
         out <- list()
         p <- list()
         if(is.null(select.plots)) select.plots <- 1:length(conditions)
-        for(i in select.plots){ 
-                out[[i]] <- SingleR.PlotTsne.1(object.subsets[[i]]$singler[[1]]$SingleR.single,
-                                      object.subsets[[i]]$meta.data$xy,
+        sp = select.plots
+        if(show.subtype) st =1 else st =2
+        for(i in 1:length(select.plots)){ 
+                out[[i]] <- SingleR.PlotTsne.1(object.subsets[[sp[i]]]$singler[[st]]$SingleR.single,
+                                      object.subsets[[sp[i]]]$meta.data$xy,
                                       do.label=do.label,do.letters = do.letters,
-                                      labels = object.subsets[[i]]$singler[[1]]$SingleR.single$labels,
+                                      labels = object.subsets[[sp[i]]]$singler[[st]]$SingleR.single$labels,
                                       label.size = label.size, dot.size = dot.size,...)
-                out[[i]]$p <- out[[i]]$p +
-                        ggtitle(conditions[i])+
+                out[[i]]$p = out[[i]]$p +
+                        ggtitle(conditions[sp[i]])+
                         theme(text = element_text(size=20),   #larger text including legend title							
-                              plot.title = element_text(hjust = 0.5)) #title in middle
-                p[[i]] <- out[[i]]$p
+                              plot.title = element_text(hjust = 0.5))#title in middle
+                if(!is.null(legend.size))
+                        out[[i]]$p = out[[i]]$p + theme(legend.text = element_text(size=legend.size))
+                p[[i]] = out[[i]]$p
         }
         out <- out[lapply(out,length)>0] # remove NULL element
         p <- p[lapply(p,length)>0] # remove NULL element

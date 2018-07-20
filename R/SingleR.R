@@ -4,7 +4,7 @@ library(reshape2)
 library(pheatmap)
 library(kableExtra)
 
-source("./R/Seurat_functions.R")
+source("../R/Seurat_functions.R")
 #====== 3.1 Create Singler Object  ==========================================
 lnames = load(file = "./data/MCL_alignment.Rda")
 lnames
@@ -33,6 +33,10 @@ out = SingleR.DrawBoxPlot(sc_data = singler$seurat@data,cell_id = 10,
                           labels.use=c('B cells','T cells','DC','Macrophages','Monocytes','NK cells',
                                        'Mast cells','Neutrophils','Fibroblasts','Endothelial cells'))
 print(out$plot)
+
+##############################
+# Human Primary Cell Atlas (HPCA)
+###############################
 SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single.main, top.n = Inf,
                     clusters = singler$meta.data$orig.ident)
 #Or by all cell types (showing the top 50 cell types):
@@ -48,11 +52,12 @@ out = SingleR.PlotTsne.1(singler$singler[[1]]$SingleR.single,
                        label.size = 4, dot.size = 3,do.legend = F,alpha = 1,force=2)
 out$p
 
-SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",do.label=T,
-                      do.letters = T,do.legend = FALSE,force=2)
+SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",do.label=T,alpha = 1,
+                      select.plots =c(2,1),label.repel = T, do.legend = FALSE,
+                      show.subtype = TRUE,force=20)
 output <- SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",
-                              return.plots=T,do.label=T,do.legend = F,alpha = 1,
-                              text.repel = F, label.repel = TRUE, force=2)
+                              return.plots=T,do.label=F,do.legend = F,alpha = 1,
+                              label.repel = T, force=2)
 output[[1]]
 output[[2]]
 #Finally, we can also view the labeling as a table compared to the original identities:
@@ -65,3 +70,25 @@ kable(table(singler$meta.data$orig.ident,
         kable_styling()
 kable(table(singler$meta.data$orig.ident,singler$seurat@ident)) %>%
         kable_styling()
+
+##############################
+# Blueprint+Encode
+###############################
+SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",do.label=T,alpha = 1,
+                      select.plots =c(2,1),label.repel = F, do.legend = FALSE,
+                      show.subtype = F,force=3)
+output <- SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",show.subtype = F,
+                                return.plots=T,do.label=F,do.legend = T,legend.size = 15,
+                                alpha = 1,label.repel = T, force=1)
+        
+output[[1]]
+output[[2]]
+
+kable(table(singler$singler[[2]]$SingleR.single$labels,
+            singler$meta.data$orig.ident)) %>%
+        kable_styling()
+
+kable(table(singler$other,singler$meta.data$orig.ident)) %>%
+        kable_styling()
+SingleFeaturePlot.1(object = MCL, "FOXP3", threshold = 0.1)
+

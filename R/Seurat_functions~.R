@@ -132,25 +132,7 @@ FindAllMarkers.UMI <- function (object, genes.use = NULL, logfc.threshold = 0.25
         genes.de <- list()
         avg_UMI <- list()
         for (i in 1:length(x = idents.all)) {
-                genes.de[[i]] <- tryCatch({
-                        FindMarkers.1(object = object, assay.type = assay.type, 
-                                      ident.1 = idents.all[i], ident.2 = NULL, genes.use = genes.use, 
-                                      logfc.threshold = logfc.threshold, test.use = test.use, 
-                                      min.pct = min.pct, min.diff.pct = min.diff.pct, 
-                                      print.bar = print.bar, min.cells = min.cells, 
-                                      latent.vars = latent.vars, max.cells.per.ident = max.cells.per.ident, 
-                                      ...)
-                }, error = function(cond) {
-                        return(NULL)
-                })
-                pct.1_UMI <-rowMeans(as.matrix(x = object@data[, WhichCells(object = object,
-                                                                            ident = idents.all[[i]])]))
-                pct.2_UMI <-rowMeans(as.matrix(x = object@data[, WhichCells(object = object,
-                                                                            ident.remove = idents.all[[i]])]))
-                avg_UMI[[i]] <-data.frame(pct.1_UMI, pct.2_UMI)
-                genes.de[[i]] <- cbind(genes.de[[i]],
-                                       avg_UMI[[i]][match(rownames(genes.de[[i]]), 
-                                                          rownames(avg_UMI[[i]])),])
+                genes.de[[i]] <- tryCatch(FindMarkers.UMI)
                 if (do.print) {
                         print(paste("Calculating cluster", idents.all[i]))
                 }
@@ -356,6 +338,36 @@ FindMarkers.1 <- function (object, ident.1, ident.2 = NULL, genes.use = NULL,
         }
         return(to.return)
 }
+
+
+FindMarkers.UMI <- function (object, ident.1, ident.2 = NULL, genes.use = NULL, 
+                           logfc.threshold = 0.25, test.use = "wilcox", min.pct = 0.1, 
+                           min.diff.pct = -Inf, print.bar = TRUE, only.pos = FALSE, 
+                           max.cells.per.ident = Inf, random.seed = 1, latent.vars = "nUMI", 
+                           min.cells = 3, pseudocount.use = 1, assay.type = "RNA", 
+                           ...) 
+{
+        genes.de <- tryCatch({
+                FindMarkers.1(object = object, assay.type = assay.type, 
+                              ident.1 = ident.1, ident.2 = ident.2, genes.use = genes.use, 
+                              logfc.threshold = logfc.threshold, test.use = test.use, 
+                              min.pct = min.pct, min.diff.pct = min.diff.pct, 
+                              print.bar = print.bar, min.cells = min.cells, 
+                              latent.vars = latent.vars, max.cells.per.ident = max.cells.per.ident, 
+                              ...)
+        }, error = function(cond) {
+                return(NULL)
+        })
+        pct.1_UMI <-rowMeans(as.matrix(x = object@data[, WhichCells(object = object,
+                                                                    ident = ident.1)]))
+        pct.2_UMI <-rowMeans(as.matrix(x = object@data[, WhichCells(object = object,
+                                                                    ident.remove = ident.1)]))
+        avg_UMI <-data.frame(pct.1_UMI, pct.2_UMI)
+        genes.de <- cbind(genes.de,avg_UMI[match(rownames(genes.de),rownames(avg_UMI)),])
+        
+        return(genes.de)
+}
+
 
 # find and print differentially expressed genes across conditions ================
 # combine SetIdent,indMarkers and avg_UMI
@@ -916,6 +928,8 @@ SplitSingler <- function(singler = singler, split.by = "conditions"){
         object.subsets: list of subseted singler object by certein conditions,
         plus levels of the conditions
         "
+        if(is.null(singler$seurat))
+                stop("A seurat object must be provided first, add singler$seurat = your_seurat_object")
         cell.subsets <- SplitCells(object = singler$seurat, split.by = split.by)
         
         object.subsets <- list()

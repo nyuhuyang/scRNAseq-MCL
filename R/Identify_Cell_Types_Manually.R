@@ -1,6 +1,7 @@
 library(Seurat)
 library(dplyr)
-source("./R/Seurat_functions.R")
+source("../R/Seurat_functions.R")
+source("../R/SingleR_functions.R")
 
 #====== 2.1 identify phenotype for each cluster  ==========================================
 lnames = load(file = "./data/MCL_alignment.Rda")
@@ -218,14 +219,3 @@ SplitTSNEPlot(object = MCL)
 AllMarkers_cells <- FindAllMarkers.UMI(MCL)
 AllMarkers_cells <- AllMarkers_cells[AllMarkers_cells$avg_logFC > 0,]
 write.csv(AllMarkers_cells,"./output/AllMarkers_cells.csv")
-
-#===========answer to 6/1's email
-MCL.subsets <- SplitCells(MCL)
-MCL.subsets[[3]]
-MCL.patient <- MCL.subsets[[1]]
-MCL.normal <- MCL.subsets[[2]]
-g1 <- featureplot(Treg[1:2],object=MCL.patient,do.return=T)
-g2 <- featureplot(Treg[1:2],object=MCL.normal,do.return=T)
-g <- list()
-g[[1]] <- g1[[1]];g[[2]] <- g1[[2]];g[[3]] <- g2[[1]];g[[4]] <- g2[[2]];
-do.call(plot_grid, g)

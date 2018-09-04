@@ -6,8 +6,9 @@
 
 library(Seurat)
 library(dplyr)
+library(SingleR)
 source("../R/Seurat_functions.R")
-
+source("../R/SingleR_functions.R")
 #3.1  Compare DE across all major cell types==================
 #We would need the data for all clusters, as well the subclusters.
 #detect changes in gene expression between young and aged, 
@@ -69,7 +70,7 @@ SplitDotPlotGG.1(object=MCL, genes.plot = rev(cellcycle.to.plot),
                  cols.use = c("blue","red"), x.lab.rot = T, 
                  plot.legend = T, dot.scale = 8, do.return = T, 
                  grouping.var = "conditions")
-
+FindAllMarkers.UMI(MCL,logfc.threshold = 1)
 gde.all <- FindAllMarkersAcrossConditions(MCL,return.thresh = 0.01)
 write.csv(gde.all,"./doc/MCL_patient_vs_normal.csv")
 #===========answer to 6/17 & 6/21's email=====
@@ -226,9 +227,14 @@ B_NK_index3 = B_NK_index1 & B_NK_index2
 table(B_NK_index3)
 
 # 3th run
-MCL_B_NK = SubsetData(MCL, cells.use = MCL@cell.names[B_NK_index3])
+B_NK_cells = MCL@cell.names[B_NK_index3]
+MCL_B_NK = SubsetData(MCL, cells.use = B_NK_cells)
+# select cell manually.......
 remove1 <- FeaturePlot(MCL_B_NK, features.plot = "RPL4",do.identify = T) # manually select
 write.csv(remove1,"./output/Cell_remove_20180808.csv",na = "")
+# load cell manually.......
+remove1 = read.csv("./output/Cell_remove_20180808.csv",row.names = 1)
+remove1 = as.character(remove1$x)
 B_NK_cells = B_NK_cells[!(B_NK_cells %in% remove1)]
 length(B_NK_cells)
 
@@ -256,7 +262,7 @@ MCL.subsets[[3]]
 MCL.patient = MCL.subsets[[1]]
 MCL.normal = MCL.subsets[[2]]
 
-# select cell manually
+# select cell manually.......
 B_cells_normal <- FeaturePlot(MCL.normal, features.plot = "RPL4",pt.size = 3,
                               do.identify = T) # manually select
 Cell_names_20180808 <- list("top_NK_cells_normal" = top_NK_cells_normal,
@@ -264,44 +270,68 @@ Cell_names_20180808 <- list("top_NK_cells_normal" = top_NK_cells_normal,
                             "Normal B cells" = B_cells_normal,
                             "top_NK_cells_MCL" = top_NK_cells_MCL,
                             "bottom_NK_cells_MCL" = bottom_NK_cells_MCL,
-                            "MCL B cells middle" = middle_B_cells,
-                            "MCL B cells left" = left_B_cells,
-                            "MCL B cells right" = right_B_cells)
+                            "MCL B cells (middle)" = middle_B_cells,
+                            "MCL B cells (left)" = left_B_cells,
+                            "MCL B cells (right)" = right_B_cells)
 Cell_names_20180808 <- list2df(Cell_names_20180808)
 write.csv(Cell.names_20180808,"./output/Cell_names_20180808.csv",na = "")
-
-Cell_names_20180808 <- df2list(Cell_names_20180808)
+# load cell manually.......
+Cell_names_20180808 = read.csv("./output/Cell_names_20180808.csv",header = 1, row.names = 1)
+Cell_names_20180808 = apply(Cell_names_20180808, 2, function(x) x[x!= ""]) # df2list 
+names(Cell_names_20180808) = c("Normal top NK cells",
+                               "Normal bottom NK cells",
+                               "Normal B cells",
+                               "MCL top NK cells",
+                               "MCL bottom NK cells",
+                               "MCL B cells (1)",
+                               "MCL B cells (2)",
+                               "MCL B cells (3)")
 for(i in 1:length(Cell_names_20180808)){
         MCL_B_NK <- RenameIdent.1(MCL_B_NK, new.ident.name = names(Cell_names_20180808)[i],
                      cells.use = Cell_names_20180808[[i]])
 }
 
-TSNEPlot(object = MCL_B_NK, no.legend = TRUE, do.label = TRUE, pt.size = 2,
+MCL_B_NK =  SubsetData(MCL_B_NK, ident.remove = "4")
+TSNEPlot(object = MCL_B_NK, no.legend = F, do.label = TRUE, pt.size = 2,
          do.return = TRUE, label.size = 5)+
         ggtitle("TSNE plot of four major cell types in normal sample")+
         theme(text = element_text(size=20),     #larger text including legend title							
               plot.title = element_text(hjust = 0.5)) #title in middle
-
-MCL_B_NK =  SubsetData(MCL_B_NK, ident.remove = "4")
-top_NK <- SubsetData(MCL_B_NK,ident.use = c("top_NK_cells_normal","top_NK_cells_MCL"))
+top_NK <- SubsetData(MCL_B_NK,ident.use = c("Normal top NK cells","MCL top NK cells"))
 top_NK.markers <- FindAllMarkers.UMI(top_NK)
 
-bottom_NK <- SubsetData(MCL_B_NK,ident.use = c("bottom_NK_cells_normal","bottom_NK_cells_MCL"))
+bottom_NK <- SubsetData(MCL_B_NK,ident.use = c("Normal bottom NK cells","MCL bottom NK cells"))
 bottom_NK.markers <- FindAllMarkers.UMI(bottom_NK)
 
-MCL_B <- SubsetData(MCL_B_NK,ident.use = c("Normal B cells","MCL B cells middle",
-                                           "MCL B cells left","MCL B cells right"))
-MCL_B.markers <- FindAllMarkers.UMI(MCL_B)
+normal_NK <- SubsetData(MCL_B_NK,ident.use = c("Normal top NK cells","Normal bottom NK cells"))
+normal_NK.markers <- FindAllMarkers.UMI(normal_NK)
 
-top <- MCL_B.markers %>% group_by(cluster) %>% top_n(20, avg_logFC)
+MCL_NK <- SubsetData(MCL_B_NK,ident.use = c("MCL top NK cells","MCL bottom NK cells"))
+MCL_NK.markers <- FindAllMarkers.UMI(MCL_NK)
+
+MCL_B <- SubsetData(MCL_B_NK,ident.use = c("Normal B cells","MCL B cells (1)",
+                                           "MCL B cells (2)","MCL B cells (3)"))
+MCL_B.markers <- FindAllMarkers.UMI(MCL_B)
 write.csv(MCL_B.markers,"./output/MCL_B_markers.csv")
+
+top <- MCL_NK.markers %>% group_by(cluster) %>% top_n(30, avg_logFC)
 # setting slim.col.label to TRUE will print just the cluster IDS instead of
 # every cell name
-DoHeatmap.1(object = MCL_B, genes.use = c(top$gene,"CCND1","CD5","CD19"), 
-          slim.col.label = TRUE, remove.key = T,cex.row = 6,
-          group.order = c("Normal B cells","MCL B cells left","MCL B cells middle",
-                          "MCL B cells right"),
-          rotate.key = T,group.label.rot = T)+
-        ggtitle("Expression heatmap of top 15 DE genes")+
+DoHeatmap.1(object = MCL_NK, genes.use = top$gene, 
+          slim.col.label = TRUE, remove.key = T,cex.row = 10,
+          group.cex = 15,
+          rotate.key = T,group.label.rot = F)+
+        ggtitle("Expression heatmap of top 20 differential expression genes in each group")+
         theme(text = element_text(size=20),     #larger text including legend title							
               plot.title = element_text(hjust = 0.5)) #title in middle
+which(top$gene %in% "TXNIP")
+
+HumanGenes(MCL,"B3GAT1")
+MCL.sub <- SplitSeurat(MCL)
+g1 <- SingleFeaturePlot.1(MCL.sub[[2]],"CASP10",threshold=0.1)
+g2 <- SingleFeaturePlot.1(MCL.sub[[1]],"CASP10",threshold=0.1)
+plot_grid(g1,g2)
+
+g1 <- SingleFeaturePlot.1(MCL.sub[[2]],"MR1",threshold=0.1)
+g2 <- SingleFeaturePlot.1(MCL.sub[[1]],"MR1",threshold=0.1)
+plot_grid(g1,g2)

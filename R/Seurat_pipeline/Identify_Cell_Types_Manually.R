@@ -1,80 +1,28 @@
 library(Seurat)
-library(SingleR)
 library(dplyr)
-library(tidyr)
-library(kableExtra)
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
 
 #====== 2.1 identify phenotype for each cluster  ==========================================
-lnames = load(file="./output/MCL_20181021.RData")
+lnames = load(file = "./data/MCL_alignment.Rda")
 lnames
-markers.to.plot <-  HumanGenes(MCL,c("CD14","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
-                     "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
-                     "FCER2"))
-test.markers <- HumanGenes(MCL,c(markers.to.plot,c("CASP10","MR1","B3GAT1","RPL4"),
-                                 c("CCND1","CDK4","CCND2","CDK6","CCND3","RB1"),
-                                 c("SOX11","MS4A1","CD19","CD79A","CD5","CD40"),
-                                 c("CD22","PAX5","FCER2","CXCR4","CD27","IL4R")))
-for(i in 1:length(test.markers)) {
-    jpeg(paste0(path,"/",test.markers[i],".jpeg"), units="in", width=10, height=7,
-        res=600)
-    p1 <- SingleFeaturePlot.1(object = MCL, feature = test.markers[i])
-    print(p1)
-    print(paste0(i,":",length(test.markers)))
-    dev.off()
+
+featureplot <- function(x,object = MCL,...){
+    p <- featureplot(object = object, 
+                     reduction.use = "tsne",
+                     features.plot = x, min.cutoff = NA, 
+                     cols.use = c("lightgrey","blue"), pt.size = 1,...)
+    return(p)
 }
-
-# reply 2018/10/20 email Selina Chen-Kiang <sckiang@med.cornell.edu>============
-df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-df_samples %>% kable() %>% kable_styling()
-markers <-  HumanGenes(MCL,c("CD19","MS4A1","ITGA4","CD79A","CCND1","CCND2","CD5","SOX11"))
-markers <-  HumanGenes(MCL,c("ITGA1","ITGA2","ITGA3","ITGA4","ITGA5","ITGA6","ITGAL","ITGB2"))
-# two normals (DJ and MD)
-sample_n = which(df_samples$Tests %in% "test1")
-samples <- df_samples$Samples[sample_n]
-print(samples)
-cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
-subset.MCL <- SubsetData(MCL, cells.use = cell.use)
-
-object.subsets <- SplitSeurat(object = subset.MCL, split.by = "conditions")
-levels <- object.subsets[[length(object.subsets)]]
-
-for(marker in markers){
-    g <- list()
-    for(i in 1:length(levels)){
-        g[[i]] <- SingleFeaturePlot.1(object = object.subsets[[i]], 
-                                      feature = marker,title =samples[i])
-    }
-    jpeg(paste0(path,"Split_",marker,".jpeg"), units="in", width=10, height=7,
-         res=600)
-    print(do.call(plot_grid, g))
-    dev.off()
-}
-
-
-# two normals (DJ and MD)
-sample_n = which(df_samples$Tests %in% "test2")
-samples <- df_samples$Samples[sample_n]
-print(samples)
-cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
-subset.MCL <- SubsetData(MCL, cells.use = cell.use)
-
-object.subsets <- SplitSeurat(object = subset.MCL, split.by = "orig.ident")
-levels <- object.subsets[[length(object.subsets)]]
-
-for(marker in markers){
-    g <- list()
-    for(i in 1:length(levels)){
-        g[[i]] <- SingleFeaturePlot.1(object = object.subsets[[i]], 
-                                      feature = marker,title =samples[i])
-    }
-    jpeg(paste0(path,"Split_",marker,"_MCL.jpeg"), units="in", width=10, height=7,
-         res=600)
-    print(do.call(plot_grid, g))
-    dev.off()
-}
-
+#------
+Adipocytes <- HumanGenes(MCL,c("SLC36A2","P2RX5","MYF5","UCP1","TRIP4","ASCC1"))
+Endothelium <- HumanGenes(MCL,c("Cdh5","Pecam1","Flt1","Plvap","Kdr","ptprb",
+                                  "Vwf","EMCN","Car4"))
+Epithelium <- HumanGenes(MCL,c("Epcam","KRT19","KRT5",
+                                 "MUC1","SCGB3A2","SCGB1A1","SCGB3A1","SFTPB","FOXJ1","Rpe65",
+                                 "Rlbp1","Msln","Upk3b","Lrrn4"))
+RPE <- HumanGenes(MCL,c("Rpe65","Rlbp1"))
+Fibroblast <- HumanGenes(MCL,c("FGF1","FGF9","SFRP1"))
 #--Hematopoietic----
 Hematopoietic <- HumanGenes(MCL,c("PTPRC","LAPTM5","SRGN"))
 #------Myeloid----
@@ -105,7 +53,7 @@ NK <- HumanGenes(MCL,c("NKG7","CCL5","NCAM1","FCGR3A","Ncr1","KLRD1"))
 B_Cell <-HumanGenes(MCL,c("CD19","MS4A1","CD79A","CD40","CD22","FCER2","HLA-DRB1",
                           "CXCR4","SOX11","CD5","PAX5","CD27","IL4R"))
 
-B_StemCell <- HumanGenes(MCL,c("SPN","MS4A1"))
+B_StemCell <- HumanGenes(MCL,c("SPN","CD20"))
 Pre_Pro_B <- HumanGenes(MCL,c("CD34","MME","CD38"))
 Pro_B <- HumanGenes(MCL,c("MME","CD19","SPN","CD38","CD24","IL7","IL3RA"))
 Pre_B <- HumanGenes(MCL,c("MME","CD19","MS4A1","CD24","CD38","IL7","IL3RA","IL4R"))
@@ -130,13 +78,61 @@ Pericytes <- HumanGenes(MCL,c("Pdgfrb","Cspg4","Anpep","Rgs5",
 Smooth_muscle_cells <- HumanGenes(MCL,c("Acta2","Myh11"))
 Stem_cell <- HumanGenes(MCL,c("POU5F1","FUT4","CD34","PROM1","ABCG2","Runx1","ATXN1",
                                 "Nes","NCAM","NGFR"))
-#GP38,PODP
+GP38,PODP
 Stromal_fibroblasts <- HumanGenes(MCL,c("DCN","COL6A1","TIMP3","PDGFRA"))
 Neurons <- HumanGenes(MCL,c("Ihh","Gli1", "Ptch1", "Hhip"))
 cellcycle <- HumanGenes(MCL,c("CCND1","CCND2","CCND3","CDK4","CDK6","PCNA","SOX11",
                               "RB1","E2F1","TK1","CCNA2","MKI67","CDK1"),unique = T)
 
+# featureplot
+featureplot(Adipocytes) # Adipocytes
+featureplot(Endothelium) # Endothelial Cells
+featureplot(Epithelium) # Epithelium
+featureplot(c(RPE,Melanocytes,Myelinating_Schwann_cells)) # RPE, Melanocytes, Myelinating Schwann cells
+featureplot(Fibroblast) # Fibroblasts
 
+#==================
+featureplot(Hematopoietic) # Hematopoietic cells
+featureplot(Myeloid[1:9]) # Myeloid cells
+featureplot(Myeloid[10:18]) # Myeloid cells
+featureplot(erythrocyte)
+featureplot(MastCells)
+featureplot(Neutrophil)
+featureplot(c(CD14_Monocytes,CD16_Monocytes[]))
+featureplot(Macrophages)
+featureplot(DendriticCells)
+featureplot(interferon)
+#=====================
+featureplot(Lymphoid) # Lymphoid cells
+featureplot(NK)
+# T cell
+featureplot(c(T_Cell[1:6],Natural_killer_T))
+featureplot(Treg)
+featureplot(CD4_Naive_T)
+featureplot(c(Regulatory_T,Natural_killer_T))
+# B cell
+featureplot(B_Cell)
+featureplot(unique(c(B_StemCell,
+                     Pre_Pro_B,
+                     Pro_B,
+                     Pre_B)))
+featureplot(unique(c(Immature_B,
+                     Transitional_B)))
+featureplot(Marginal_zone_B)
+featureplot(unique(c(Regulatory_B,
+                     Activated_B)))
+featureplot(Follicular_B)
+featureplot(Germinal_center_B)
+featureplot(unique(c(Plasma_blast,
+                     Plasma_cell_long_lived,
+                     Memory_B)))
+
+featureplot(Mesenchymal) # Mesenchymal cells
+featureplot(Pericytes) # Pericytes
+featureplot(Smooth_muscle_cells)
+featureplot(Stem_cell)
+featureplot(Stromal_fibroblasts)
+featureplot(Neurons)
 
 markers.to.plot <- c(CD14_Monocytes[c(1:3)],DendriticCells[c(3,5)],
                      Macrophages[2],Natural_killer_T[2],

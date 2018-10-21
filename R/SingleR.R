@@ -3,28 +3,35 @@ library(Seurat)
 library(reshape2)
 library(pheatmap)
 library(kableExtra)
-
+library(dplyr)
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
+path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
+dir.create(path, recursive = T)
 #====== 3.1 Create Singler Object  ==========================================
-lname1 = load(file = "./data/MCL_alignment.Rda")
-lname1
-lname2 = load(file = "../SingleR/data/Hpca.RData")
-lname2
-singler = CreateSinglerObject(as.matrix(MCL@data), annot = NULL, project.name=MCL@project.name,
+lname1 = load(file = "./data/MCL_20181019.Rda");lname1
+singler = CreateSinglerObject(MCL@data, annot = NULL, project.name=MCL@project.name,
                               min.genes = 500,technology = "10X", species = "Human", citation = "",
-                              ref.list = list(Hpca), normalize.gene.length = F, variable.genes = "de",
+                              normalize.gene.length = F, variable.genes = "de",
                               fine.tune = F, do.signatures = F, clusters = NULL)
-singler$meta.data$orig.ident = MCL@meta.data$orig.ident # the original identities, if not supplied in 'annot'
-singler$meta.data$xy = MCL@dr$tsne@cell.embeddings # the tSNE coordinates
-singler$meta.data$clusters = MCL@ident # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="./data/singler_MCL1.RData")
+# singler didn't find all cell labels
+length(singler$singler[[1]]$SingleR.single$labels) == ncol(MCL@data)
+all.cell = MCL@cell.names;length(all.cell)
+know.cell = rownames(singler$singler[[1]]$SingleR.single$labels);length(know.cell)
+know.MCL = SubsetData(MCL, cells.use = know.cell)
+know.MCL
+singler$meta.data$orig.ident = know.MCL@meta.data$orig.ident # the original identities, if not supplied in 'annot'
+singler$meta.data$xy = know.MCL@dr$tsne@cell.embeddings # the tSNE coordinates
+singler$meta.data$clusters = know.MCL@ident # the Seurat clusters (if 'clusters' not provided)
+save(singler,file="./output/singler_MCL_20181020.RData")
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
-lnames = load(file = "./data/singler_MCL.RData")
+lnames = load(file = "./output/singler_MCL_20181020.RData")
+lnames = load(file = "../SingleR/data/Hpca.RData")
 lnames
+singler$seurat = know.MCL
 SingleR.DrawScatter(sc_data = singler$seurat@data,cell_id = 10, 
-                    ref = immgen, sample_id = 232)
+                    ref = Hpca, sample_id = 232)
 
 # Step 2: Multiple correlation coefficients per cell types are aggregated 
 # to provide a single value per cell type per single-cell. 
@@ -39,71 +46,159 @@ print(out$plot)
 ##############################
 # Human Primary Cell Atlas (HPCA)
 ###############################
-SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single.main, top.n = Inf,
-                    clusters = singler$meta.data$orig.ident)
+SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single.main, top.n = Inf)
 #Or by all cell types (showing the top 50 cell types):
-SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single, top.n = 50,
-                    clusters = singler$meta.data$orig.ident)
-SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single,top.n = 50,
-                    normalize = F,clusters = singler$meta.data$orig.ident)
+jpeg(paste0(path,"/DrawHeatmap.jpeg"), units="in", width=10, height=7,
+     res=600)
+print(SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single, top.n = 50))
+dev.off()
+jpeg(paste0(path,"/DrawHeatmap_normF.jpeg"), units="in", width=10, height=7,
+     res=600)
+print(SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single,top.n = 50,normalize = F))
+dev.off()
 #Next, we can use the fine-tuned labels to color the t-SNE plot:
        
-out = SingleR.PlotTsne.1(singler$singler[[1]]$SingleR.single,
-                       singler$meta.data$xy,do.label=T,
-                       do.letters = F,labels = singler$singler[[1]]$SingleR.single$labels,
-                       label.size = 4, label.repel = T,dot.size = 2,do.legend = F,alpha = 1,
-                       force=2)
-out$p+  ggtitle("Supervised sub-cell type labeling by HPCA")+#ggplot title
-        theme(text = element_text(size=20),     #larger text including legend title
-              plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) #title in middle
-# main types-------
-out = SingleR.PlotTsne.1(singler$singler[[1]]$SingleR.single.main,
+out1 = SingleR.PlotTsne.1(singler$singler[[2]]$SingleR.single,
                          singler$meta.data$xy,do.label=T,
                          do.letters = F,labels = singler$singler[[1]]$SingleR.single.main$labels,
                          label.size = 5, dot.size = 2,do.legend = F,alpha = 1,
                          label.repel = T,force=2)
-out$p+  ggtitle("Supervised cell type labeling by HPCA")+#ggplot title
+#label.repel = T,force=2)
+jpeg(paste0(path,"/PlotTsne_sub.jpeg"), units="in", width=10, height=7,
+     res=600)
+out1+  ggtitle("Supervised sub cell type labeling by HPCA")+#ggplot title
         theme(text = element_text(size=20),     #larger text including legend title
               plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) #title in middle
+dev.off()
+# main types-------
+out2 = SingleR.PlotTsne.1(singler$singler[[2]]$SingleR.single.main,
+                         singler$meta.data$xy,do.label=T,
+                         do.letters = F,labels = singler$singler[[1]]$SingleR.single.main$labels,
+                         label.size = 5, dot.size = 2,do.legend = F,alpha = 1,
+                         label.repel = T,force=2)
+jpeg(paste0(path,"/PlotTsne_main.jpeg"), units="in", width=10, height=7,
+     res=600)
+out2+  ggtitle("Supervised main cell type labeling by HPCA")+#ggplot title
+        theme(text = element_text(size=20),     #larger text including legend title
+              plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) #title in middle
+dev.off()
 
-singler$seurat = MCL
-SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",do.label=T,alpha = 1,
-                      select.plots =c(2,1),label.repel = T, do.legend = FALSE,
-                      show.subtype = TRUE,force=20)
-output <- SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",main=T,
-                              return.plots=T,do.label=T,do.legend = F,alpha = 1,
-                              label.repel = T, force=2)
-output[[1]]
-output[[2]]
 #Finally, we can also view the labeling as a table compared to the original identities:
 
-kable(table(singler$singler[[1]]$SingleR.single$labels,
+kable(table(singler$singler[[2]]$SingleR.single$labels,
             singler$meta.data$orig.ident)) %>%
         kable_styling()
 kable(table(singler$meta.data$orig.ident,
             singler$singler[[1]]$SingleR.single.main$labels)) %>%
         kable_styling()
-kable(table(singler$meta.data$orig.ident,singler$seurat@ident)) %>%
-        kable_styling()
 
 ##############################
-# Blueprint+Encode
+# add singleR label to Seurat
 ###############################
-SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",do.label=T,alpha = 1,
-                      select.plots =c(2,1),label.repel = F, do.legend = FALSE,
-                      show.subtype = F,force=3)
-output <- SplitSingleR.PlotTsne(singler = singler, split.by = "conditions",show.subtype = F,
-                                return.plots=T,do.label=F,do.legend = T,legend.size = 15,
-                                alpha = 1,label.repel = T, force=1)
+singlerDF = data.frame("singler1sub"=singler$singler[[1]]$SingleR.single$labels,
+                       "singler1main"=singler$singler[[1]]$SingleR.single.main$labels,
+                       "singler2sub"=singler$singler[[2]]$SingleR.single$labels,
+                       "singler2main"=singler$singler[[2]]$SingleR.single.main$labels,
+                       "cell.names" = rownames(singler$singler[[1]]$SingleR.single$labels))
+knowDF = data.frame("cell.names"= MCL@cell.names)
+ident.DF = full_join(singlerDF,knowDF, by="cell.names")
+ident.DF<- apply(ident.DF,2,as.character)
+rownames(ident.DF) = ident.DF[,"cell.names"]
+ident.DF = ident.DF[,-which(colnames(ident.DF) == "cell.names")]
+#ident.DF[is.na(ident.DF)] <- "unknown"
+MCL <- AddMetaData(object = MCL,
+                   metadata = as.data.frame(ident.DF))
+MCL <- SetAllIdent(object = MCL, id = "singler2sub")
+##############################
+# process singler.color
+##############################
+singler_colors <- readxl::read_excel("../SingleR/singler.colors.xlsx")
+singler_colors = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
+length(singler_colors)
+length(unique(singler$singler[[2]]$SingleR.single$labels))
+
+#' AddMetaColor: prepare meta.data data frame to store color code
+#' @mat factor at column 1, rownames is cell.names
+#' @colors vector of hex colors
+#' @example 
+# singlerDF = factor2color(mat = singler$singler[[2]]$SingleR.single$labels,
+#                       colors = singler_colors[3:26], col.name = "singler2sub")
+AddMetaColor <- function(mat, colors){
+        if(class(mat) != "data.frame") mat = as.data.frame(mat)
+        mat$cell.names = rownames(mat)
+        mat$index <- as.numeric(as.factor(mat[,1]))
+        df_colors = data.frame("colors" = colors[1:length(unique(mat$index))],
+                               "index" = 1:length(unique(mat$index)))
+        mat_colors <- full_join(mat, df_colors, by = "index")
+        # remove NA color if there is any
+        mat_colors <- mat_colors[(mat_colors$cell.names %in% rownames(mat)),]
+        rownames(mat_colors) = mat_colors$cell.names
+        df_colors <- data.frame("colors" = mat_colors$colors,
+                                row.names = mat_colors$cell.names)
         
-output[[1]]
-output[[2]]
+        return(df_colors)
+}
+singlerDF = AddMetaColor(mat = singler$singler[[2]]$SingleR.single$labels,
+                         colors = singler_colors[3:26])
+MCL <- AddMetaData(object = MCL, metadata = singlerDF)
 
-kable(table(singler$singler[[2]]$SingleR.single$labels,
-            singler$meta.data$orig.ident)) %>%
-        kable_styling()
+##############################
+# draw tsne plot
+##############################
 
-kable(table(singler$other,singler$meta.data$orig.ident)) %>%
-        kable_styling()
-SingleFeaturePlot.1(object = MCL, "FOXP3", threshold = 0.1)
+#' ExtractMetaColor: extract color code from meta.data
+#' @object seurat object, meta.data slot must have "color"
+#' @label corresponding label
+#' @example 
+# singlerDF = factor2color(mat = singler$singler[[2]]$SingleR.single$labels,
+#                       colors = singler_colors[3:26], col.name = "singler2sub")
+ExtractMetaColor <- function(object, label = "singler2sub"){
+        meta.data =object@meta.data
+        meta.data = meta.data[,c(label,"colors")]
+        meta.data$index <- as.numeric(as.factor(meta.data[,1]))
+        df_colors = meta.data[!duplicated(meta.data$index),]
+        df_colors = df_colors[order(df_colors$index),]
 
+        return(as.character(df_colors$colors))
+}
+
+df_colors <- ExtractMetaColor(object = MCL, label = "singler2sub")
+#colors_df <- gg_colors(object = MCL, colors.use = singler_colors[3:26])
+p3 <- DimPlot.1(object = MCL, reduction.use = "tsne", dim.1 = 1, dim.2 = 2, 
+          group.by = "ident", do.return = TRUE,
+          cols.use = df_colors,no.legend = T,
+          do.label =F,label.size=4, label.repel = T,force=1)+
+        ggtitle("Supervised sub cell type labeling by HPCA")+
+        theme(text = element_text(size=15),
+              plot.title = element_text(hjust = 0.5))
+
+jpeg(paste0(path,"PlotTsne_sub1~alpha.jpeg"), units="in", width=10, height=7,
+     res=600)
+print(p3+scale_alpha_discrete(0.5))
+dev.off()
+
+save(MCL,file="./output/MCL_20181021.RData")
+##############################
+# subset Seurat
+###############################
+table(MCL@meta.data$orig.ident)
+table(MCL@ident)
+
+df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
+tests <- paste0("test",1:5)
+for(test in tests){
+        sample_n = which(df_samples$Tests %in% test)
+        samples <- df_samples$Samples[sample_n]
+        print(samples)
+        
+        cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+        subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+        
+        g <- SplitTSNEPlot(subset.MCL,group.by = "ident",split.by = "orig.ident",
+                           no.legend = T,do.label =F,label.size=3,
+                           return.plots =T, label.repel = T,force=2)
+        jpeg(paste0(path,test,"~.jpeg"), units="in", width=10, height=7,
+             res=600)
+        print(do.call(plot_grid, g))
+        dev.off()
+}

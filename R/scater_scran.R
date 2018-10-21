@@ -5,19 +5,27 @@
 # ######################################################################
 library(DropletUtils)
 library(scater)
-library(EnsDb.Hsapiens.v86)
+#install_github("MarioniLab/scran") #BiocManager::install("BiocNeighbors", version = "devel")
 library(scran)
+library(EnsDb.Hsapiens.v86)
+library(devtools)
 library(Matrix)
-library(pheatmap)
+library(devtools)
+#library(scRNAseq)#BiocInstaller::biocLite("scRNAseq")
+source("../R/Seurat_functions.R")
+source("../R/scatter_utils.R")
+path <- paste("./output",gsub("-","",Sys.Date()),sep = "/")
+dir.create(path, recursive = T)
 ########################################################################
 #
-#  0. scater
+#  0.1~0.5 scater
 # 
 # ######################################################################
 # 0.1. Setting up the data
 # 0.1.1 Reading in a sparse matrix
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-sample_n = which(df_samples$Patients %in% "test1")
+sample_n = which(df_samples$Tests %in% c("test1", "test2", "test3","test4"))
+table(df_samples$Tests)
 df_samples[sample_n,]
 samples <- df_samples$Samples[sample_n]
 projects <- df_samples$Projects[sample_n]
@@ -26,10 +34,11 @@ conditions <- df_samples$Conditions[sample_n]
 sce_list <- list()
 for(i in 1:length(samples)){
         fname <- paste0("./data/",samples[i],
-                        "/outs/raw_gene_bc_matrices/hg19/")
-        sce_list[[i]] <- read10xCounts(fname, col.names=TRUE)
+                        "/outs/raw_gene_bc_matrices/hg19")
+        sce_list[[i]] <- read10xCounts.1(fname, col.names=TRUE,
+                                         add.colnames = samples[i])
 }
-
+names(sce_list) <- samples
 # 0.1.2 Annotating the rows
 for(i in 1:length(samples)){
         rownames(sce_list[[i]]) <- uniquifyFeatureNames(rowData(sce_list[[i]])$ID,
@@ -47,7 +56,8 @@ for(i in 1:length(samples)){
         print(summary(location=="MT"))
 }
 
-# 0.2 Calling cells from empty droplets
+# 0.2 Calling cells from empty droplets#######################################
+# 0.2.1 Testing for deviations from ambient expression
 ## ----rankplot, "Total UMI count for each barcode in the dataset, 
 # plotted against its rank (in decreasing order of total counts). 
 # The inferred locations of the inflection and knee points are also shown."----
@@ -67,7 +77,7 @@ e.out <- lapply(sce_list, function(x) emptyDrops(counts(x))) # long time
 g <- list()
 for(i in 1:length(samples)){
         g[[i]] <- qplot(bcrank[[i]]$rank[uniq[[i]]], bcrank[[i]]$total[uniq[[i]]], log="xy",
-             xlab="Rank", ylab="Total UMI count", main = samples[i])+
+             xlab="Barcodes", ylab="Total UMI counts", main = samples[i])+
                 theme(text = element_text(size = 20),
                       plot.title = element_text(hjust = 0.5))+
                 geom_vline(aes(xintercept = length(which(e.out[[i]]$FDR <= 0.01)),
@@ -80,10 +90,12 @@ for(i in 1:length(samples)){
         scale_linetype_manual(name = "Threshold", values = c(3,2,1))
 }
 # alternative
-par(mfrow =c(3,2))
-for(i in 1:length(samples)){
+jpeg(paste0(path,"/emptyDrops_test3.jpeg"), units="in", width=10, height=7,
+     res=600)
+par(mfrow =c(1,2))
+for(i in 8:9){
         plot(bcrank[[i]]$rank[uniq[[i]]], bcrank[[i]]$total[uniq[[i]]], log="xy",
-             xlab="Rank", ylab="Total UMI count", main=samples[i], cex.lab=1.2)
+             xlab="Barcodes", ylab="Total UMI counts", main=samples[i], cex.lab=1.2)
         
         abline(h=bcrank[[i]]$knee, col="green", lty=1)
         abline(h=bcrank[[i]]$inflection, col="blue", lty=1)
@@ -92,16 +104,18 @@ for(i in 1:length(samples)){
         legend("bottomleft", legend=c("Knee","Inflection","FDR <= 0.01"), 
                col=c("green","blue","red" ), lty=1, cex=1.2)
 }
+dev.off()
 ## --------------------------------------------------------------------------
 ########################################################################
-# 0.3
-path <- paste("./output",gsub("-","",Sys.Date()),sep = "/")
-dir.create(path, recursive = T)
-# emptyDrops() computes Monte Carlo p-values, 
-# so it is important to set the random seed to obtain reproducible results. 
-# The number of Monte Carlo iterations also determines the lower bound for the _p_values. 
-# If any non-significant barcodes are TRUE for Limited, 
-# we may need to increase the number of iterations to ensure that they can be detected.
+# 0.2.2 Examining cell-calling diagnostics
+# The number of Monte Carlo iterations (specified by the  niters argument in emptyDrops())
+# determines the lower bound for the _p_values (Phipson and Smyth 2010).
+# The  Limited field in the output indicates whether or not the computed p-value for
+# a particular barcode is bounded by the number of iterations. 
+# If any non-significant barcodes are  TRUE for Limited, 
+# we may need to increase the number of iterations. 
+# A larger number of iterations will often result in a lower p-value for these barcodes,
+# which may allow them to be detected after correcting for multiple testing.
 for(i in 1:length(samples)){
         print(samples[i])
         print(table(Sig=e.out[[i]]$FDR <= 0.01, Limited=e.out[[i]]$Limited))
@@ -111,15 +125,14 @@ for(i in 1:length(samples)){
         sce_list[[i]] <- sce_list[[i]][,which(e.out[[i]]$FDR <= 0.01)]
 }
 
-# 0.4 Quality control on the cells
+# 0.4 Quality control on the cells#########################
 # It is entirely possible for droplets to contain damaged or dying cells,
 # which need to be removed prior to downstream analysis. 
 # We compute some QC metrics using  calculateQCMetrics() (McCarthy et al. 2017) 
 # and examine their distributions in Figure 2.
 sce_list.copy <- sce_list
-sce_list <- lapply(sce_list.copy, function(x) calculateQCMetrics(x,compact = TRUE,
+sce_list <- lapply(sce_list.copy, function(x) calculateQCMetrics(x,compact = FALSE,
                         feature_controls=list(Mito=which(location=="MT"))))
-QC = lapply(sce_list,function(x) x$scater_qc)
 ########################################################################
 ## --------------------------------------------------------------------------
 ## ----qchist, Histograms of QC metric distributions in the dataset."----
@@ -149,19 +162,23 @@ for(i in 1:length(samples)){
 # (Keep in mind that droplet-based datasets usually do not have spike-in RNA.)
 # Low-quality cells are defined as those with extreme values for these QC metrics and are removed.
 for(i in 1:length(samples)){
-        high.mito <- isOutlier(QC[[i]]$feature_control_Mito$pct_counts, nmads=3, type="higher")
-        low.lib <- isOutlier(QC[[i]]$all$log10_total_counts, type="lower", nmad=3)
-        low.genes <- isOutlier(QC[[i]]$all$log10_total_features_by_counts, type="lower", nmad=3)
+        high.mito <- isOutlier(sce_list[[i]]$pct_counts_Mito, nmads=3, type="higher")
+        low.lib <- isOutlier(sce_list[[i]]$log10_total_counts, type="lower", nmad=3)
+        low.genes <- isOutlier(sce_list[[i]]$log10_total_features_by_counts, type="lower", nmad=3)
         discard <- high.mito | low.lib | low.genes
         data.frame(HighMito= sum(high.mito),LowLib=sum(low.lib), 
                    LowNgenes=sum(low.genes),Discard=sum(discard))
         sce_list[[i]] <- sce_list[[i]][,!discard]
-        print(summary(discard))
+        print(summary(!discard))
 }
-# 0.5 Examining gene expression
+# remove samples
+sce_list$`Pt-11-C31`
+sce_list$`Pt-11-C31` = NULL
+samples = samples[-which(samples == "Pt-11-C31")]
+# 0.5 Examining gene expression ############################
 ## Histogram of the log~10~-average counts for each gene in the dataset.----
 #par(mfrow = c(3,2))
-for(i in 1:length(samples)){
+for(i in 1:length(sce_list)){
         ave <- calcAverage(sce_list[[i]])
         rowData(sce_list[[i]])$AveCount <- ave
         #hist(log10(ave), col="grey80",main = paste("log10(ave) of",samples[i]))
@@ -182,14 +199,18 @@ for(i in 1:length(samples)){
 }
 ## --------------------------------------------------------------------------
 ########################################################################
+#
+#  0.6~ scran
+# 
+# ######################################################################
 # Use natural Log transform to fit Seurat
 
-for(i in 1:length(samples)){
+for(i in 1:length(sce_list)){
         logcounts(sce_list[[i]]) <- as(log(assay(sce_list[[i]], "counts")+1),"dgCMatrix")
 }
 # 0.6 Normalizing for cell-specific biases
 clusters <- list()
-for(i in 1:length(samples)){
+for(i in 1:length(sce_list)){
         clusters[[i]] <- quickCluster(sce_list[[i]], method="igraph", min.mean=0.1,
                                       assay.type = "logcounts",
                                  irlba.args=list(maxit=1000)) # for convergence.
@@ -199,18 +220,24 @@ for(i in 1:length(samples)){
         print(summary(sizeFactors(sce_list[[i]])))
         
 }
-
+####################
+#--------------------
 ## ----sfplot, fig.cap="Size factors for all cells in the PBMC dataset, plotted against the library size."----
-jpeg(paste0(path,"/0_Size_factors.jpeg"), units="in", width=10, height=7,
+jpeg(paste0(path,"/0_Size_factors2.jpeg"), units="in", width=10, height=7,
      res=600)
 par(mfrow=c(3,2))
-for(i in 1:length(samples)) plot(sce_list[[i]]$scater_qc$all$total_counts,
-                                 sizeFactors(sce_list[[i]]), log="xy")
+for(i in 7:length(samples)) plot(sce_list[[i]]$total_counts,
+                                 sizeFactors(sce_list[[i]]),main=samples[i], log="xy")
 dev.off()
+#--------------------
+####################
+#Filter out low sizeFactors cells
+sce_list[[9]] <- sce_list[[9]][,which(sizeFactors(sce_list[[9]]) >0.02)]
+sce_list[[11]] <- sce_list[[11]][,which(sizeFactors(sce_list[[11]]) >0.02)]
 
 sce_list <- lapply(sce_list, function(x) normalize(x,exprs_values = "logcounts"))
 
-# 7 Modelling the mean-variance trend
+# 0.7 Modelling the mean-variance trend
 # The lack of spike-in transcripts complicates the modelling of the technical noise.
 # One option is to assume that most genes do not exhibit strong biological variation,
 # and to fit a trend to the variances of endogenous genes. 
@@ -226,74 +253,107 @@ new.trend <- lapply(sce_list, function(y) makeTechTrend(x=y))
 # The blue line represents the mean-dependent trend fitted to the variances, 
 # while the red line represents the Poisson noise."----
 fit <- lapply(sce_list, function(x) trendVar(x, use.spikes=FALSE, loess.args=list(span=0.05)))
-par(mfrow=c(1,1))
-plot(fit[[1]]$mean, fit[[1]]$var, pch=16)
-curve(fit[[1]]$trend(x), col="dodgerblue", add=TRUE)
-curve(new.trend[[1]](x), col="red", add=TRUE)
-
+######################################
+## ---------------------------------
+jpeg(paste0(path,"/0_Variance_values2.jpeg"), units="in", width=10, height=7,
+     res=600)
+par(mfrow=c(3,2))
+for(i in 7:length(samples)) {
+        plot(fit[[i]]$mean, fit[[i]]$var, pch=16, main =samples[i])
+        curve(fit[[i]]$trend(x), col="dodgerblue", add=TRUE)
+        curve(new.trend[[i]](x), col="red", add=TRUE)
+}
+dev.off()
+## ---------------------------------
+######################################
 # decompose the variance for each gene using the Poisson-based trend, 
 # and examine the genes with the highest biological components.
-## --------------------------------------------------------------------------
-fit0 <- fit[[1]]
-fit[[1]]$trend <- new.trend[[1]]
-dec <- decomposeVar(fit=fit[[1]])
-top.dec <- dec[order(dec$bio, decreasing=TRUE),] 
-head(top.dec)
+
+fit0 <- fit
+for(i in 1:length(samples)) fit[[i]]$trend <- new.trend[[i]]
+
+dec <- mapply(decomposeVar, x = sce_list, fit = fit)
+top.dec <- list()
+for(i in 1:length(samples)) {
+        top.dec[[i]] <- dec[[i]][order(dec[[i]]$bio, decreasing=TRUE),] 
+        print(length(row.names(top.dec[[i]])))
+}
 
 ## ----hvgplot, "Distributions of normalized log-expression values for the top 10 genes 
 # with the largest biological components in the dataset. 
 # Each point represents the log-expression value in a single cell."----
-plotExpression(sce_list[[1]], features=rownames(top.dec)[1:10])
+plotExpression(sce_list[[1]], features=rownames(top.dec[[1]])[1:10])
 
-## --------------------------------------------------------------------------
-sce <- denoisePCA(sce, technical=new.trend, approx=TRUE)
-ncol(reducedDim(sce, "PCA"))
+########################################################################
+#
+#  0.8 batch correction
+# 
+# ######################################################################
+# 0.8.1 Feature selection across batches
+rownames_top.dec <- lapply(top.dec, function(x) rownames(x))
+universe <- Reduce(intersect, rownames_top.dec)
+bio_top.dec <- lapply(dec, function(x) x[,"bio"])
+mean.bio <- Reduce("+", bio_top.dec)/length(samples)
+chosen <- universe[mean.bio > 0]
+length(chosen)
 
-## ----screeplot, fig.cap="Variance explained by each principal component in the PBMC dataset. The red line represents the chosen number of PCs."----
-plot(attr(reducedDim(sce), "percentVar"), xlab="PC",
-     ylab="Proportion of variance explained")
-abline(v=ncol(reducedDim(sce, "PCA")), lty=2, col="red")
+#sce_list_universe <- lapply(sce_list,function(x) x[universe,])
+#rescaled <- Reduce(multiBatchNorm, sce_list_universe)
+save(sce_list,chosen, file = "./data/sce_list.Rda")
 
-## ----pcaplot-init, fig.cap="Pairwise PCA plots of the first three PCs in the PBMC dataset, constructed from normalized log-expression values of genes with positive biological components. Each point represents a cell, coloured by the log-number of expressed features.", fig.width=9----
-plotPCA(sce, ncomponents=3, colour_by="log10_total_features_by_counts")
+# 0.9 Performing MNN-based correction
+#https://bioconductor.org/packages/3.8/workflows/vignettes/simpleSingleCell/inst/doc/work-5-mnn.html#4_performing_mnn-based_correction
 
-## ----tsneplot-init, fig.cap="_t_-SNE plots constructed from the denoised PCs of the PBMC dataset. Each point represents a cell and is coloured according to the log-number of expressed features."----
-sce <- runTSNE(sce, use_dimred="PCA", perplexity=30, rand_seed=100)
-plotTSNE(sce, colour_by="log10_total_features_by_counts")
+set.seed(100)
+original <- lapply(sce_list, function(x) logcounts(x)[chosen,])
+# Slightly convoluted call to avoid re-writing code later.
+# Equivalent to fastMNN(GSE81076, GSE85241, k=20, d=50, approximate=TRUE)
+mnn.out <- do.call(fastMNN, c(original, list(k=20, d=50, approximate=TRUE)))
+dim(mnn.out$corrected)
+mnn.out$batch
+mnn.out$pair
 
-## --------------------------------------------------------------------------
-snn.gr <- buildSNNGraph(sce, use.dimred="PCA")
-clusters <- igraph::cluster_walktrap(snn.gr)
-sce$Cluster <- factor(clusters$membership)
-table(sce$Cluster)
+# 0.10 Examining the effect of correction
+# 0.10.1 prepare integrated SingleCellExperiment object
+counts_list <- lapply(sce_list, function(x) counts(x))
+logcounts_list <- lapply(sce_list, function(x) logcounts(x))
+colData_list <- lapply(sce_list, function(x) colData(x))
+rowData_list <- lapply(sce_list, function(x) rowData(x))
 
-## ----clustermod, fig.cap="Heatmap of the log~10~-ratio of the total weight between nodes in the same cluster or in different clusters, relative to the total weight expected under a null model of random links."----
-cluster.mod <- clusterModularity(snn.gr, sce$Cluster, get.values=TRUE)
-log.ratio <- log2(cluster.mod$observed/cluster.mod$expected + 1)
+all.counts <- do.call(cbind, counts_list)
+all.logcounts <- do.call(cbind, logcounts_list)
+all.colData <- do.call(rbind, colData_list)
 
+sce <- SingleCellExperiment(list(counts=all.counts,
+                                 logcounts=all.logcounts),
+                            colData=all.colData,
+                            rowData=rowData_list[[1]][,1:3])
+reducedDim(sce, "MNN") <- mnn.out$corrected
+sce$Batch <- as.character(mnn.out$batch)
+sce
 
-pheatmap(log.ratio, cluster_rows=FALSE, cluster_cols=FALSE, 
-         color=colorRampPalette(c("white", "blue"))(100))
+set.seed(100)
+# Using irlba to set up the t-SNE, for speed.
+sce <- runPCA(sce, ntop=Inf, method="irlba",feature_set = chosen)
+osce <- runTSNE(sce, use_dimred="PCA")
+ot <- plotTSNE(osce, colour_by="Batch") + ggtitle("Original")
 
-## ----tsneplot-cluster, fig.cap="_t_-SNE plots constructed from the denoised PCs of the PBMC dataset. Each point represents a cell and is coloured according to its cluster identity."----
-plotTSNE(sce, colour_by="Cluster")
-
-## --------------------------------------------------------------------------
-markers <- findMarkers(sce, clusters=sce$Cluster, direction="up")
-
-## --------------------------------------------------------------------------
-marker.set <- markers[["1"]]
-head(marker.set[,1:8], 10) # only first 8 columns, for brevity
-
-## ----heatmap, fig.wide=TRUE, fig.cap="Heatmap of mean-centred and normalized log-expression values for the top set of markers for cluster 1 in the PBMC dataset. Column colours represent the cluster to which each cell is assigned, as indicated by the legend."----
-chosen <- rownames(marker.set)[marker.set$Top <= 10]
-plotHeatmap(sce, features=chosen, exprs_values="logcounts", 
-            zlim=5, center=TRUE, symmetric=TRUE, cluster_cols=FALSE,
-            colour_columns_by="Cluster", columns=order(sce$Cluster))
-
-## --------------------------------------------------------------------------
-saveRDS(sce, file="pbmc_data.rds")
-
-## --------------------------------------------------------------------------
-sessionInfo()
-
+set.seed(100)
+sce_MNN <- runTSNE(sce, use_dimred="MNN",feature_set = chosen)
+ct <- plotTSNE(sce_MNN, colour_by="Batch") + ggtitle("Corrected")
+save(sce_MNN, file = "./data/MNN_batch_correct.Rda")
+######################################
+## ---------------------------------
+jpeg(paste0(path,"/0_batech_correction.jpeg"), units="in", width=10, height=7,
+     res=600)
+multiplot(ot, ct, cols=2)
+dev.off()
+## ---------------------------------
+######################################
+lnames = load(file = "./data/MNN_batch_correct.Rda");lnames
+MCL <- as.seurat(sce_MNN)
+MCL <- FindClusters(object = MCL, reduction.type = "MNN", dims.use = 1:20, 
+                    resolution = 0.6, force.recalc = T, save.SNN = TRUE)
+DimPlot(object = MCL, reduction.use = "TSNE", dim.1 = 1, dim.2 = 2, 
+        group.by = "ident", do.return = TRUE)
+save(MCL, file = "./data/MCL_MNN_20181017.Rda")

@@ -10,7 +10,7 @@ library(SingleR)
 library(scran)
 source("../R/Seurat_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
-dir.create(path, recursive = T)
+if(!dir.exists(path)) dir.create(path, recursive = T)
 ########################################################################
 #
 #  1 Seurat Alignment 
@@ -22,12 +22,12 @@ dir.create(path, recursive = T)
 # setup Seurat objects since both count matrices have already filtered
 # cells, we do no additional filtering here
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-sample_n = which(df_samples$Tests %in% c("test1", "test2", "test3","test4"))
-table(df_samples$Tests)
+sample_n = which(df_samples$tests %in% c("test1", "test2", "test3","test4"))
+table(df_samples$tests)
 df_samples[sample_n,]
-samples <- df_samples$Samples[sample_n]
-projects <- df_samples$Projects[sample_n]
-conditions <- df_samples$Conditions[sample_n]
+samples <- df_samples$samples[sample_n]
+projects <- df_samples$projects[sample_n]
+conditions <- df_samples$conditions[sample_n]
 
 MCL_raw <- list()
 MCL_Seurat <- list()

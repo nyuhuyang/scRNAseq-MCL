@@ -9,13 +9,10 @@ source("../R/SingleR_functions.R")
 #====== 2.1 identify phenotype for each cluster  ==========================================
 lnames = load(file="./output/MCL_20181021.RData")
 lnames
-markers.to.plot <-  HumanGenes(MCL,c("CD14","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
+markers.to.plot <-  HumanGenes(MCL,c("CD","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2"))
-test.markers <- HumanGenes(MCL,c(markers.to.plot,c("CASP10","MR1","B3GAT1","RPL4"),
-                                 c("CCND1","CDK4","CCND2","CDK6","CCND3","RB1"),
-                                 c("SOX11","MS4A1","CD19","CD79A","CD5","CD40"),
-                                 c("CD22","PAX5","FCER2","CXCR4","CD27","IL4R")))
+test.markers <- HumanGenes(MCL,c("SOX11","MS4A1","CD19","CD79A","CD5","CD40"))
 for(i in 1:length(test.markers)) {
     jpeg(paste0(path,"/",test.markers[i],".jpeg"), units="in", width=10, height=7,
         res=600)
@@ -25,30 +22,27 @@ for(i in 1:length(test.markers)) {
     dev.off()
 }
 
-# reply 2018/10/20 email Selina Chen-Kiang <sckiang@med.cornell.edu>============
-df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-df_samples %>% kable() %>% kable_styling()
+#============Selina's 10/31 email=====
+
 markers <-  HumanGenes(MCL,c("CD19","MS4A1","ITGA4","CD79A","CCND1","CCND2","CD5","SOX11"))
-markers <-  HumanGenes(MCL,c("ITGA1","ITGA2","ITGA3","ITGA4","ITGA5","ITGA6","ITGAL","ITGB2"))
-# two normals (DJ and MD)
-sample_n = which(df_samples$Tests %in% "test1")
-samples <- df_samples$Samples[sample_n]
-print(samples)
-cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
-subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+all.markers <- sort(unique(c(markers.to.plot,test.markers,markers)))
 
-object.subsets <- SplitSeurat(object = subset.MCL, split.by = "conditions")
+Q3 <- HumanGenes(MCL,c("CD72","HLA-DQA1","LILRA4","STMN1"))
+
+object.subsets <- SplitSeurat(object = MCL, split.by = "orig.ident")
 levels <- object.subsets[[length(object.subsets)]]
+levels
 
-for(marker in markers){
+for(marker in Q3){
     g <- list()
-    for(i in 1:length(levels)){
+    for(i in 1:length(samples)){
         g[[i]] <- SingleFeaturePlot.1(object = object.subsets[[i]], 
-                                      feature = marker,title =samples[i])
+                                      feature = marker,title =levels[i])
     }
     jpeg(paste0(path,"Split_",marker,".jpeg"), units="in", width=10, height=7,
          res=600)
     print(do.call(plot_grid, g))
+    print(paste0(which(all.markers == marker),":",length(all.markers)))
     dev.off()
 }
 
@@ -74,6 +68,35 @@ for(marker in markers){
     print(do.call(plot_grid, g))
     dev.off()
 }
+
+#====== 2.2 marker gene analysis ==========================================
+immgen_main = read.csv("../SingleR/output/immgen_main.csv",row.names =1,header = T,
+                       stringsAsFactors = F)
+marker.list <- df2list(immgen_main)
+marker.list <- lapply(marker.list, function(x) HumanGenes(MCL,x))
+
+marker.list %>% list2df %>% head(15) %>% kable() %>% kable_styling()
+
+FeaturePlot.1 <- function(x){
+    p <- FeaturePlot(object = MCL, 
+                     reduction.use = "tsne",
+                     features.plot = x, min.cutoff = NA, do.return =T,
+                     cols.use = c("lightgrey","blue"), pt.size = 0.5)
+    return(p)
+}
+
+for(i in 1:length(marker.list)){
+    p <- FeaturePlot.1(x = marker.list[[i]][1:9])
+    p1 <- do.call(plot_grid, p)
+    p1 <- p1 + ggtitle(paste(names(marker.list)[i],"markers"))+
+        theme(plot.title = element_text(hjust = 0.5,size = 20, face = "bold"))
+    jpeg(paste0(path,names(marker.list)[i],".jpeg"),
+         units="in", width=10, height=7,res=600)
+    print(p1)
+    print(paste0(i,":",length(marker.list)))
+    dev.off()
+}
+
 
 #--Hematopoietic----
 Hematopoietic <- HumanGenes(MCL,c("PTPRC","LAPTM5","SRGN"))
@@ -144,82 +167,3 @@ markers.to.plot <- c(CD14_Monocytes[c(1:3)],DendriticCells[c(3,5)],
 markers.to.plot <- c("CD14","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2")
-markers.to.plot <- HumanGenes(MCL,markers.to.plot,unique=T)
-DotPlot(MCL, genes.plot = rev(markers.to.plot),
-        cols.use = c("blue","red"), x.lab.rot = T, plot.legend = F,
-        dot.scale = 8, do.return = T)
-#  test FindAllMarkers
-AllMarkers <- FindAllMarkers.UMI(MCL)
-AllMarkers <- AllMarkers[AllMarkers$avg_logFC > 0,]
-write.csv(AllMarkers,"./output/AllMarkers_clusters.csv")
-# Rename ident
-table(MCL@ident)
-idents <- as.data.frame(table(MCL@ident))
-old.ident.ids <- idents$Var1
-new.cluster.ids <- c("T cells 0",
-                     "CD14 Monocytes 1",
-                     "B cells 2",
-                     "CD8 T cells 3",
-                     "B cells 4",
-                     "NK T cells 5",
-                     "CD16 Monocytes 6",
-                     "CD8 T cells 7",
-                     "Dendritic Cells 8",
-                     "Myeloid cells 9")
-
-MCL@ident <- plyr::mapvalues(x = MCL@ident,
-                                    from = old.ident.ids,
-                                    to = new.cluster.ids)
-DotPlot(MCL, genes.plot = rev(markers.to.plot),
-        cols.use = c("blue","red"), x.lab.rot = T, plot.legend = F,
-        dot.scale = 8, do.return = T)
-# MCL <- RenameIdentBack(MCL)
-
-#====== 2.2 dot Plots ==========================================
-lnames = load(file = "./data/MCL_alignment.Rda")
-lnames
-table(MCL@ident)
-idents <- as.data.frame(table(MCL@ident))
-old.ident.ids <- idents$Var1
-new.cluster.ids <- c("T cells",
-                     "CD14 Monocytes",
-                     "B cells",
-                     "CD8 T cells",
-                     "B cells",
-                     "NK T cells",
-                     "CD16 Monocytes",
-                     "CD8 T cells",
-                     "Dendritic Cells",
-                     "Myeloid cells")
-
-MCL@ident <- plyr::mapvalues(x = MCL@ident,
-                                    from = old.ident.ids,
-                                    to = new.cluster.ids)
-DotPlot(MCL.normal, genes.plot = rev(markers.to.plot),
-        cols.use = c("blue","red"), x.lab.rot = T, plot.legend = T,
-        dot.scale = 8, do.return = T)
-MCL@meta.data$conditions <- sub("_",".",MCL@meta.data$conditions)
-SplitDotPlotGG(object=MCL, genes.plot = rev(markers.to.plot),
-               cols.use = c("blue","red"), x.lab.rot = T, 
-               plot.legend = T, dot.scale = 8, do.return = T, 
-               grouping.var = "conditions")
-TSNEPlot(object = MCL, no.legend = TRUE, do.label = TRUE,
-         do.return = TRUE, label.size = 5)+
-        ggtitle("TSNE plot of major cell types")+
-        theme(text = element_text(size=20),     #larger text including legend title							
-              plot.title = element_text(hjust = 0.5)) #title in middle
-
-freq_table <- prop.table(x = table(MCL@ident, MCL@meta.data[, "conditions"]),
-margin = 2)
-barplot(height = freq_table)
-freq_table
-table(MCL@meta.data[, "conditions"])
-
-#====== 2.4 Compare cell type changes across conditions  ==========================================
-# the two patients profiled have very different composition
-# Compare clusters for each dataset
-SplitTSNEPlot(object = MCL)
-#  test FindAllMarkers
-AllMarkers_cells <- FindAllMarkers.UMI(MCL)
-AllMarkers_cells <- AllMarkers_cells[AllMarkers_cells$avg_logFC > 0,]
-write.csv(AllMarkers_cells,"./output/AllMarkers_cells.csv")

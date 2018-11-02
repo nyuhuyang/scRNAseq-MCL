@@ -7,6 +7,8 @@ library(kableExtra)
 
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
+path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
+if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.1 Create Singler Object  ==========================================
 lname1 = load(file = "./data/MCL_alignment20181031.Rda")
 

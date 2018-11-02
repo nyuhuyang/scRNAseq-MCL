@@ -7,7 +7,7 @@ source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
 
 #====== 2.1 identify phenotype for each cluster  ==========================================
-lnames = load(file="./output/MCL_20181021.RData")
+lname1 = load(file = "./data/MCL_alignment20181031.Rda")
 lnames
 markers.to.plot <-  HumanGenes(MCL,c("CD","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
@@ -69,6 +69,18 @@ for(marker in markers){
     dev.off()
 }
 
+markers <-  HumanGenes(MCL,c("CCND1","SOX11","MS4A1","FCER2","CD72","HLA-DQA1","STMN1"))
+object.subsets <- SplitSeurat(object = MCL, split.by = "orig.ident")
+levels <- object.subsets[[length(object.subsets)]]
+
+p <- FeaturePlot.1(object.subsets[[2]],x = markers)
+p1 <- do.call(plot_grid, p)
+p1 <- p1 + ggtitle(levels[2])+
+    theme(plot.title = element_text(hjust = 0.5,size = 20, face = "bold"))
+jpeg(paste0(path,levels[2],".jpeg"),
+     units="in", width=10, height=7,res=600)
+print(p1)
+dev.off()
 #====== 2.2 marker gene analysis ==========================================
 immgen_main = read.csv("../SingleR/output/immgen_main.csv",row.names =1,header = T,
                        stringsAsFactors = F)
@@ -77,8 +89,8 @@ marker.list <- lapply(marker.list, function(x) HumanGenes(MCL,x))
 
 marker.list %>% list2df %>% head(15) %>% kable() %>% kable_styling()
 
-FeaturePlot.1 <- function(x){
-    p <- FeaturePlot(object = MCL, 
+FeaturePlot.1 <- function(object = MCL, x){
+    p <- FeaturePlot(object = object, 
                      reduction.use = "tsne",
                      features.plot = x, min.cutoff = NA, do.return =T,
                      cols.use = c("lightgrey","blue"), pt.size = 0.5)
@@ -86,7 +98,7 @@ FeaturePlot.1 <- function(x){
 }
 
 for(i in 1:length(marker.list)){
-    p <- FeaturePlot.1(x = marker.list[[i]][1:9])
+    p <- FeaturePlot.1(object = MCL, x = marker.list[[i]][1:9])
     p1 <- do.call(plot_grid, p)
     p1 <- p1 + ggtitle(paste(names(marker.list)[i],"markers"))+
         theme(plot.title = element_text(hjust = 0.5,size = 20, face = "bold"))
@@ -96,6 +108,8 @@ for(i in 1:length(marker.list)){
     print(paste0(i,":",length(marker.list)))
     dev.off()
 }
+
+
 
 
 #--Hematopoietic----

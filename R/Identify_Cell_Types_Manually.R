@@ -8,11 +8,46 @@ source("../R/SingleR_functions.R")
 
 #====== 2.1 identify phenotype for each cluster  ==========================================
 lname1 = load(file = "./data/MCL_alignment20181031.Rda")
-lnames
+lname1
 markers.to.plot <-  HumanGenes(MCL,c("CD","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2"))
-test.markers <- HumanGenes(MCL,c("SOX11","MS4A1","CD19","CD79A","CD5","CD40"))
+
+markers <- HumanGenes(MCL,c("SOX11","MS4A1","CD19","CD79A","CD5","CD40","S.Score","G2M.Score"))
+markers <-  HumanGenes(MCL,c("CD19","MS4A1","ITGA4","CD79A","CCND1","CCND2","CD5","SOX11"))
+cc_markers <- c("S.Score","G2M.Score")
+
+samples <- c("Pt-MS","Pt-RM","Pt-1475")
+
+samples <- c("Pt-LM","Pt-MS","Pt-RM","Pt-1475")
+samples <- "Pt-1294"
+for(sample in samples){
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% c("Pt-DJ",sample)]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    subset.MCL <- SetAllIdent(subset.MCL, id="singler1main")
+    subset.MCL <- SubsetData(subset.MCL, ident.use = c("B_cell"))#"Pre-B_cell_CD34+",
+                                                       #"Pre-B_cell_CD34-"))
+    subset.MCL <- SetAllIdent(subset.MCL, id="singler1sub")
+
+    object.subsets <- SplitSeurat(object = subset.MCL, split.by = "orig.ident")
+    levels <- object.subsets[[length(object.subsets)]]
+    levels
+    
+    for(marker in c(markers,cc_markers)){
+        g <- list()
+        g[[1]] <- SingleFeaturePlot.1(object = object.subsets[[1]], 
+                                      feature = marker,title =levels[1])
+        g[[2]] <- SingleFeaturePlot.1(object = object.subsets[[2]], 
+                                      feature = marker,title =levels[2])
+        jpeg(paste0(path,"_B_Splited_",sample,"_",marker,".jpeg"), units="in", width=10, height=7,
+             res=600)
+        print(do.call(plot_grid, g))
+        print(paste0(which(markers == marker),":",length(markers)))
+        dev.off()
+    }
+}
+
 for(i in 1:length(test.markers)) {
     jpeg(paste0(path,"/",test.markers[i],".jpeg"), units="in", width=10, height=7,
         res=600)
@@ -33,7 +68,8 @@ object.subsets <- SplitSeurat(object = MCL, split.by = "orig.ident")
 levels <- object.subsets[[length(object.subsets)]]
 levels
 
-for(marker in Q3){
+
+for(marker in markers){
     g <- list()
     for(i in 1:length(samples)){
         g[[i]] <- SingleFeaturePlot.1(object = object.subsets[[i]], 

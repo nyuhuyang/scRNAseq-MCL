@@ -14,8 +14,8 @@ library(devtools)
 #library(scRNAseq)#BiocInstaller::biocLite("scRNAseq")
 source("../R/Seurat_functions.R")
 source("../R/scatter_utils.R")
-path <- paste("./output",gsub("-","",Sys.Date()),sep = "/")
-dir.create(path, recursive = T)
+path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
+if(!dir.exists(path)) dir.create(path, recursive = T)
 ########################################################################
 #
 #  0.1~0.5 scater
@@ -34,7 +34,7 @@ conditions <- df_samples$Conditions[sample_n]
 sce_list <- list()
 for(i in 1:length(samples)){
         fname <- paste0("./data/",samples[i],
-                        "/outs/raw_gene_bc_matrices/hg19")
+                        "/outs/filtered_gene_bc_matrices/hg19")
         sce_list[[i]] <- read10xCounts.1(fname, col.names=TRUE,
                                          add.colnames = samples[i])
 }
@@ -61,15 +61,15 @@ for(i in 1:length(samples)){
 ## ----rankplot, "Total UMI count for each barcode in the dataset, 
 # plotted against its rank (in decreasing order of total counts). 
 # The inferred locations of the inflection and knee points are also shown."----
-bcrank <- lapply(sce_list, function(x) barcodeRanks(counts(x)))
+#bcrank <- lapply(sce_list, function(x) barcodeRanks(counts(x)))
 
 # Only showing unique points for plotting speed.
-uniq <- lapply(bcrank, function(x) !duplicated(x$rank))
+#uniq <- lapply(bcrank, function(x) !duplicated(x$rank))
 
 # We call cells at a false discovery rate (FDR) of 1%, 
 # meaning that no more than 1% of our called barcodes should be empty droplets on average.
-set.seed(100)
-e.out <- lapply(sce_list, function(x) emptyDrops(counts(x))) # long time
+#set.seed(100)
+#e.out <- lapply(sce_list, function(x) emptyDrops(counts(x))) # long time
 
 ########################################################################
 ## --------------------------------------------------------------------------
@@ -116,22 +116,21 @@ dev.off()
 # we may need to increase the number of iterations. 
 # A larger number of iterations will often result in a lower p-value for these barcodes,
 # which may allow them to be detected after correcting for multiple testing.
-for(i in 1:length(samples)){
-        print(samples[i])
-        print(table(Sig=e.out[[i]]$FDR <= 0.01, Limited=e.out[[i]]$Limited))
-}
+#for(i in 1:length(samples)){
+#        print(samples[i])
+#        print(table(Sig=e.out[[i]]$FDR <= 0.01, Limited=e.out[[i]]$Limited))
+#}
 # using which() to automatically remove NAs.
-for(i in 1:length(samples)){
-        sce_list[[i]] <- sce_list[[i]][,which(e.out[[i]]$FDR <= 0.01)]
-}
+#for(i in 1:length(samples)){
+#        sce_list[[i]] <- sce_list[[i]][,which(e.out[[i]]$FDR <= 0.01)]
+#}
 
 # 0.4 Quality control on the cells#########################
 # It is entirely possible for droplets to contain damaged or dying cells,
 # which need to be removed prior to downstream analysis. 
 # We compute some QC metrics using  calculateQCMetrics() (McCarthy et al. 2017) 
 # and examine their distributions in Figure 2.
-sce_list.copy <- sce_list
-sce_list <- lapply(sce_list.copy, function(x) calculateQCMetrics(x,compact = FALSE,
+sce_list <- lapply(sce_list, function(x) calculateQCMetrics(x,compact = FALSE,
                         feature_controls=list(Mito=which(location=="MT"))))
 ########################################################################
 ## --------------------------------------------------------------------------
@@ -171,18 +170,20 @@ for(i in 1:length(samples)){
         sce_list[[i]] <- sce_list[[i]][,!discard]
         print(summary(!discard))
 }
+
+####################################################
 # remove samples
-sce_list$`Pt-11-C31`
-sce_list$`Pt-11-C31` = NULL
-samples = samples[-which(samples == "Pt-11-C31")]
+#sce_list$`Pt-11-C31`
+#sce_list$`Pt-11-C31` = NULL
+#samples = samples[-which(samples == "Pt-11-C31")]
 # 0.5 Examining gene expression ############################
 ## Histogram of the log~10~-average counts for each gene in the dataset.----
 #par(mfrow = c(3,2))
-for(i in 1:length(sce_list)){
-        ave <- calcAverage(sce_list[[i]])
-        rowData(sce_list[[i]])$AveCount <- ave
-        #hist(log10(ave), col="grey80",main = paste("log10(ave) of",samples[i]))
-}
+#for(i in 1:length(sce_list)){
+#        ave <- calcAverage(sce_list[[i]])
+#        rowData(sce_list[[i]])$AveCount <- ave
+#        #hist(log10(ave), col="grey80",main = paste("log10(ave) of",samples[i]))
+#}
 ########################################################################
 ## --------------------------------------------------------------------------
 ## Percentage of total counts assigned to the top 50 most highly-abundant features in the dataset. 
@@ -220,6 +221,8 @@ for(i in 1:length(sce_list)){
         print(summary(sizeFactors(sce_list[[i]])))
         
 }
+
+save(sce_list, file = "./data/sce_list_20181105.Rda")
 ####################
 #--------------------
 ## ----sfplot, fig.cap="Size factors for all cells in the PBMC dataset, plotted against the library size."----

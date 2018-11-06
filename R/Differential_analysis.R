@@ -19,18 +19,19 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-lname1 = load(file = "./data/MCL_alignment20180525.Rda")
-lnames
-table(MCL@ident)
-.FindIdentLabel(MCL)
+lname1 = load(file="./output/MCL_20181021.RData")
+lname1
 B_cell_id <- grepl("B_cell",MCL@meta.data$singler1sub)
 B_cell_id <- MCL@cell.names[B_cell_id]
 B_cell <- SubsetData(MCL, cells.use = B_cell_id)
 B_cell <- SetAllIdent(B_cell, id = "orig.ident")
+B_cell <- SubsetData(B_cell, ident.use = c("Pt-DJ","Pt-RM"))
+TSNEPlot(B_cell)
+
 B_cell_markers <- FindAllMarkers.UMI(B_cell, test.use = "MAST")
 write.csv(B_cell_markers,paste0(path,"B_cell_DE.csv"))
 jpeg(paste0(path,"Bcell_heatmap.jpeg"), units="in", width=10, height=7,
      res=600)
 DoHeatmap.1(B_cell,B_cell_markers,Top_n = 50,ident.use = "B cells",
-            group.label.rot =F,cex.row = 6)
+            group.label.rot =F,cex.row = 5)
 dev.off()

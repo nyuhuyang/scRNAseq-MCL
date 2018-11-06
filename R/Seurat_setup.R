@@ -8,6 +8,7 @@ library(Seurat)
 library(dplyr)
 library(SingleR)
 library(scran)
+library(kableExtra)
 source("../R/Seurat_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
@@ -43,26 +44,28 @@ for(i in 1:length(samples)){
                                                  names.delim = "_")
     MCL_Seurat[[i]]@meta.data$conditions <- conditions[i]
 }
+#======1.1.2 QC before merge =========================
+cell.number <- sapply(MCL_Seurat, function(x) length(x@cell.names))
+QC_list <- lapply(MCL_Seurat, function(x) as.matrix(x = x@raw.data))
+median.nUMI <- sapply(QC_list, function(x) median(colSums(x)))
+median.nGene <- sapply(QC_list, function(x) median(apply(x,2,function(y) sum(length(y[y>0])))))
+
+min.nUMI <- sapply(QC_list, function(x) min(colSums(x)))
+min.nGene <- sapply(QC_list, function(x) min(apply(x,2,function(y) sum(length(y[y>0])))))
+
+QC.list <- cbind(df_samples,cell.number, median.nUMI,median.nGene,min.nUMI,min.nGene,
+                 row.names = samples)
+write.csv(QC.list,paste0(path,"QC_list.csv"))
+QC.list %>% kable() %>% kable_styling()
+remove(QC_list);GC()
+
+#========1.1.3 merge ===================================
 MCL <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), MCL_Seurat)
 remove(MCL_raw,MCL_Seurat);GC()
-MCL <- FilterCells(MCL, subset.names = "nGene",
-                    low.thresholds = 200,
-                    high.thresholds = Inf) %>%
-    NormalizeData() %>%
-    ScaleData(display.progress = FALSE) %>%
-    FindVariableGenes(do.plot = FALSE, display.progress = FALSE)
-save(MCL, file = "./data/MCL_20181019.Rda")
-
-#======1.2 QC, pre-processing and normalizing the data=========================
-# 1.2.1 Calculate median UMI per cell
-Iname = load(file = "./data/MCL_20181019.Rda")
-MCL_raw_data <- as.matrix(x = MCL@raw.data)
-mean(colSums(MCL_raw_data))
-median(colSums(MCL_raw_data))
-min(colSums(MCL_raw_data))
-remove(MCL_raw_data);GC()
-
-# 1.2.3 calculate mitochondria percentage
+#MCL <- FilterCells(MCL, subset.names = "nGene",low.thresholds = 200,high.thresholds = Inf) %>%
+#    NormalizeData() #%>%
+    #ScaleData(display.progress = FALSE) %>%
+    #FindVariableGenes(do.plot = FALSE, display.progress = FALSE)
 mito.genes <- grep(pattern = "^MT-", x = rownames(x = MCL@data), value = TRUE)
 percent.mito <- Matrix::colSums(MCL@raw.data[mito.genes, ])/Matrix::colSums(MCL@raw.data)
 MCL <- AddMetaData(object = MCL, metadata = percent.mito, col.name = "percent.mito")
@@ -73,21 +76,42 @@ g1 <- VlnPlot(object = MCL, features.plot = c("nGene", "nUMI", "percent.mito"),
               nCol = 1,point.size.use = 0.2,
               x.lab.rot = T, do.return = T,return.plotlist =T)
 
-jpeg(paste0(path,"/S1_nUMI1.jpeg"), units="in", width=10, height=7,res=600)
-print(g1[[2]]+ scale_y_log10() )
-dev.off()
-
+#======1.2 QC, pre-processing and normalizing with scater =========================
+Iname <- load(file = "./data/sce_list_20181105.Rda");Iname
+seurat_list <- lapply(sce_list, as.seurat)
+MCL <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), sce_list)
+remove(seurat_list,sce_list);GC()
+# 1.2.3 calculate mitochondria percentage
+mito.genes <- grep(pattern = "^MT-", x = rownames(x = MCL@data), value = TRUE)
+percent.mito <- Matrix::colSums(MCL@raw.data[mito.genes, ])/Matrix::colSums(MCL@raw.data)
+MCL <- AddMetaData(object = MCL, metadata = percent.mito, col.name = "percent.mito")
 
 MCL <- FilterCells(object = MCL, subset.names = c("nGene","nUMI","percent.mito"),
-                    low.thresholds = c(500,1000, -Inf), 
-                    high.thresholds = c(Inf,Inf, 0.5))
+                   low.thresholds = c(500,1000, -Inf), 
+                   high.thresholds = c(Inf,Inf, 0.5))
 
+
+MCL@ident = factor(MCL@ident,levels = samples)
 g2 <- VlnPlot(object = MCL, features.plot = c("nGene", "nUMI", "percent.mito"), 
               nCol = 1,point.size.use = 0.2,
               x.lab.rot = T, do.return = T,return.plotlist =T)
-
-jpeg(paste0(path,"/S1_nGene2.jpeg"), units="in", width=10, height=7,res=600)
-print(g2[[1]]+ scale_y_log10() )
+jpeg(paste0(path,"/S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
+print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
+                    scale_y_log10(limits = c(200,8000)),#+ylim(c(0,1000)),
+                g2[[1]]+ggtitle("nGene after filteration")+ 
+                    scale_y_log10(limits = c(200,8000))))
+dev.off()
+jpeg(paste0(path,"/S1_nUMI.jpeg"), units="in", width=10, height=7,res=600)
+print(plot_grid(g1[[2]]+ggtitle("nUMI in raw data")+ 
+                    scale_y_log10(limits = c(500,100000)),#+ylim(c(0,1000)),
+                g2[[2]]+ggtitle("nUMI after filteration")+ 
+                    scale_y_log10(limits = c(500,100000))))
+dev.off()
+jpeg(paste0(path,"/S1_mito.jpeg"), units="in", width=10, height=7,res=600)
+print(plot_grid(g1[[3]]+ggtitle("mito % in raw data")+ 
+                    ylim(c(0,0.9)),
+                g2[[3]]+ggtitle("mito % after filteration")+ 
+                    ylim(c(0,0.9))))
 dev.off()
 ######################################
 
@@ -103,16 +127,16 @@ MCL <- ScaleData(object = MCL) %>%
     RunPCA() %>%
     FindClusters(dims.use = 1:20, force.recalc = T, print.output = FALSE) %>%
     RunTSNE()
-#MCL@meta.data$orig.ident <- gsub("PND18pre","PND18",MCL@meta.data$orig.ident)
-g1 <- TSNEPlot(object = MCL, do.label = F, group.by = "orig.ident", 
+
+p1 <- TSNEPlot(object = MCL, do.label = F, group.by = "orig.ident", 
          do.return = TRUE, no.legend = F, #colors.use = singler.colors,
          pt.size = 1,label.size = 8 )+
     ggtitle("Oiginal")+
     theme(text = element_text(size=15),							
           plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
 
-save(MCL, file = "./data/MCL_20181019.Rda")
-Iname = load("./data/MCL_20181019.Rda")
+save(MCL, file = "./data/MCL_20181105.Rda")
+Iname = load("./data/MCL_20181105.Rda")
 
 #======1.4 Add Cell-cycle score =========================
 # Read in a list of cell cycle markers, from Tirosh et al, 2015
@@ -133,14 +157,6 @@ head(x = MCL@meta.data)
 
 #======1.5 Add project id =========================
 batchname = MCL@meta.data$orig.ident
-batch.effect = rep(NA,length(batchname))
-batch.effect[batchname %in% c("Pt-DJ","Pt-1294")] = 1
-batch.effect[!(batchname %in% c("Pt-DJ","Pt-1294"))] = 2
-names(batch.effect) = rownames(MCL@meta.data)
-MCL <- AddMetaData(object = MCL, metadata = batch.effect, col.name = "project.id")
-table(MCL@meta.data$project.id)
-#------
-batchname = MCL@meta.data$orig.ident
 batch.effect = as.numeric(factor(batchname,levels = samples))
 names(batch.effect) = rownames(MCL@meta.data)
 MCL <- AddMetaData(object = MCL, metadata = batch.effect, col.name = "batch.effect")
@@ -156,15 +172,15 @@ SingleFeaturePlot.1(MCL,"CC.Difference",threshold=0.05)
 TSNEPlot(object = MCL, do.label = F, group.by = "batch.effect")
 MCL@scale.data = NULL
 MCL <- ScaleData(object = MCL, #genes.use = MCL@var.genes,
-                  model.use = "linear", do.par=T, do.center = T, do.scale = T,
-                  vars.to.regress = c("nUMI","percent.mito","batch.effect"),#"CC.Difference","percent.mito"--nogood,"nUMI"--nogood
-                  display.progress = T)
-#save(MCL, file = "./data/MCL_20181001.Rda") #do.center = F, do.scale = T
+                 model.use = "linear", do.par=T, do.center = T, do.scale = T,
+                 vars.to.regress = c("orig.ident"),#"nUMI","percent.mito",
+                 display.progress = T)
+
 #======1.7 Performing MNN-based correction =========================
 #https://bioconductor.org/packages/3.8/workflows/vignettes/simpleSingleCell/inst/doc/work-5-mnn.html#4_performing_mnn-based_correction
 set.seed(100)
-original <- lapply(samples, function(x) MCL@scale.data[MCL@var.genes, 
-                                                 (MCL@meta.data$orig.ident %in% x)])
+original <- lapply(samples, function(x) MCL@scale.data[MCL@var.genes,
+                                                       (MCL@meta.data$orig.ident %in% x)])
 mnn.out <- do.call(fastMNN, c(original, list(k=20, d=50, auto.order=T,
                                              approximate=TRUE)))
 dim(mnn.out$corrected)
@@ -173,48 +189,51 @@ colnames(mnn.out$corrected) = paste0("MNN_",1:ncol(mnn.out$corrected))
 #Storing a new MNN
 MCL <- SetDimReduction(object = MCL, reduction.type = "MNN", slot = "cell.embeddings",
                        new.data = mnn.out$corrected)
-MCL <- SetDimReduction(object = MCL, reduction.type = "MNN", slot = "key", 
+MCL <- SetDimReduction(object = MCL, reduction.type = "MNN", slot = "key",
                        new.data = "MNN_")
 remove(original);GC()
-MCL <- SetAllIdent(MCL,id = "orig.ident")
-DimPlot(object = MCL, reduction.use = "MNN", pt.size = 0.5)
+#MCL <- SetAllIdent(MCL,id = "orig.ident")
+#DimPlot(object = MCL, reduction.use = "MNN", pt.size = 0.5)
 
 #======1.7 unsupervised clustering based on MNN =========================
-MCL <- RunPCA(object = MCL, pc.genes = MCL@var.genes, pcs.compute = 100, 
-               do.print = TRUE, pcs.print = 1:5, genes.print = 5)
+MCL <- RunPCA(object = MCL, pc.genes = MCL@var.genes, pcs.compute = 100,
+              do.print = TRUE, pcs.print = 1:5, genes.print = 5)
 PCAPlot(object = MCL)
 PCElbowPlot(object = MCL, num.pc = 100)
 PCHeatmap(MCL, pc.use = c(1:3, 25:30), cells.use = 500, do.balanced = TRUE)
 
-DimElbowPlot.1(object = MCL, reduction.type = "MNN", 
-             dims.plot = 50,slot = "cell.embeddings")
+#DimElbowPlot.1(object = MCL, reduction.type = "MNN",
+#             dims.plot = 50,slot = "cell.embeddings")
 
-MCL <- RunTSNE(object = MCL, reduction.use = "MNN", dims.use = 1:50, 
-                do.fast = TRUE, perplexity= 30)
+MCL <- RunTSNE(object = MCL, reduction.use = "MNN", dims.use = 1:50,
+               do.fast = TRUE, perplexity= 30)
 
-MCL <- FindClusters(object = MCL, reduction.type = "MNN", 
-                    dims.use = 1:50, resolution = 0.6, 
-                     k.param = 30,force.recalc = T,
-                     save.SNN = TRUE, n.start = 100, nn.eps = 0, print.output = FALSE)
+MCL <- FindClusters(object = MCL, reduction.type = "MNN",
+                    dims.use = 1:50, resolution = 0.6,
+                    k.param = 30,force.recalc = T,
+                    save.SNN = TRUE, n.start = 100, nn.eps = 0, print.output = FALSE)
 
-g2 <- TSNEPlot.1(object = MCL, do.label = F, group.by = "orig.ident", 
-           do.return = TRUE, no.legend = T, 
-           #colors.use = singler.colors,
-           pt.size = 1,label.size = 4 )+
+p2 <- TSNEPlot.1(object = MCL, do.label = F, group.by = "orig.ident",
+                 do.return = TRUE, no.legend = T,
+                 #colors.use = singler.colors,
+                 pt.size = 1,label.size = 4 )+
     ggtitle("Corrected")+
-    theme(text = element_text(size=15),							
-          plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
+    theme(text = element_text(size=15),
+          plot.title = element_text(hjust = 0.5,size = 18, face = "bold"))
 
 jpeg(paste0(path,"TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
-g2
+p2+ggtitle("TSNEplot for all clusters")+
+    theme(text = element_text(size=15),
+          legend.position="none",
+          plot.title = element_text(hjust = 0.5,size = 18, face = "bold"))
 dev.off()
 
-jpeg(paste0(path,"remove_batch~.jpeg"), units="in", width=10, height=7,res=600)
-plot_grid(g1 +ggtitle("Original")+
+jpeg(paste0(path,"remove_batch.jpeg"), units="in", width=10, height=7,res=600)
+plot_grid(p1 +ggtitle("Original")+
               theme(text = element_text(size=15),
                     legend.position="none",
-                    plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),g2)
+                    plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),p2)
 dev.off()
 MCL <- StashIdent(object = MCL, save.name = "MNN_scale")
 MCL <- SetAllIdent(object = MCL, id = "MNN_ident")
-save(MCL, file = "./data/MCL_20181019.Rda")
+save(MCL, file = "./data/MCL_20181105.Rda")

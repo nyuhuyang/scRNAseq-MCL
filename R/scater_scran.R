@@ -24,12 +24,12 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # 0.1. Setting up the data
 # 0.1.1 Reading in a sparse matrix
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-sample_n = which(df_samples$Tests %in% c("test1", "test2", "test3","test4"))
-table(df_samples$Tests)
+sample_n = which(df_samples$tests %in% c("test2", "test3","test4"))
+table(df_samples$tests)
 df_samples[sample_n,]
-samples <- df_samples$Samples[sample_n]
-projects <- df_samples$Projects[sample_n]
-conditions <- df_samples$Conditions[sample_n]
+samples <- df_samples$samples[sample_n]
+projects <- df_samples$projects[sample_n]
+conditions <- df_samples$conditions[sample_n]
 
 sce_list <- list()
 for(i in 1:length(samples)){
@@ -72,7 +72,7 @@ for(i in 1:length(samples)){
 #e.out <- lapply(sce_list, function(x) emptyDrops(counts(x))) # long time
 
 ########################################################################
-## --------------------------------------------------------------------------
+## ----------------------------------------
 # generate plots for QC
 g <- list()
 for(i in 1:length(samples)){
@@ -105,7 +105,7 @@ for(i in 8:9){
                col=c("green","blue","red" ), lty=1, cex=1.2)
 }
 dev.off()
-## --------------------------------------------------------------------------
+## --------------------------------------------
 ########################################################################
 # 0.2.2 Examining cell-calling diagnostics
 # The number of Monte Carlo iterations (specified by the  niters argument in emptyDrops())
@@ -133,7 +133,7 @@ dev.off()
 sce_list <- lapply(sce_list, function(x) calculateQCMetrics(x,compact = FALSE,
                         feature_controls=list(Mito=which(location=="MT"))))
 ########################################################################
-## --------------------------------------------------------------------------
+## ---------------------------------------------
 ## ----qchist, Histograms of QC metric distributions in the dataset."----
 for(i in 1:length(samples)){
         jpeg(paste0(path,"/0_QC_",samples[i],".jpeg"), units="in", width=10, height=7,
@@ -150,7 +150,7 @@ for(i in 1:length(samples)){
              main = paste("mitochondrial % of",samples[i]))
         dev.off()
 }
-## --------------------------------------------------------------------------
+## -------------------------------------------------
 ########################################################################
 
 # Ideally, we would remove cells with low library sizes or total number of expressed features as described previously.
@@ -185,7 +185,7 @@ for(i in 1:length(samples)){
 #        #hist(log10(ave), col="grey80",main = paste("log10(ave) of",samples[i]))
 #}
 ########################################################################
-## --------------------------------------------------------------------------
+## -------------------------------------------------------
 ## Percentage of total counts assigned to the top 50 most highly-abundant features in the dataset. 
 # For each feature, each bar represents the percentage assigned to that feature for a single cell,
 # while the circle represents the average across all cells. 
@@ -198,7 +198,7 @@ for(i in 1:length(samples)){
         print(gg[[i]])
         dev.off()
 }
-## --------------------------------------------------------------------------
+## --------------------------------------------------------
 ########################################################################
 #
 #  0.6~ scran
@@ -222,7 +222,7 @@ for(i in 1:length(sce_list)){
         
 }
 
-save(sce_list, file = "./data/sce_list_20181105.Rda")
+save(sce_list, file = "./data/sce_list_5_20181107.Rda")
 ####################
 #--------------------
 ## ----sfplot, fig.cap="Size factors for all cells in the PBMC dataset, plotted against the library size."----

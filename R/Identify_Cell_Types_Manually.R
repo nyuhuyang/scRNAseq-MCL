@@ -5,42 +5,36 @@ library(tidyr)
 library(kableExtra)
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
-
+path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
+if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 2.1 identify phenotype for each cluster  ==========================================
-lname1 = load(file = "./data/MCL_alignment20181031.Rda")
-lname1
+(load(file = "./data/MCL_20181107.RData"))
 markers.to.plot <-  HumanGenes(MCL,c("CD","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2"))
 
-markers <- HumanGenes(MCL,c("SOX11","MS4A1","CD19","CD79A","CD5","CD40","S.Score","G2M.Score"))
-markers <-  HumanGenes(MCL,c("CD19","MS4A1","ITGA4","CD79A","CCND1","CCND2","CD5","SOX11"))
-cc_markers <- c("S.Score","G2M.Score")
+markers <-  HumanGenes(MCL,c("CD19","MS4A1","SOX11","ITGA4","CD79A","CCND1","CCND2","CD5","CD40"))
+MCL <- SetAllIdent(object = MCL, id = "singler1sub")
 
-samples <- c("Pt-MS","Pt-RM","Pt-1475")
+df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
+(samples <- df_samples$samples[-c(1:3,10)])
 
-samples <- c("Pt-LM","Pt-MS","Pt-RM","Pt-1475")
-samples <- "Pt-1294"
+cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident == "MD"]
+MD.MCL <- SubsetData(MCL, cells.use = cell.use)
+
+#  MD compare all others pairwisely in tsne
 for(sample in samples){
     
-    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% c("Pt-DJ",sample)]
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident == sample]
     subset.MCL <- SubsetData(MCL, cells.use = cell.use)
-    subset.MCL <- SetAllIdent(subset.MCL, id="singler1main")
-    subset.MCL <- SubsetData(subset.MCL, ident.use = c("B_cell"))#"Pre-B_cell_CD34+",
-                                                       #"Pre-B_cell_CD34-"))
-    subset.MCL <- SetAllIdent(subset.MCL, id="singler1sub")
-
-    object.subsets <- SplitSeurat(object = subset.MCL, split.by = "orig.ident")
-    levels <- object.subsets[[length(object.subsets)]]
-    levels
     
-    for(marker in c(markers,cc_markers)){
+    for(marker in markers){
         g <- list()
-        g[[1]] <- SingleFeaturePlot.1(object = object.subsets[[1]], 
-                                      feature = marker,title =levels[1])
-        g[[2]] <- SingleFeaturePlot.1(object = object.subsets[[2]], 
-                                      feature = marker,title =levels[2])
-        jpeg(paste0(path,"_B_Splited_",sample,"_",marker,".jpeg"), units="in", width=10, height=7,
+        g[[1]] <- SingleFeaturePlot.1(object = MD.MCL, 
+                                      feature = marker,title = "MD")
+        g[[2]] <- SingleFeaturePlot.1(object = subset.MCL, 
+                                      feature = marker,title = sample)
+        jpeg(paste0(path,"Splited_MD_",sample,"_",marker,".jpeg"), units="in", width=10, height=7,
              res=600)
         print(do.call(plot_grid, g))
         print(paste0(which(markers == marker),":",length(markers)))
@@ -48,8 +42,88 @@ for(sample in samples){
     }
 }
 
+# heat map
+MCL <- SetAllIdent(MCL, id="singler1main")
+B_cells_MCL <- SubsetData(MCL, ident.use = c("B_cell","Pre-B_cell_CD34-",
+                                             "Pro-B_cell_CD34+"))
+table(B_cells_MCL@meta.data$singler2main)
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler2main")
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B-cells","HSC"))
+
+(samples <- df_samples$samples[4:7])
+
+for(sample in samples){
+    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% c("MD",sample)]
+    subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
+    subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
+    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, 
+                                       test.use = "MAST")
+    write.csv(test_markers, paste0(path,"MD_",sample,"_DE_genes.csv"))
+    g <- DoHeatmap.1(subset.MCL,test_markers,Top_n = 50,
+                     ident.use = paste("MD vs.",sample, "in B cells"),
+                     group.label.rot = F,cex.row = 6,remove.key =T)
+    jpeg(paste0(path,"_heatmap_MD_",sample,".jpeg"), units="in", width=10, height=7,
+         res=600)
+    print(g)
+    dev.off()
+}
+
+# 2. Compare Pt 17-C7 with C2, Compare Pt 11-C14 with C1 in tsne
+tests <- c("test3","test4")
+
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    df_samples[sample_n,] %>% kable() %>% kable_styling()
+    samples <- df_samples$samples[sample_n]
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    subset.MCL <- SplitSeurat(subset.MCL, split.by = "orig.ident")
+    lvl <- subset.MCL[[3]]
+    
+    for(marker in markers){
+        g <- list()
+        g[[1]] <- SingleFeaturePlot.1(object = subset.MCL[[1]], 
+                                      feature = marker,title = lvl[1])
+        g[[2]] <- SingleFeaturePlot.1(object = subset.MCL[[2]], 
+                                      feature = marker,title = lvl[2])
+        jpeg(paste0(path,"_Splited_",test,"_",marker,".jpeg"), units="in", width=10, height=7,
+             res=600)
+        print(do.call(plot_grid, g))
+        print(paste0(which(markers == marker),":",length(markers)))
+        dev.off()
+    }
+}
+
+# heat map of the top 50 genes that are differentially regulated in MCL cells in Pt17, C2 vs C14, and Pt 11, C1 vs C14.
+
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    df_samples[sample_n,] %>% kable() %>% kable_styling()
+    samples <- df_samples$samples[sample_n]
+    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
+    subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
+    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, 
+                       test.use = "MAST")
+    write.csv(test_markers, paste0(path,test,"_DE_genes.csv"))
+    g <- DoHeatmap.1(subset.MCL,test_markers,Top_n = 50,
+                     ident.use = paste(paste(samples,collapse=" vs. "), "in B cells"),
+              group.label.rot = T,cex.row = 6,remove.key =T)
+    jpeg(paste0(path,"_heatmap_",test,".jpeg"), units="in", width=10, height=7,
+         res=600)
+    print(g)
+    dev.off()
+}
+
+#==================================================================
+
+
+
+
+
+
 for(i in 1:length(test.markers)) {
-    jpeg(paste0(path,"/",test.markers[i],".jpeg"), units="in", width=10, height=7,
+    jpeg(paste0(path,test.markers[i],".jpeg"), units="in", width=10, height=7,
         res=600)
     p1 <- SingleFeaturePlot.1(object = MCL, feature = test.markers[i])
     print(p1)
@@ -217,3 +291,4 @@ markers.to.plot <- c(CD14_Monocytes[c(1:3)],DendriticCells[c(3,5)],
 markers.to.plot <- c("CD14","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2")
+                     

@@ -23,7 +23,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # setup Seurat objects since both count matrices have already filtered
 # cells, we do no additional filtering here
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-sample_n = which(df_samples$tests %in% c("test1", "test2", "test3","test4"))
+sample_n = which(df_samples$tests %in% c("test2", "test3","test4"))
 table(df_samples$tests)
 df_samples[sample_n,]
 samples <- df_samples$samples[sample_n]
@@ -77,8 +77,9 @@ g1 <- VlnPlot(object = MCL, features.plot = c("nGene", "nUMI", "percent.mito"),
               x.lab.rot = T, do.return = T,return.plotlist =T)
 
 #======1.2 QC, pre-processing and normalizing with scater =========================
-Iname <- load(file = "./data/sce_list_20181105.Rda");Iname
+Iname <- load(file = "./data/sce_list_5_20181107.Rda");Iname
 seurat_list <- lapply(sce_list, as.seurat)
+seurat_list <- lapply(seurat_list, FindVariableGenes, do.plot = FALSE)
 MCL <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), sce_list)
 remove(seurat_list,sce_list);GC()
 # 1.2.3 calculate mitochondria percentage

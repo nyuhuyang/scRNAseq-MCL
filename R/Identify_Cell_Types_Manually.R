@@ -1,14 +1,14 @@
 library(Seurat)
-library(SingleR)
 library(dplyr)
 library(tidyr)
 library(kableExtra)
+library(gplots)
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 2.1 identify phenotype for each cluster  ==========================================
-(load(file = "./data/MCL_20181107.RData"))
+(load(file="data/MCL_Harmony_20181118.Rda"))
 markers.to.plot <-  HumanGenes(MCL,c("CD","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2"))
@@ -17,7 +17,7 @@ markers <-  HumanGenes(MCL,c("CD19","MS4A1","SOX11","ITGA4","CD79A","CCND1","CCN
 MCL <- SetAllIdent(object = MCL, id = "singler1sub")
 
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-(samples <- df_samples$samples[-c(1:3,10)])
+(samples <- df_samples$samples[c(4:7)])
 
 cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident == "MD"]
 MD.MCL <- SubsetData(MCL, cells.use = cell.use)
@@ -30,9 +30,9 @@ for(sample in samples){
     
     for(marker in markers){
         g <- list()
-        g[[1]] <- SingleFeaturePlot.1(object = MD.MCL, 
+        g[[1]] <- SingleFeaturePlot.1(object = MD.MCL, threshold=0.1,
                                       feature = marker,title = "MD")
-        g[[2]] <- SingleFeaturePlot.1(object = subset.MCL, 
+        g[[2]] <- SingleFeaturePlot.1(object = subset.MCL, threshold=0.1,
                                       feature = marker,title = sample)
         jpeg(paste0(path,"Splited_MD_",sample,"_",marker,".jpeg"), units="in", width=10, height=7,
              res=600)
@@ -42,7 +42,7 @@ for(sample in samples){
     }
 }
 
-# heat map
+# DoHeatmap ================
 MCL <- SetAllIdent(MCL, id="singler1main")
 B_cells_MCL <- SubsetData(MCL, ident.use = c("B_cell","Pre-B_cell_CD34-",
                                              "Pro-B_cell_CD34+"))
@@ -56,15 +56,51 @@ for(sample in samples){
     cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% c("MD",sample)]
     subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
     subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
-    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, 
+    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, only.pos = T,
                                        test.use = "MAST")
-    write.csv(test_markers, paste0(path,"MD_",sample,"_DE_genes.csv"))
+
     g <- DoHeatmap.1(subset.MCL,test_markers,Top_n = 50,
                      ident.use = paste("MD vs.",sample, "in B cells"),
                      group.label.rot = F,cex.row = 6,remove.key =T)
     jpeg(paste0(path,"_heatmap_MD_",sample,".jpeg"), units="in", width=10, height=7,
          res=600)
     print(g)
+    dev.off()
+}
+
+# heatmap.2 ================
+for(sample in samples){
+    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% c("MD",sample)]
+    subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
+    subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
+    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, only.pos = T,
+                                       test.use = "MAST")
+    top <- test_markers %>% group_by(cluster) %>% top_n(50, avg_logFC)
+    y = subset.MCL@scale.data[unique(top$gene),]
+    ## Column clustering (adjust here distance/linkage methods to what you need!)
+    hc <- hclust(as.dist(1-cor(as.matrix(y), method="spearman")), method="complete")
+    cc = gsub("_.*","",hc$labels)
+    cc = gsub("Pt-MD","#E31A1C",cc)
+    cc = gsub(sample,"#33A02C",cc)
+    
+    jpeg(paste0(path,"/Heatmap2_MD_",sample,".jpeg"), units="in", width=10, height=7,res=600)
+    heatmap.2(as.matrix(y),
+              Colv = as.dendrogram(hc), Rowv= FALSE,
+              ColSideColors = cc, trace ="none",labCol = FALSE,dendrogram = "column",#scale="row",
+              key.xlab = "scale log nUMI",
+              cexRow = 0.5,
+              margins = c(2,5),
+              #scale = "row",
+              breaks = seq(-3,3,length.out = 101),
+              col = bluered,
+              main = paste("MD vs.",sample, "in B cells"))
+    par(lend = 1)           # square line ends for the color legend
+    legend(0, 0.8,       # location of the legend on the heatmap plot
+           legend = c("MD", sample), # category labels
+           col = c("#E31A1C", "#33A02C"),  # color key
+           lty= 1,             # line style
+           lwd = 10            # line width
+    )
     dev.off()
 }
 
@@ -115,12 +151,48 @@ for(test in tests){
     dev.off()
 }
 
+# heatmap.2 ================
+tests <- c("test3","test4")
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    df_samples[sample_n,] %>% kable() %>% kable_styling()
+    samples <- df_samples$samples[sample_n]
+    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
+    subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
+    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, only.pos = T,
+                                       test.use = "MAST")
+    top <- test_markers %>% group_by(cluster) %>% top_n(50, avg_logFC)
+    y = subset.MCL@scale.data[unique(top$gene),]
+    ## Column clustering (adjust here distance/linkage methods to what you need!)
+    hc <- hclust(as.dist(1-cor(as.matrix(y), method="spearman")), method="complete")
+    cc = gsub("_.*","",hc$labels)
+    cc = gsub(samples[2],"#33A02C",cc)
+    cc = gsub(samples[1],"#E31A1C",cc)
+
+    
+    jpeg(paste0(path,"/Heatmap2_",samples[1],"_",samples[2],".jpeg"), units="in", width=10, height=7,res=600)
+    heatmap.2(as.matrix(y),
+              Colv = as.dendrogram(hc), Rowv= FALSE,
+              ColSideColors = cc, trace ="none",labCol = FALSE,dendrogram = "column",
+              key.xlab = "scale log nUMI",
+              cexRow = 0.5,
+              margins = c(2,5),
+              #scale = "row",
+              breaks = seq(-3,3,length.out = 101),
+              col = bluered,
+              main = paste(samples[1],"vs.",samples[2], "in B cells"))
+    par(lend = 1)           # square line ends for the color legend
+    legend(0, 0.8,       # location of the legend on the heatmap plot
+           legend = c(samples[1], samples[2]), # category labels
+           col = c("#E31A1C", "#33A02C"),  # color key
+           lty= 1,             # line style
+           lwd = 10            # line width
+    )
+    dev.off()
+}
+
 #==================================================================
-
-
-
-
-
 
 for(i in 1:length(test.markers)) {
     jpeg(paste0(path,test.markers[i],".jpeg"), units="in", width=10, height=7,

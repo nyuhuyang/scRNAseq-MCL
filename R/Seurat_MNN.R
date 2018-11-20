@@ -222,11 +222,16 @@ p2 <- TSNEPlot.1(object = MCL, do.label = F, group.by = "orig.ident",
     theme(text = element_text(size=15),
           plot.title = element_text(hjust = 0.5,size = 18, face = "bold"))
 
-jpeg(paste0(path,"TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
-p2+ggtitle("TSNEplot for all clusters")+
-    theme(text = element_text(size=15),
-          legend.position="none",
-          plot.title = element_text(hjust = 0.5,size = 18, face = "bold"))
+g_MNN <- TSNEPlot.1(object = MCL, do.label = F, group.by = "ident", 
+                        do.return = TRUE, no.legend = T, 
+                        #colors.use = ExtractMetaColor(MCL),
+                        pt.size = 1,label.size = 6 )+
+    ggtitle("Tsne plot based on MNN")+
+    theme(text = element_text(size=15),							
+          plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
+
+jpeg(paste0(path,"/TSNEplot-MNN~.jpeg"), units="in", width=10, height=7,res=600)
+g_MNN
 dev.off()
 
 jpeg(paste0(path,"remove_batch.jpeg"), units="in", width=10, height=7,res=600)

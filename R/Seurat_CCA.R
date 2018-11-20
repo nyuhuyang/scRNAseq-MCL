@@ -128,7 +128,7 @@ SingleFeaturePlot.1(MCL,"percent.mito",threshold=0.05)
 SingleFeaturePlot.1(MCL,"CC.Difference",threshold=0.05)
 MCL <- ScaleData(object = MCL, 
                  model.use = "linear", do.par=T, do.center = T, do.scale = T,
-                 vars.to.regress = c("orig.ident"),
+                 #vars.to.regress = c("orig.ident"),
                  display.progress = T)
 
 # === 1.7 Perform a canonical correlation analysis (CCA) =========================
@@ -192,22 +192,23 @@ plot_grid(p1, p2)
 dev.off()
 MCL <- SetAllIdent(MCL,id='res.0.6')
 MCL@ident <- factor(MCL@ident, levels = 0:18)
-p3 <- TSNEPlot.1(object = MCL, do.label = T, group.by = "ident", 
-                 do.return = TRUE, no.legend = T, 
-                 pt.size = 1,label.size = 6 )+
-    ggtitle("Tsne plot for all clusters")+
+
+g_CCA <- TSNEPlot.1(object = MCL, do.label = F, group.by = "oident", 
+                        do.return = TRUE, no.legend = T, 
+                        colors.use = ExtractMetaColor(MCL),
+                        pt.size = 1,label.size = 6 )+
+    ggtitle("Tsne plot based on CCA")+
     theme(text = element_text(size=15),							
           plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
 
-jpeg(paste0(path,"/TSNEplot.jpeg"), units="in", width=10, height=7,res=600)
-p3
+jpeg(paste0(path,"/TSNEplot-CCA~.jpeg"), units="in", width=10, height=7,res=600)
+g_CCA
 dev.off()
 
-table(MCL@meta.data$orig.ident)
 
 jpeg(paste0(path,"/SplitTSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 SplitTSNEPlot(object = MCL,split.by = "orig.ident",do.return=F,
               select.plots = c(7,6,8,9,3,1,2,4,5))
 dev.off()
 
-save(MCL, file = "./data/MCL_CCA_20181110.Rda")
+save(MCL, file = "./data/MCL_CCA_20181107.Rda")

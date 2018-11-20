@@ -38,6 +38,8 @@ singlerDF = data.frame("singler1sub"=singler$singler[[1]]$SingleR.single$labels,
                        "singler2sub"=singler$singler[[2]]$SingleR.single$labels,
                        "singler2main"=singler$singler[[2]]$SingleR.single.main$labels,
                        "cell.names" = rownames(singler$singler[[1]]$SingleR.single$labels))
+table(singlerDF$cell.names %in% MCL@cell.names)
+
 knowDF = data.frame("cell.names"= MCL@cell.names)
 ident.DF = full_join(singlerDF,knowDF, by="cell.names")
 ident.DF<- apply(ident.DF,2,as.character)
@@ -69,7 +71,7 @@ out1 = SingleR.PlotTsne.1(singler$singler[[1]]$SingleR.single,
                          label.size = 5, dot.size = 2,do.legend = F,alpha = 1,
                          label.repel = T,force=2)
 #label.repel = T,force=2)
-jpeg(paste0(path,"/PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
+jpeg(paste0(path,"PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
      res=600)
 out1+  ggtitle("Supervised sub cell type labeling by HPCA")+#ggplot title
         theme(text = element_text(size=20),     #larger text including legend title
@@ -81,7 +83,7 @@ out2 = SingleR.PlotTsne.1(singler$singler[[2]]$SingleR.single,
                          do.letters = F,labels = singler$singler[[2]]$SingleR.single$labels,
                          label.size = 5, dot.size = 2,do.legend = F,alpha = 1,
                          label.repel = T,force=2)
-jpeg(paste0(path,"/PlotTsne_sub2.jpeg"), units="in", width=10, height=7,
+jpeg(paste0(path,"PlotTsne_sub2.jpeg"), units="in", width=10, height=7,
      res=600)
 out2+  ggtitle("Supervised cell type labeling by Blueprint+ Encode")+#ggplot title
         theme(text = element_text(size=20),     #larger text including legend title
@@ -124,7 +126,7 @@ write.csv(MCL@meta.data,file = "output/MCL_metadata_20181107.csv")
 ##############################
 # draw tsne plot
 ##############################
-p3 <- TSNEPlot.1(object = MCL, do.label = F, group.by = "ident", 
+p3 <- TSNEPlot.1(object = MCL, do.label = T, group.by = "ident", 
                  do.return = TRUE, no.legend = F, 
                  colors.use = ExtractMetaColor(MCL),
                  pt.size = 1,label.size = 3)+
@@ -132,7 +134,7 @@ p3 <- TSNEPlot.1(object = MCL, do.label = F, group.by = "ident",
   theme(text = element_text(size=10),							
         plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
 
-jpeg(paste0(path,"PlotTsne_sub1~.jpeg"), units="in", width=10, height=7,
+jpeg(paste0(path,"PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
      res=600)
 print(p3)
 dev.off()
@@ -156,9 +158,10 @@ for(test in tests){
         subset.MCL <- SubsetData(MCL, cells.use = cell.use)
         
         g <- SplitTSNEPlot(subset.MCL,group.by = "ident",split.by = "orig.ident",
+                           #select.plots = c(1,5,4,3,2),
                            no.legend = T,do.label =F,label.size=3,
                            return.plots =T, label.repel = T,force=2)
-        jpeg(paste0(path,test,".jpeg"), units="in", width=10, height=7,
+        jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,
              res=600)
         print(do.call(plot_grid, g))
         dev.off()

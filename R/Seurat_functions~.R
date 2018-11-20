@@ -514,13 +514,6 @@ HumanGenes <- function(object, marker.genes, unique=FALSE){
 }
 
 
-# select ggplot color
-gg_color_hue <- function(n) {
-        hues = seq(15, 375, length = n + 1)
-        grDevices::hcl(h = hues, l = 65, c = 100)[1:n]
-}
-#gg_color_hue(4)
-
 # modified GenePlot
 # GenePlot.1(do.hover = TRUE) will return ggplot 
 GenePlot.1 <- function (object, gene1, gene2, cell.ids = NULL, col.use = NULL, 
@@ -581,6 +574,7 @@ GenePlot.1 <- function (object, gene1, gene2, cell.ids = NULL, col.use = NULL,
                 return(p)
         }
 }
+
 
 LabelPoint <- function(plot, genes, exp.mat, adj.x.t = 0, adj.y.t = 0, adj.x.s = 0, 
                        adj.y.s = 0, text.size = 2.5, segment.size = 0.1) {

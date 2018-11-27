@@ -25,7 +25,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # cells, we do no additional filtering here
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
 #sample_n = which(df_samples$tests %in% c("test1", "test2", "test3","test4"))
-sample_n = which(df_samples$tests %in% c("test2","test3","test4"))
+sample_n = which(df_samples$tests %in% paste0("test",1:4))
 table(df_samples$tests)
 df_samples[sample_n,] %>% kable() %>% kable_styling()
 samples <- df_samples$samples[sample_n]
@@ -33,7 +33,7 @@ projects <- df_samples$projects[sample_n]
 conditions <- df_samples$conditions[sample_n]
 tests <- df_samples$tests[sample_n]
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "./data/sce_list_5_20181107.Rda"))
+(load(file = "./data/sce_list_20181121.Rda"))
 names(sce_list)
 MCL_Seurat <- lapply(sce_list, as.seurat) %>%
         lapply(NormalizeData) %>%
@@ -54,8 +54,8 @@ MCL <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), MCL_Seurat)
 MCL@var.genes = genes.use
 remove(sce_list,MCL_Seurat);GC()
 
-MCL@meta.data$orig.ident <- gsub("Pt-MD", "MD", MCL@meta.data$orig.ident)
-MCL = SetAllIdent(MCL, id = "orig.ident")
+#MCL@meta.data$orig.ident <- gsub("Pt-MD", "MD", MCL@meta.data$orig.ident)
+#MCL = SetAllIdent(MCL, id = "orig.ident")
 #======1.4 mito, QC, filteration =========================
 mito.genes <- grep(pattern = "^MT-", x = rownames(x = MCL@data), value = TRUE)
 percent.mito <- Matrix::colSums(MCL@raw.data[mito.genes, ])/Matrix::colSums(MCL@raw.data)
@@ -83,7 +83,10 @@ head(x = MCL@meta.data)
 #======1.5 1st run of pca-tsne  =========================
 MCL %<>% NormalizeData %>% ScaleData %>%
          RunPCA(pc.genes = MCL@var.genes, pcs.compute = 50, do.print = F)
-system.time(MCL %<>% RunHarmony("orig.ident", theta = 2, plot_convergence = TRUE,
+#MCL %<>% RunICA(ic.genes = MCL@var.genes, ics.compute = 50, print.results = F)
+DimElbowPlot(MCL, reduction.type = "pca", dims.plot = 50)
+system.time(MCL %<>% RunHarmony("orig.ident", 
+                                theta = 2, plot_convergence = TRUE,
                                 nclust = 50, max.iter.cluster = 100))
 
 MCL@ident %<>% factor(levels = samples)
@@ -111,7 +114,7 @@ jpeg(paste0(path,"/S1_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,re
 plot_grid(p3, p4)
 dev.off()
 
-g_Harmony2 <- TSNEPlot.1(object = MCL, do.label = F, group.by = "ident", 
+g_Harmony <- TSNEPlot.1(object = MCL, do.label = F, group.by = "ident", 
                  do.return = TRUE, no.legend = T, 
                  colors.use = ExtractMetaColor(MCL),
                  pt.size = 1,label.size = 6 )+
@@ -119,12 +122,12 @@ g_Harmony2 <- TSNEPlot.1(object = MCL, do.label = F, group.by = "ident",
         theme(text = element_text(size=15),							
               plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
 
-jpeg(paste0(path,"/TSNEplot-Harmony2.jpeg"), units="in", width=10, height=7,res=600)
-do.call(plot_grid, list(g_Harmony1,g_Harmony2))
+jpeg(paste0(path,"/TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=600)
+print(g_Harmony)
 dev.off()
 
-save(MCL, file = "./data/MCL_Harmony_20181118.Rda")
+save(MCL, file = "./data/MCL_Harmony_20181121.Rda")
 
-jpeg(paste0(path,"/TSNEplot-alignment~L.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"/TSNEplot-alignment~.jpeg"), units="in", width=10, height=7,res=600)
 do.call(plot_grid, list(g_CCA,g_MNN,g_Harmony))
 dev.off()

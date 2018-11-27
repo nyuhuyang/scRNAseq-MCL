@@ -24,10 +24,10 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # 0.1. Setting up the data
 # 0.1.1 Reading in a sparse matrix
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-sample_n = which(df_samples$tests %in% c("test2", "test3","test4"))
+sample_n = which(df_samples$tests %in% paste0("test",1:4))
 table(df_samples$tests)
 df_samples[sample_n,]
-samples <- df_samples$samples[sample_n]
+samples <- unique(df_samples$samples[sample_n])
 projects <- df_samples$projects[sample_n]
 conditions <- df_samples$conditions[sample_n]
 
@@ -222,7 +222,7 @@ for(i in 1:length(sce_list)){
         
 }
 
-save(sce_list, file = "./data/sce_list_5_20181107.Rda")
+save(sce_list, file = "./data/sce_list_20181121.Rda")
 ####################
 #--------------------
 ## ----sfplot, fig.cap="Size factors for all cells in the PBMC dataset, plotted against the library size."----

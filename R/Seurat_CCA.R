@@ -75,6 +75,7 @@ MCL@ident = factor(MCL@ident,levels = samples)
 g2 <- VlnPlot(object = MCL, features.plot = c("nGene", "nUMI", "percent.mito"), 
               nCol = 1,point.size.use = 0.2,
               x.lab.rot = T, do.return = T,return.plotlist =T)
+save(g2,file = "./data/MCL_g2.Rda")
 jpeg(paste0(path,"/S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
                     scale_y_log10(limits = c(200,10000)),#+ylim(c(0,1000)),

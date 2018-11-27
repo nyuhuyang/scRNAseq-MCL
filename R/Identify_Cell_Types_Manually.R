@@ -8,7 +8,7 @@ source("../R/SingleR_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 2.1 identify phenotype for each cluster  ==========================================
-(load(file="data/MCL_Harmony_20181118.Rda"))
+(load(file="data/MCL_Harmony_20181121.Rda"))
 markers.to.plot <-  HumanGenes(MCL,c("CD","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2"))
@@ -17,7 +17,7 @@ markers <-  HumanGenes(MCL,c("CD19","MS4A1","SOX11","ITGA4","CD79A","CCND1","CCN
 MCL <- SetAllIdent(object = MCL, id = "singler1sub")
 
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-(samples <- df_samples$samples[c(4:7)])
+(samples <- df_samples$samples[6:9])
 
 cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident == "MD"]
 MD.MCL <- SubsetData(MCL, cells.use = cell.use)
@@ -41,16 +41,53 @@ for(sample in samples){
         dev.off()
     }
 }
+#========= test B cell markers=======
+blueprint_encode_main <- read_csv("../SingleR/output/blueprint_encode_main.csv")
+(samples <- df_samples$samples[6:9])
+(B_markers <- HumanGenes(MCL, blueprint_encode_main$B_cells[1:15]))
+
+for(sample in samples){
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident == sample]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    
+    for(marker in markers){
+        g <- list()
+        g[[1]] <- SingleFeaturePlot.1(object = MD.MCL, threshold=0.1,
+                                      feature = marker,title = "MD")
+        g[[2]] <- SingleFeaturePlot.1(object = subset.MCL, threshold=0.1,
+                                      feature = marker,title = sample)
+        jpeg(paste0(path,"Splited_MD_",sample,"_",marker,".jpeg"), units="in", width=10, height=7,
+             res=600)
+        print(do.call(plot_grid, g))
+        print(paste0(which(markers == marker),":",length(markers)))
+        dev.off()
+    }
+}
 
 # DoHeatmap ================
-MCL <- SetAllIdent(MCL, id="singler1main")
-B_cells_MCL <- SubsetData(MCL, ident.use = c("B_cell","Pre-B_cell_CD34-",
-                                             "Pro-B_cell_CD34+"))
-table(B_cells_MCL@meta.data$singler2main)
+MCL <- SetAllIdent(MCL, id="res.0.6")
+table(MCL@ident)
+TSNEPlot.1(MCL,do.label = T)
+B_cells_MCL <- SubsetData(MCL, ident.use = c(0,2,3,7,8,10,12))
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler2main")
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B-cells","HSC"))
+table(B_cells_MCL@ident)
 
-(samples <- df_samples$samples[4:7])
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","HSC","MCL"))
+table(B_cells_MCL@meta.data$singler1main)
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells"))
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler2sub")
+
+p3 <- TSNEPlot.1(B_cells_MCL, do.return = T, pt.size = 0.5, group.by = "orig.ident",no.legend =T )
+p4 <- TSNEPlot.1(B_cells_MCL, do.label = F, do.return = T, pt.size = 0.5, 
+                 colors.use = ExtractMetaColor(B_cells_MCL), no.legend =T)
+jpeg(paste0(path,"/S1_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
+plot_grid(p3, p4)
+dev.off()
+
+
+(samples <- df_samples$samples[6:9])
 
 for(sample in samples){
     cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% c("MD",sample)]
@@ -69,19 +106,21 @@ for(sample in samples){
 }
 
 # heatmap.2 ================
+markers <-  HumanGenes(B_cells_MCL,c("CD19","MS4A1","CD79A","CD5","CD40","CDK4"))
+(samples <- df_samples$samples[6:9])
 for(sample in samples){
-    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% c("MD",sample)]
+    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% c("DJ",sample)] #
     subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
     subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
     test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, only.pos = T,
                                        test.use = "MAST")
     top <- test_markers %>% group_by(cluster) %>% top_n(50, avg_logFC)
-    y = subset.MCL@scale.data[unique(top$gene),]
+    y = subset.MCL@scale.data[unique(c(markers,top$gene)),]
     ## Column clustering (adjust here distance/linkage methods to what you need!)
     hc <- hclust(as.dist(1-cor(as.matrix(y), method="spearman")), method="complete")
     cc = gsub("_.*","",hc$labels)
-    cc = gsub("Pt-MD","#E31A1C",cc)
-    cc = gsub(sample,"#33A02C",cc)
+    cc = gsub("MD","#B3DE69",cc)
+    cc = gsub(sample,"#195016",cc)
     
     jpeg(paste0(path,"/Heatmap2_MD_",sample,".jpeg"), units="in", width=10, height=7,res=600)
     heatmap.2(as.matrix(y),
@@ -97,7 +136,7 @@ for(sample in samples){
     par(lend = 1)           # square line ends for the color legend
     legend(0, 0.8,       # location of the legend on the heatmap plot
            legend = c("MD", sample), # category labels
-           col = c("#E31A1C", "#33A02C"),  # color key
+           col = c("#B3DE69", "#195016"),  # color key
            lty= 1,             # line style
            lwd = 10            # line width
     )
@@ -118,9 +157,9 @@ for(test in tests){
     
     for(marker in markers){
         g <- list()
-        g[[1]] <- SingleFeaturePlot.1(object = subset.MCL[[1]], 
+        g[[1]] <- SingleFeaturePlot.1(object = subset.MCL[[1]], threshold=0.5,
                                       feature = marker,title = lvl[1])
-        g[[2]] <- SingleFeaturePlot.1(object = subset.MCL[[2]], 
+        g[[2]] <- SingleFeaturePlot.1(object = subset.MCL[[2]],  threshold=0.5,
                                       feature = marker,title = lvl[2])
         jpeg(paste0(path,"_Splited_",test,"_",marker,".jpeg"), units="in", width=10, height=7,
              res=600)
@@ -152,6 +191,7 @@ for(test in tests){
 }
 
 # heatmap.2 ================
+markers <-  HumanGenes(B_cells_MCL,c("CD19","MS4A1","CD79A","CD5","CD40","CDK4"))
 tests <- c("test3","test4")
 for(test in tests){
     sample_n = which(df_samples$tests %in% test)
@@ -162,16 +202,16 @@ for(test in tests){
     subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
     test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, only.pos = T,
                                        test.use = "MAST")
-    top <- test_markers %>% group_by(cluster) %>% top_n(50, avg_logFC)
-    y = subset.MCL@scale.data[unique(top$gene),]
+    top <- test_markers %>% group_by(cluster) %>% top_n(30, avg_logFC)
+    y = subset.MCL@scale.data[unique(c(markers,top$gene)),]
     ## Column clustering (adjust here distance/linkage methods to what you need!)
     hc <- hclust(as.dist(1-cor(as.matrix(y), method="spearman")), method="complete")
     cc = gsub("_.*","",hc$labels)
-    cc = gsub(samples[2],"#33A02C",cc)
-    cc = gsub(samples[1],"#E31A1C",cc)
+    cc = gsub(samples[1],"#B3DE69",cc)
+    cc = gsub(samples[3],"#E31A1C",cc)
+    cc = gsub(samples[2],"#195016",cc)
 
-    
-    jpeg(paste0(path,"/Heatmap2_",samples[1],"_",samples[2],".jpeg"), units="in", width=10, height=7,res=600)
+    jpeg(paste0(path,"/Heatmap2_MD_",samples[2],"_",samples[3],".jpeg"), units="in", width=10, height=7,res=600)
     heatmap.2(as.matrix(y),
               Colv = as.dendrogram(hc), Rowv= FALSE,
               ColSideColors = cc, trace ="none",labCol = FALSE,dendrogram = "column",
@@ -181,11 +221,11 @@ for(test in tests){
               #scale = "row",
               breaks = seq(-3,3,length.out = 101),
               col = bluered,
-              main = paste(samples[1],"vs.",samples[2], "in B cells"))
+              main = paste(samples[1],"vs.",samples[2],"vs.",samples[3], "in B cells"))
     par(lend = 1)           # square line ends for the color legend
     legend(0, 0.8,       # location of the legend on the heatmap plot
-           legend = c(samples[1], samples[2]), # category labels
-           col = c("#E31A1C", "#33A02C"),  # color key
+           legend = c(samples[1], samples[2], samples[3]), # category labels
+           col = c("#B3DE69", "#195016","#E31A1C"),  # color key
            lty= 1,             # line style
            lwd = 10            # line width
     )

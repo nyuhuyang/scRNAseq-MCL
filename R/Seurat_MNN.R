@@ -96,6 +96,7 @@ MCL@ident = factor(MCL@ident,levels = samples)
 g2 <- VlnPlot(object = MCL, features.plot = c("nGene", "nUMI", "percent.mito"), 
               nCol = 1,point.size.use = 0.2,
               x.lab.rot = T, do.return = T,return.plotlist =T)
+
 jpeg(paste0(path,"/S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
                     scale_y_log10(limits = c(200,8000)),#+ylim(c(0,1000)),
@@ -200,7 +201,7 @@ remove(original);GC()
 MCL <- RunPCA(object = MCL, pc.genes = MCL@var.genes, pcs.compute = 100,
               do.print = TRUE, pcs.print = 1:5, genes.print = 5)
 PCAPlot(object = MCL)
-PCElbowPlot(object = MCL, num.pc = 100)
+PCElbowPlot(object = MCL, num.pc = 50)
 PCHeatmap(MCL, pc.use = c(1:3, 25:30), cells.use = 500, do.balanced = TRUE)
 
 #DimElbowPlot.1(object = MCL, reduction.type = "MNN",

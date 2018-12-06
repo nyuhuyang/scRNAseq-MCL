@@ -10,13 +10,14 @@ source("../R/SingleR_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.1 Create Singler Object  ==========================================
-(load(file = "./data/MCL_Harmony_20181121.Rda"))
+(load(file = "./data/MCL_Harmony_23_20181205.Rda"))
+MCL@scale.data = NULL; GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();
 (load(file = 'data/ref_MCL_blue_encode.RData'))
-(load(file = "../SingleR/data/Hpca.RData"))
+
 singler = CreateSinglerObject(MCL@data, annot = NULL, project.name=MCL@project.name,
                               min.genes = 500,technology = "10X", species = "Human", citation = "",
                               ref.list = list(ref),normalize.gene.length = F, variable.genes = "de",
-                              fine.tune = T, do.signatures = F, clusters = NULL)
+                              fine.tune = F, do.signatures = F, clusters = NULL)
 # if singler didn't find all cell labels
 length(singler$singler[[1]]$SingleR.single$labels) == ncol(MCL@data)
 all.cell = MCL@cell.names;length(all.cell)
@@ -26,7 +27,7 @@ MCL
 singler$meta.data$orig.ident = MCL@meta.data$orig.ident # the original identities, if not supplied in 'annot'
 singler$meta.data$xy = MCL@dr$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = MCL@ident # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="./output/singler_MCL_11T_20181121.RData")
+save(singler,file="./output/singler_MCL_11T_20181128.RData")
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 (load(file = "./output/singler_MCL_11T_20181121.RData"))
@@ -61,7 +62,7 @@ MCL <- SetAllIdent(object = MCL, id = "singler2sub")
 #Or by all cell types (showing the top 50 cell types):
 jpeg(paste0(path,"/DrawHeatmap_sub2.jpeg"), units="in", width=10, height=7,
      res=600)
-print(SingleR.DrawHeatmap(singler$singler[[2]]$SingleR.single, top.n = 50,normalize = F))
+print(SingleR.DrawHeatmap(singler_T$singler[[1]]$SingleR.single, top.n = 50,normalize = F))
 dev.off()
 jpeg(paste0(path,"/DrawHeatmap_sub2_N.jpeg"), units="in", width=10, height=7,
      res=600)
@@ -87,7 +88,7 @@ apply(MCL@meta.data[,c("singler1sub","singler1main","singler2sub","singler2main"
       2,function(x) length(unique(x)))
 MCL@meta.data[,c("singler2sub")] %>% table() %>% kable() %>% kable_styling()
 MCL <- AddMetaColor(object = MCL, label= "singler1sub", colors = singler_colors1[1:42])
-MCL <- AddMetaColor(object = MCL, label= "singler2sub", colors = singler_colors2[1:41])
+MCL <- AddMetaColor(object = MCL, label= "singler2sub", colors = singler_colors2[1:35])
 MCL <- SetAllIdent(object = MCL, id = "singler2sub")
 TSNEPlot.1(MCL, colors.use = ExtractMetaColor(MCL),no.legend = F)
 
@@ -96,29 +97,28 @@ write.csv(MCL@meta.data,file = "output/MCL_metadata_20181107.csv")
 ##############################
 # draw tsne plot
 ##############################
-p3 <- TSNEPlot.1(object = MCL, do.label = F, group.by = "ident", 
-                 do.return = TRUE, no.legend = F, 
+p3 <- TSNEPlot.1(object = MCL, do.label = T, group.by = "ident", 
+                 do.return = TRUE, no.legend = T, 
                  colors.use = ExtractMetaColor(MCL),
                  pt.size = 1,label.size = 3,force = 2)+
   ggtitle("Supervised cell type labeling by Blueprint + Encode + MCL")+
   theme(text = element_text(size=10),							
         plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
 
-jpeg(paste0(path,"PlotTsne_legend.jpeg"), units="in", width=10, height=7,
+jpeg(paste0(path,"PlotTsne_sub2.jpeg"), units="in", width=10, height=7,
      res=600)
 print(p3)
 dev.off()
 
-save(MCL,file="./data/MCL_Harmony_20181121.Rda")
+save(MCL,file="./data/MCL_Harmony_20181127.Rda")
 ##############################
 # subset Seurat
 ###############################
 table(MCL@meta.data$orig.ident)
-MCL@meta.data$orig.ident = gsub("Pt-MD","MD",MCL@meta.data$orig.ident)
 table(MCL@ident)
 
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-tests <- paste0("test",2)
+tests <- paste0("test",c(1,3:4))
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         samples <- unique(df_samples$samples[sample_n])
@@ -128,7 +128,7 @@ for(test in tests){
         subset.MCL <- SubsetData(MCL, cells.use = cell.use)
         
         g <- SplitTSNEPlot(subset.MCL,group.by = "ident",split.by = "orig.ident",
-                           select.plots = c(1,5,4,3,2),
+                           #select.plots = c(1,5,4,3,2),
                            no.legend = T,do.label =F,label.size=3,
                            return.plots =T, label.repel = T,force=2)
         jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,

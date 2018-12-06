@@ -4,6 +4,8 @@
 # 
 # ######################################################################
 library(DropletUtils)
+library(dplyr)
+library(kableExtra)
 library(scater)
 #install_github("MarioniLab/scran") #BiocManager::install("BiocNeighbors", version = "devel")
 library(scran)
@@ -23,13 +25,14 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # ######################################################################
 # 0.1. Setting up the data
 # 0.1.1 Reading in a sparse matrix
-df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-sample_n = which(df_samples$tests %in% paste0("test",1:4))
-table(df_samples$tests)
-df_samples[sample_n,]
-samples <- unique(df_samples$samples[sample_n])
-projects <- df_samples$projects[sample_n]
-conditions <- df_samples$conditions[sample_n]
+df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
+colnames(df_samples) <- colnames(df_samples) %>% tolower
+sample_n = which(df_samples$tests %in% c("test",paste0("test",1:6)))
+df_samples[sample_n,] %>% kable() %>% kable_styling()
+table(df_samples$tests);nrow(df_samples)
+samples <- df_samples$sample[sample_n]
+projects <- df_samples$project[sample_n]
+tests <- df_samples$tests[sample_n]
 
 sce_list <- list()
 for(i in 1:length(samples)){
@@ -207,22 +210,23 @@ for(i in 1:length(samples)){
 # Use natural Log transform to fit Seurat
 
 for(i in 1:length(sce_list)){
-        logcounts(sce_list[[i]]) <- as(log(assay(sce_list[[i]], "counts")+1),"dgCMatrix")
+        logcounts(sce_list[[i]]) <- as(log1p(assay(sce_list[[i]], "counts")),"dgCMatrix")
 }
 # 0.6 Normalizing for cell-specific biases
 clusters <- list()
 for(i in 1:length(sce_list)){
-        clusters[[i]] <- quickCluster(sce_list[[i]], method="igraph", min.mean=0.1,
+        clusters[[i]] <- quickCluster(sce_list[[i]], method="igraph", min.size=50,
                                       assay.type = "logcounts",
                                  irlba.args=list(maxit=1000)) # for convergence.
         print(table(clusters[[i]]))
         sce_list[[i]] <- computeSumFactors(sce_list[[i]], min.mean=0.1, 
                                            cluster=clusters[[i]])
         print(summary(sizeFactors(sce_list[[i]])))
+        print(paste0(i,":",length(sce_list)," done"))
         
 }
 
-save(sce_list, file = "./data/sce_list_20181121.Rda")
+save(sce_list, file = "./data/sce_23_20181205.Rda")
 ####################
 #--------------------
 ## ----sfplot, fig.cap="Size factors for all cells in the PBMC dataset, plotted against the library size."----

@@ -91,7 +91,8 @@ RemoveDup <- function(mat){
 }
 X181120_MCL_WTS <- RemoveDup(X181120_MCL_WTS)
 dim(X181120_MCL_WTS)
-
+head(X181120_MCL_WTS)
+X181120_MCL_WTS <- X181120_MCL_WTS[,-c(1:4)]
 testMMM(X181120_MCL_WTS)
 
 # merge MCL and Blueprint_encode
@@ -111,7 +112,8 @@ testMMM(MCL_blue_encode)
 
 
 jpeg(paste0(path,"boxplot_MCL_blue_encode.jpeg"), units="in", width=10, height=7,res=600)
-boxplot(MCL_blue_encode) #slow
+boxplot(ref$data) #slow
+title(main = "boxplot for Blueprint + Encode + MCL")
 dev.off()
 
 # Create Singler Reference

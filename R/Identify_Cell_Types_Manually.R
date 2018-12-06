@@ -8,19 +8,32 @@ source("../R/SingleR_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 2.1 identify phenotype for each cluster  ==========================================
-(load(file="data/MCL_Harmony_20181121.Rda"))
+(load(file="data/MCL_Harmony_12_20181121.Rda"))
 markers.to.plot <-  HumanGenes(MCL,c("CD","LYZ","S100A9","CST3","CD68","FCER1A","FCGR3A","MS4A7","VMO1",
                      "CD2","CD3G","CD3D","CD8A","CD19","MS4A1","CD79A","CD40","CD22",
                      "FCER2"))
-
 markers <-  HumanGenes(MCL,c("CD19","MS4A1","SOX11","ITGA4","CD79A","CCND1","CCND2","CD5","CD40"))
-MCL <- SetAllIdent(object = MCL, id = "singler1sub")
 
-df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-(samples <- df_samples$samples[6:9])
+# SingleFeaturePlot.1 for Normal / MCL ================
+markers <-  HumanGenes(MCL,c("CCND1","CCND2","CD19","CD3G","CDK4","CDK6","PCNA","CDK1"))
+df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
+colnames(df_samples) <- colnames(df_samples) %>% tolower
+tests <- paste0("test",c(3:4))
+control = "MD"
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    samples <- unique(df_samples$sample[sample_n])
+    print(paste(control,samples))
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% c(control,samples)]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    SplitSingleFeaturePlot(subset.MCL, 
+                           #select.plots = c(1,5,4,3,2),
+                           group.by = "ident",split.by = "orig.ident",
+                           no.legend = T,label.size=3,do.print =T,markers = markers,
+                           threshold = 0.1)
+}
 
-cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident == "MD"]
-MD.MCL <- SubsetData(MCL, cells.use = cell.use)
 
 #  MD compare all others pairwisely in tsne
 for(sample in samples){
@@ -41,7 +54,7 @@ for(sample in samples){
         dev.off()
     }
 }
-#========= test B cell markers=======
+#========= test markers for Normal / MCL ================
 blueprint_encode_main <- read_csv("../SingleR/output/blueprint_encode_main.csv")
 (samples <- df_samples$samples[6:9])
 (B_markers <- HumanGenes(MCL, blueprint_encode_main$B_cells[1:15]))
@@ -65,85 +78,34 @@ for(sample in samples){
     }
 }
 
-# DoHeatmap ================
-MCL <- SetAllIdent(MCL, id="res.0.6")
-table(MCL@ident)
-TSNEPlot.1(MCL,do.label = T)
-B_cells_MCL <- SubsetData(MCL, ident.use = c(0,2,3,7,8,10,12))
-B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler2main")
-table(B_cells_MCL@ident)
-
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","HSC","MCL"))
-table(B_cells_MCL@meta.data$singler1main)
-B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells"))
-B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler2sub")
-
-p3 <- TSNEPlot.1(B_cells_MCL, do.return = T, pt.size = 0.5, group.by = "orig.ident",no.legend =T )
-p4 <- TSNEPlot.1(B_cells_MCL, do.label = F, do.return = T, pt.size = 0.5, 
-                 colors.use = ExtractMetaColor(B_cells_MCL), no.legend =T)
-jpeg(paste0(path,"/S1_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
-plot_grid(p3, p4)
-dev.off()
-
-
+# Identify MCL marker genes===================
 (samples <- df_samples$samples[6:9])
-
-for(sample in samples){
-    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% c("MD",sample)]
-    subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
+MCL_markers_list <- list()
+for(i in 1:length(samples)){
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% c("MD",samples[i])]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
     subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
-    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, only.pos = T,
-                                       test.use = "MAST")
+    MCL_markers_list[[i]] <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.2, only.pos = T,
+                                                test.use = "MAST")
+}
+MCL_markers_list <- lapply(MCL_markers_list, function(df) {df[!(df$cluster == "MD"),]})
+MCL_markers <- do.call(rbind.data.frame , MCL_markers_list)
+MCL_markers <- MCL_markers[,-(1:2)]
+MCL_markers <- MCL_markers[order(MCL_markers$avg_logFC,decreasing = T),]
+write.csv(MCL_markers, paste0(path,"MCL_markers.csv"))
 
-    g <- DoHeatmap.1(subset.MCL,test_markers,Top_n = 50,
-                     ident.use = paste("MD vs.",sample, "in B cells"),
-                     group.label.rot = F,cex.row = 6,remove.key =T)
-    jpeg(paste0(path,"_heatmap_MD_",sample,".jpeg"), units="in", width=10, height=7,
-         res=600)
-    print(g)
+#==================================================================
+
+for(i in 1:length(test.markers)) {
+    jpeg(paste0(path,test.markers[i],".jpeg"), units="in", width=10, height=7,
+        res=600)
+    p1 <- SingleFeaturePlot.1(object = MCL, feature = test.markers[i])
+    print(p1)
+    print(paste0(i,":",length(test.markers)))
     dev.off()
 }
 
-# heatmap.2 ================
-markers <-  HumanGenes(B_cells_MCL,c("CD19","MS4A1","CD79A","CD5","CD40","CDK4"))
-(samples <- df_samples$samples[6:9])
-for(sample in samples){
-    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% c("DJ",sample)] #
-    subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
-    subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
-    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, only.pos = T,
-                                       test.use = "MAST")
-    top <- test_markers %>% group_by(cluster) %>% top_n(50, avg_logFC)
-    y = subset.MCL@scale.data[unique(c(markers,top$gene)),]
-    ## Column clustering (adjust here distance/linkage methods to what you need!)
-    hc <- hclust(as.dist(1-cor(as.matrix(y), method="spearman")), method="complete")
-    cc = gsub("_.*","",hc$labels)
-    cc = gsub("MD","#B3DE69",cc)
-    cc = gsub(sample,"#195016",cc)
-    
-    jpeg(paste0(path,"/Heatmap2_MD_",sample,".jpeg"), units="in", width=10, height=7,res=600)
-    heatmap.2(as.matrix(y),
-              Colv = as.dendrogram(hc), Rowv= FALSE,
-              ColSideColors = cc, trace ="none",labCol = FALSE,dendrogram = "column",#scale="row",
-              key.xlab = "scale log nUMI",
-              cexRow = 0.5,
-              margins = c(2,5),
-              #scale = "row",
-              breaks = seq(-3,3,length.out = 101),
-              col = bluered,
-              main = paste("MD vs.",sample, "in B cells"))
-    par(lend = 1)           # square line ends for the color legend
-    legend(0, 0.8,       # location of the legend on the heatmap plot
-           legend = c("MD", sample), # category labels
-           col = c("#B3DE69", "#195016"),  # color key
-           lty= 1,             # line style
-           lwd = 10            # line width
-    )
-    dev.off()
-}
-
-# 2. Compare Pt 17-C7 with C2, Compare Pt 11-C14 with C1 in tsne
+# 2. SingleFeaturePlot.1 for Normal / MCL.1 / MCL.2 ================
 tests <- c("test3","test4")
 
 for(test in tests){
@@ -169,80 +131,306 @@ for(test in tests){
     }
 }
 
-# heat map of the top 50 genes that are differentially regulated in MCL cells in Pt17, C2 vs C14, and Pt 11, C1 vs C14.
+#######################
+# FACS
+#######################
+# Compare FACS data using GenePlot =======
+df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
+sample_n = which(df_samples$tests %in% paste0("test",2:4))
+table(df_samples$tests)
+df_samples[sample_n,] %>% kable() %>% kable_styling()
 
+tests <- paste0("test",2:4)
 for(test in tests){
     sample_n = which(df_samples$tests %in% test)
-    df_samples[sample_n,] %>% kable() %>% kable_styling()
     samples <- df_samples$samples[sample_n]
-    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% samples]
-    subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
-    subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
-    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, 
-                       test.use = "MAST")
-    write.csv(test_markers, paste0(path,test,"_DE_genes.csv"))
-    g <- DoHeatmap.1(subset.MCL,test_markers,Top_n = 50,
-                     ident.use = paste(paste(samples,collapse=" vs. "), "in B cells"),
-              group.label.rot = T,cex.row = 6,remove.key =T)
-    jpeg(paste0(path,"_heatmap_",test,".jpeg"), units="in", width=10, height=7,
+    print(samples)
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    
+    cells_use_list <- split(row.names(subset.MCL@meta.data), subset.MCL@meta.data[,"orig.ident"])
+    G1 <- lapply(cells_use_list, function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells_use_list[[2]])
+        GenePlot.1(single.MCL, gene1 = "CD5", gene2 = "CD19",use.raw = F, 
+                   title = unique(single.MCL@meta.data$orig.ident))
+    })
+    G2 <- lapply(cells_use_list, function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells_use)
+        GenePlot.1(single.MCL, gene1 = "CD3E", gene2 = "CD19",use.raw = F, 
+                   title = unique(single.MCL@meta.data$orig.ident))
+    })
+    
+    jpeg(paste0(path,test,"_CD5_CD3E_CD19.jpeg"), units="in", width=8, height=7,
          res=600)
-    print(g)
+    #print(plot_grid(G1[[1]],G1[[5]],G1[[4]],G1[[3]],G1[[2]],
+    #          G2[[1]],G2[[5]],G2[[4]],G2[[3]],G2[[2]],nrow = 2))
+    print(plot_grid(G1[[1]],G1[[2]],G2[[1]],G2[[2]],nrow = 2))
     dev.off()
 }
+#  count cells in geneplot=============================
+CountCells <- function(object = subset.MCL, gene1="CD5", gene2 = "CD19", split.by ="orig.ident"){
+    cells_use_list <- split(row.names(subset.MCL@meta.data), subset.MCL@meta.data[,split.by])
+    cell_counts <- lapply(cells_use_list, function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells_use)
+        c(length(which(single.MCL@data[gene1,] == 0 & single.MCL@data[gene2,] == 0)),
+          length(which(single.MCL@data[gene1,] > 0 & single.MCL@data[gene2,] == 0)),
+          length(which(single.MCL@data[gene1,] == 0 & single.MCL@data[gene2,] > 0)),
+          length(which(single.MCL@data[gene1,] > 0 & single.MCL@data[gene2,] > 0)))/
+            length(single.MCL@cell.names)*100
+    })
+    df_cell_counts <- list2df(cell_counts)
+    rownames(df_cell_counts) <- c("l.l","h.l","l.h","h.h")
+    return(df_cell_counts)
+}
 
-# heatmap.2 ================
-markers <-  HumanGenes(B_cells_MCL,c("CD19","MS4A1","CD79A","CD5","CD40","CDK4"))
-tests <- c("test3","test4")
+tests <- paste0("test",2:4)
 for(test in tests){
     sample_n = which(df_samples$tests %in% test)
-    df_samples[sample_n,] %>% kable() %>% kable_styling()
     samples <- df_samples$samples[sample_n]
-    cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in% samples]
-    subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
-    subset.MCL <- SetAllIdent(subset.MCL,id = "orig.ident")
-    test_markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.1, only.pos = T,
-                                       test.use = "MAST")
-    top <- test_markers %>% group_by(cluster) %>% top_n(30, avg_logFC)
-    y = subset.MCL@scale.data[unique(c(markers,top$gene)),]
-    ## Column clustering (adjust here distance/linkage methods to what you need!)
-    hc <- hclust(as.dist(1-cor(as.matrix(y), method="spearman")), method="complete")
-    cc = gsub("_.*","",hc$labels)
-    cc = gsub(samples[1],"#B3DE69",cc)
-    cc = gsub(samples[3],"#E31A1C",cc)
-    cc = gsub(samples[2],"#195016",cc)
+    print(samples)
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    CD5_CD19 <- CountCells(subset.MCL, "CD5","CD19")
+    CD3E_CD19 <- CountCells(subset.MCL, "CD3E","CD19")
+    df <- merge(CD5_CD19,CD3E_CD19, by="row.names",all.x=TRUE)
+    write.csv(df, paste0(path,test,"_countcell.csv"),row.names = F)
+}
 
-    jpeg(paste0(path,"/Heatmap2_MD_",samples[2],"_",samples[3],".jpeg"), units="in", width=10, height=7,res=600)
-    heatmap.2(as.matrix(y),
-              Colv = as.dendrogram(hc), Rowv= FALSE,
-              ColSideColors = cc, trace ="none",labCol = FALSE,dendrogram = "column",
-              key.xlab = "scale log nUMI",
-              cexRow = 0.5,
-              margins = c(2,5),
-              #scale = "row",
-              breaks = seq(-3,3,length.out = 101),
-              col = bluered,
-              main = paste(samples[1],"vs.",samples[2],"vs.",samples[3], "in B cells"))
-    par(lend = 1)           # square line ends for the color legend
-    legend(0, 0.8,       # location of the legend on the heatmap plot
-           legend = c(samples[1], samples[2], samples[3]), # category labels
-           col = c("#B3DE69", "#195016","#E31A1C"),  # color key
-           lty= 1,             # line style
-           lwd = 10            # line width
-    )
+#  demonstrate cell cycle in geneplot=============================
+tests <- paste0("test",3:4)
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    samples <- df_samples$samples[sample_n]
+    print(samples)
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    
+    cells_use_list <- split(row.names(subset.MCL@meta.data), subset.MCL@meta.data[,"orig.ident"])
+    G1 <- lapply(cells_use_list, function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells_use)
+        GenePlot.1(single.MCL, gene1 = "G2M.Score", gene2 = "S.Score",use.raw = F, 
+                   title = unique(single.MCL@meta.data$orig.ident))+
+            xlim(0, 1.25)+ylim(0, 0.8)
+    })
+    jpeg(paste0(path,test,"_cellcyle_geneplot.jpeg"), units="in", width=8, height=7,
+         res=600)
+    #print(plot_grid(G1[[1]],G1[[5]],G1[[4]],G1[[3]],G1[[2]]))
+    print(do.call(plot_grid,G1))
+    dev.off()
+}
+#######################
+# geom_density
+#######################
+markers <-  HumanGenes(MCL,c("CCND1","CD5","CD19","CDK4","MS4A1","SOX11"))
+MCL <- B_cells_MCL
+tests <- paste0("test",c(1,4))
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    samples <- unique(df_samples$samples[sample_n])
+    print(samples)
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    
+    g <- split(rownames(subset.MCL@meta.data), subset.MCL@meta.data[,"orig.ident"]) %>% lapply(function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells.use = cells_use)
+        sample <- unique(single.MCL@meta.data$orig.ident)
+        data.use <- single.MCL@data[markers,] %>% as.matrix %>% t %>% as.data.frame %>%
+            gather(key = markers, value = ave.expr)
+        ggplot(data.use, aes(x = ave.expr, color = markers)) + 
+            geom_density(size = 1) +
+            scale_y_sqrt() + ylim(0, 1)+
+            xlab("Average expression (log nUMI)")+
+            ggtitle(sample)+
+            theme(text = element_text(size=15),
+                  #legend.position="none", 
+                  legend.position=c(0.3,0.85) ,
+                  plot.title = element_text(hjust = 0.5,size = 15, face = "bold"))
+    })
+    jpeg(paste0(path,"density_",test,".jpeg"), units="in", width=10, height=7,res=600)
+    print(do.call(plot_grid,c(g,nrow = 1))+ #   plot_grid(g[[1]],g[[5]],g[[4]],g[[3]],g[[2]])
+              ggtitle("Density plot for typical markers in MCL B cells")+
+              theme(text = element_text(size=15),							
+                    plot.title = element_text(hjust = 0.5,size = 15, face = "bold")))
     dev.off()
 }
 
-#==================================================================
+#======== compare threshold ===============
+sample = "Pt-1475"
+marker = "MS4A1"
+thresholds = c(0.01,0.1,0.5,1,2,3,4,5)
+cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident == sample]
+subset.MCL <- SubsetData(MCL, cells.use = cell.use)
 
-for(i in 1:length(test.markers)) {
-    jpeg(paste0(path,test.markers[i],".jpeg"), units="in", width=10, height=7,
-        res=600)
-    p1 <- SingleFeaturePlot.1(object = MCL, feature = test.markers[i])
-    print(p1)
-    print(paste0(i,":",length(test.markers)))
+for(threshold in thresholds){
+    g <- list()
+    g[[1]] <- SingleFeaturePlot.1(object = MD.MCL, threshold=threshold,
+                                  feature = marker,title = "MD")
+    g[[2]] <- SingleFeaturePlot.1(object = subset.MCL, threshold=threshold,
+                                  feature = marker,title = sample)
+    jpeg(paste0(path,"Splited_MD_",sample,"_",marker,"_",threshold,".jpeg"), units="in", width=10, height=7,
+         res=600)
+    print(do.call(plot_grid, g)+
+              ggtitle(paste("threshold =",threshold))+
+              theme(text = element_text(size=20),							
+                    plot.title = element_text(hjust = 0.5,size = 15, face = "bold")))
+    print(paste0(which(threshold == thresholds),":",length(thresholds)))
     dev.off()
 }
 
+
+
+#######################
+# FACS
+#######################
+# Compare FACS data using GenePlot =======
+df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
+sample_n = which(df_samples$tests %in% paste0("test",2:4))
+table(df_samples$tests)
+df_samples[sample_n,] %>% kable() %>% kable_styling()
+
+tests <- paste0("test",2:4)
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    samples <- df_samples$samples[sample_n]
+    print(samples)
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    
+    cells_use_list <- split(row.names(subset.MCL@meta.data), subset.MCL@meta.data[,"orig.ident"])
+    G1 <- lapply(cells_use_list, function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells_use_list[[2]])
+        GenePlot.1(single.MCL, gene1 = "CD5", gene2 = "CD19",use.raw = F, 
+                   title = unique(single.MCL@meta.data$orig.ident))
+    })
+    G2 <- lapply(cells_use_list, function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells_use)
+        GenePlot.1(single.MCL, gene1 = "CD3E", gene2 = "CD19",use.raw = F, 
+                   title = unique(single.MCL@meta.data$orig.ident))
+    })
+    
+    jpeg(paste0(path,test,"_CD5_CD3E_CD19.jpeg"), units="in", width=8, height=7,
+         res=600)
+    #print(plot_grid(G1[[1]],G1[[5]],G1[[4]],G1[[3]],G1[[2]],
+    #          G2[[1]],G2[[5]],G2[[4]],G2[[3]],G2[[2]],nrow = 2))
+    print(plot_grid(G1[[1]],G1[[2]],G2[[1]],G2[[2]],nrow = 2))
+    dev.off()
+}
+#  count cells in geneplot=============================
+CountCells <- function(object = subset.MCL, gene1="CD5", gene2 = "CD19", split.by ="orig.ident"){
+    cells_use_list <- split(row.names(subset.MCL@meta.data), subset.MCL@meta.data[,split.by])
+    cell_counts <- lapply(cells_use_list, function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells_use)
+        c(length(which(single.MCL@data[gene1,] == 0 & single.MCL@data[gene2,] == 0)),
+          length(which(single.MCL@data[gene1,] > 0 & single.MCL@data[gene2,] == 0)),
+          length(which(single.MCL@data[gene1,] == 0 & single.MCL@data[gene2,] > 0)),
+          length(which(single.MCL@data[gene1,] > 0 & single.MCL@data[gene2,] > 0)))/
+            length(single.MCL@cell.names)*100
+    })
+    df_cell_counts <- list2df(cell_counts)
+    rownames(df_cell_counts) <- c("l.l","h.l","l.h","h.h")
+    return(df_cell_counts)
+}
+
+tests <- paste0("test",2:4)
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    samples <- df_samples$samples[sample_n]
+    print(samples)
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    CD5_CD19 <- CountCells(subset.MCL, "CD5","CD19")
+    CD3E_CD19 <- CountCells(subset.MCL, "CD3E","CD19")
+    df <- merge(CD5_CD19,CD3E_CD19, by="row.names",all.x=TRUE)
+    write.csv(df, paste0(path,test,"_countcell.csv"),row.names = F)
+}
+
+#  demonstrate cell cycle in geneplot=============================
+tests <- paste0("test",3:4)
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    samples <- df_samples$samples[sample_n]
+    print(samples)
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    
+    cells_use_list <- split(row.names(subset.MCL@meta.data), subset.MCL@meta.data[,"orig.ident"])
+    G1 <- lapply(cells_use_list, function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells_use)
+        GenePlot.1(single.MCL, gene1 = "G2M.Score", gene2 = "S.Score",use.raw = F, 
+                   title = unique(single.MCL@meta.data$orig.ident))+
+            xlim(0, 1.25)+ylim(0, 0.8)
+    })
+    jpeg(paste0(path,test,"_cellcyle_geneplot.jpeg"), units="in", width=8, height=7,
+         res=600)
+    #print(plot_grid(G1[[1]],G1[[5]],G1[[4]],G1[[3]],G1[[2]]))
+    print(do.call(plot_grid,G1))
+    dev.off()
+}
+#######################
+# geom_density
+#######################
+markers <-  HumanGenes(MCL,c("CCND1","CD5","CD19","CDK4","MS4A1","SOX11"))
+tests <- paste0("test",c(1,4))
+for(test in tests){
+    sample_n = which(df_samples$tests %in% test)
+    samples <- unique(df_samples$samples[sample_n])
+    print(samples)
+    
+    cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+    subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+    
+    g <- split(rownames(subset.MCL@meta.data), subset.MCL@meta.data[,"orig.ident"]) %>% lapply(function(cells_use) {
+        single.MCL <- SubsetData(subset.MCL, cells.use = cells_use)
+        sample <- unique(single.MCL@meta.data$orig.ident)
+        data.use <- single.MCL@data[markers,] %>% as.matrix %>% t %>% as.data.frame %>%
+            gather(key = markers, value = ave.expr)
+        ggplot(data.use, aes(x = ave.expr, color = markers)) + 
+            geom_density(size = 1) +
+            scale_y_sqrt() + ylim(0, 1)+
+            xlab("Average expression (log nUMI)")+
+            ggtitle(sample)+
+            theme(text = element_text(size=15),
+                  #legend.position="none", 
+                  legend.position=c(0.3,0.85) ,
+                  plot.title = element_text(hjust = 0.5,size = 15, face = "bold"))
+    })
+    jpeg(paste0(path,"density_",test,".jpeg"), units="in", width=10, height=7,res=600)
+    print(do.call(plot_grid,c(g,nrow = 1))+ #   plot_grid(g[[1]],g[[5]],g[[4]],g[[3]],g[[2]])
+              ggtitle("Density plot for typical markers in MCL B cells")+
+              theme(text = element_text(size=15),							
+                    plot.title = element_text(hjust = 0.5,size = 15, face = "bold")))
+    dev.off()
+}
+
+#======== compare threshold ===============
+sample = "Pt-1475"
+marker = "MS4A1"
+thresholds = c(0.01,0.1,0.5,1,2,3,4,5)
+cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident == sample]
+subset.MCL <- SubsetData(MCL, cells.use = cell.use)
+
+for(threshold in thresholds){
+    g <- list()
+    g[[1]] <- SingleFeaturePlot.1(object = MD.MCL, threshold=threshold,
+                                  feature = marker,title = "MD")
+    g[[2]] <- SingleFeaturePlot.1(object = subset.MCL, threshold=threshold,
+                                  feature = marker,title = sample)
+    jpeg(paste0(path,"Splited_MD_",sample,"_",marker,"_",threshold,".jpeg"), units="in", width=10, height=7,
+         res=600)
+    print(do.call(plot_grid, g)+
+              ggtitle(paste("threshold =",threshold))+
+              theme(text = element_text(size=20),							
+                    plot.title = element_text(hjust = 0.5,size = 15, face = "bold")))
+    print(paste0(which(threshold == thresholds),":",length(thresholds)))
+    dev.off()
+}
 #============Selina's 10/31 email=====
 
 markers <-  HumanGenes(MCL,c("CD19","MS4A1","ITGA4","CD79A","CCND1","CCND2","CD5","SOX11"))

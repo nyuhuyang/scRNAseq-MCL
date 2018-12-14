@@ -16,14 +16,18 @@ markers <-  HumanGenes(MCL,c("CD19","MS4A1","SOX11","ITGA4","CD79A","CCND1","CCN
 
 # SingleFeaturePlot.1 for Normal / MCL ================
 markers <-  HumanGenes(MCL,c("CCND1","CCND2","CD19","CD3G","CDK4","CDK6","PCNA","CDK1"))
+markers <-  HumanGenes(MCL,c("CD28"))
+markers <-  HumanGenes(MCL,c("CCND3","RB1","TP53","ATM","MYC","MTAP","CDKN2a","BCL6",
+                             "EZH2","EZH1","FOXO3","PRMT5"))
+
 df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-tests <- paste0("test",c(3:4))
+tests <- paste0("test",c(3,4))
 control = "MD"
 for(test in tests){
     sample_n = which(df_samples$tests %in% test)
     samples <- unique(df_samples$sample[sample_n])
-    print(paste(control,samples))
+    print(paste(c(control,samples), collapse = " "))
     
     cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% c(control,samples)]
     subset.MCL <- SubsetData(MCL, cells.use = cell.use)
@@ -31,7 +35,7 @@ for(test in tests){
                            #select.plots = c(1,5,4,3,2),
                            group.by = "ident",split.by = "orig.ident",
                            no.legend = T,label.size=3,do.print =T,markers = markers,
-                           threshold = 0.1)
+                           threshold = 0.5)
 }
 
 

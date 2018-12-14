@@ -14,27 +14,41 @@ suppressPackageStartupMessages({
 
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
+if(!dir.exists("./data/")) dir.create("data")
 ########################################################################
 #
 #  1 harmony Alignment 
 # 
 # ######################################################################
 #======1.1 read sample file =========================
-# Load the mouse.eyes dataset
-# setup Seurat objects since both count matrices have already filtered
-# cells, we do no additional filtering here
+# Load the dataset
 df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("test",paste0("test",1:6)))
-df_samples[sample_n,] %>% kable() %>% kable_styling()
+#df_samples[sample_n,] %>% kable() %>% kable_styling()
 table(df_samples$tests);nrow(df_samples)
+sample.id <- df_samples$sample.id[sample_n]
 samples <- df_samples$sample[sample_n]
 projects <- df_samples$project[sample_n]
 tests <- df_samples$tests[sample_n]
 
+# check missing data
 current <- list.files("data")[!grepl(".Rda|RData",list.files("data"))]
-samples[!(samples %in% current)]
+(new_samples <- sample.id[!(samples %in% current)])
 
+# Move files from Download to ./data and rename them
+current.folder <- "/Users/yah2014/Downloads"
+new.folders <- "./data"
+for(new_sample in new_samples){
+    list.of.files <- list.files(paste(current.folder, new_sample,"outs","filtered_gene_bc_matrices","hg19",sep = "/")
+    new.sample <- sub("_","-",new_sample)
+    new.folder <- list.files(paste("./data", new.sample,"outs","filtered_gene_bc_matrices","hg19",sep = "/")
+    if(!dir.exists(new.folder)) dir.create(new.folder, recursive = T)
+    # copy the files to the new folder
+    file.copy(list.of.files, new.folder)
+}
+
+## Load the dataset
 MCL_raw <- list()
 MCL_Seurat <- list()
 for(i in 1:length(samples)){
@@ -226,4 +240,4 @@ jpeg(paste0(path,"/TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=6
 print(g_Harmony)
 dev.off()
 
-save(MCL, file = "./data/MCL_Harmony_23_20181205.Rda")
+save(MCL, file = "./data/MCL_Harmony_12_20181121.Rda")

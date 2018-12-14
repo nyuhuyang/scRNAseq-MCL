@@ -73,7 +73,7 @@ dev.off()
 
 kable(table(singler$singler[[2]]$SingleR.single$labels, singler$meta.data$orig.ident)) %>%
         kable_styling()
-MCL@meta.data$singler1sub %>% table() %>% kable() %>% kable_styling()
+singler$meta.data$orig.ident %>% table() %>% kable() %>% kable_styling()
 MCL@meta.data$singler2sub %>% table() %>% kable() %>% kable_styling()
 
 ##############################

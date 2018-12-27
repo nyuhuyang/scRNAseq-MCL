@@ -177,29 +177,6 @@ MCL <- AddMetaColor(object = MCL, colors = singler_colors)
 # draw tsne plot
 ##############################
 
-#' ExtractMetaColor: extract color code from meta.data
-#' @object seurat object, meta.data slot must have "color"
-#' @label corresponding label
-#' @example 
-# ExtractMetaColor(object = MCL, color_index = "singler1sub.colors")
-ExtractMetaColor <- function(object,color_index = NULL){
-        meta.data =object@meta.data
-        if(is.null(color_index)) {
-                color_index <- grep("colors",colnames(meta.data),value = T)
-        }
-        if(length(color_index) == 0) {
-                return(NULL)
-        } else
-                label = sub("colors","",color_index)
-                label = sub("[.]","",label)
-        meta.data = meta.data[,c(label,color_index)]
-        meta.data$index <- as.numeric(as.factor(meta.data[,1]))
-        df_colors = meta.data[!duplicated(meta.data$index),]
-        df_colors = df_colors[order(df_colors$index),]
-        
-        return(as.character(df_colors[,color_index]))
-}
-
 df_colors <- ExtractMetaColor(object = MCL)
 df_colors
 p3 <- TSNEPlot.1(object = MCL, dim.1 = 1, dim.2 = 2, 

@@ -23,7 +23,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Rename ident
 (load(file="data/MCL_Harmony_12_20181121.Rda"))
 
-# B cell and MCL cells only ================
+# T cells only ================
 MCL <- SetAllIdent(MCL, id="res.0.6")
 table(MCL@ident)
 TSNEPlot.1(MCL,do.label = T)
@@ -31,14 +31,19 @@ T_cells_MCL <- SubsetData(MCL, ident.use = c(1,4,5))
 T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2sub")
 table(T_cells_MCL@ident)
 
-T_cells_MCL <- SubsetData(T_cells_MCL, ident.remove = c("NK_cells"))
-table(T_cells_MCL@meta.data$singler1main)
-T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler1main")
-T_cells_MCL <- SubsetData(T_cells_MCL, ident.use = c("T_cells"))
-T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2sub")
+T_cells_MCL <- SubsetData(T_cells_MCL, 
+                          ident.remove = c("NK_cells","MCL:2PB1","MCL:8PB1",
+                                           "MCL:15PB1","MCL:27PB1","Monocytes",
+                                           "MEP","GMP","B_cells:Memory",
+                                           "B_cells:Naive_B_cells"))
+#table(T_cells_MCL@meta.data$singler1main)
+#T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler1main")
+#T_cells_MCL <- SubsetData(T_cells_MCL, ident.use = c("T_cells"))
+#T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2sub")
 p1 <- TSNEPlot.1(T_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, 
                  colors.use = ExtractMetaColor(T_cells_MCL), no.legend =T)
-T_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.3, dims.use = 1:50,
+T_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.3, 
+                              dims.use = 1:50,
                               save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
                               force.recalc = TRUE, print.output = FALSE)
 p2 <- TSNEPlot.1(T_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, 
@@ -52,6 +57,86 @@ plot_grid(p1, p2)+
               plot.title = element_text(hjust = 0.5,size = 18, face = "bold"))
 dev.off()
 
+T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2main")
+T_cells_MCL <- SubsetData(T_cells_MCL, ident.remove = c("HSC","MCL"))
+p3 <- TSNEPlot.1(T_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, 
+                 colors.use = ExtractMetaColor(T_cells_MCL), no.legend =T)
+jpeg(paste0(path,"/T_cells_TSNEPlot1.jpeg"), units="in", width=10, height=7,res=600)
+plot_grid(p1+ggtitle("Sub cell types")+
+                  theme(text = element_text(size=15),							
+                        plot.title = element_text(hjust = 0.5,size = 18,
+                                                  face = "bold")),
+          p3+ggtitle("main cell types")+
+                  theme(text = element_text(size=15),							
+                        plot.title = element_text(hjust = 0.5,size = 18,
+                                                  face = "bold")))
+dev.off()
+##############################
+# SplitTSNEPlot
+###############################
+table(T_cells_MCL@meta.data$orig.ident)
+table(T_cells_MCL@ident)
+
+df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
+colnames(df_samples) <- colnames(df_samples) %>% tolower
+T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2sub")
+tests <- paste0("test",c(3:4))
+control = "MD"
+for(test in tests){
+        sample_n = which(df_samples$tests %in% test)
+        samples <- unique(df_samples$sample[sample_n])
+        print(paste(c(control,samples), collapse = " "))
+        
+        cell.use <- rownames(T_cells_MCL@meta.data)[T_cells_MCL@meta.data$orig.ident %in%
+                                                            c(control,samples)]
+        subset.T_cells_MCL <- SubsetData(T_cells_MCL, cells.use = cell.use)
+        
+        g <- SplitTSNEPlot(subset.T_cells_MCL,group.by = "ident",split.by = "orig.ident",
+                           #select.plots = c(1,5,4,3,2),
+                           no.legend = T,do.label =F,label.size=3,
+                           return.plots =T, label.repel = T,force=2)
+        jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,
+             res=600)
+        print(do.call(plot_grid, g))
+        dev.off()
+}
+
+# SingleFeaturePlot.1 for Normal / MCL ================
+(markers <-  HumanGenes(MCL,c("CD3D","CD3G","CD8A","CD4", "CD28",
+                             "SELL", "CD69", "HLA-DRB1","HLA-DRA")))
+(markers <-  HumanGenes(MCL,c("PDCD1","CD274","PDCD1LG2")))
+df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
+colnames(df_samples) <- colnames(df_samples) %>% tolower
+tests <- paste0("test",c(3:4))
+control = "MD"
+for(test in tests){
+        sample_n = which(df_samples$tests %in% test)
+        samples <- unique(df_samples$sample[sample_n])
+        print(paste(c(control,samples), collapse = " "))
+        
+        cell.use <- rownames(T_cells_MCL@meta.data)[T_cells_MCL@meta.data$orig.ident %in%
+                                                            c(control,samples)]
+        subset.T_cells_MCL <- SubsetData(T_cells_MCL, cells.use = cell.use)
+        SplitSingleFeaturePlot(subset.T_cells_MCL, 
+                               #select.plots = c(1,5,4,3,2),
+                               group.by = "ident",split.by = "orig.ident",
+                               no.legend = T,label.size=3,do.print =T,
+                               markers = markers, threshold = 0.5)
+}
+# Table with quantification of T cell subsets (absolute # and % of total)
+T_cells_MCL <- SetAllIdent(T_cells_MCL, id = "singler2sub")
+table(T_cells_MCL@ident,
+      T_cells_MCL@meta.data$orig.ident) %>% #prop.table(margin = 2) %>%
+        t %>% kable %>% kable_styling
+T_cells_MCL.copy <- T_cells_MCL
+sub('\\_.*', '', x)
+T_cells_MCL.copy@meta.data$singler2sub = gsub('_effector_memory|_central_memory|_Central_memory','',
+                        T_cells_MCL.copy@meta.data$singler2sub)
+table(T_cells_MCL.copy@meta.data$singler2sub,
+      T_cells_MCL@meta.data$orig.ident) %>% prop.table(margin = 2) %>%
+        t %>% kable %>% kable_styling
+
+table(T_cells_MCL@meta.data$orig.ident) %>% kable %>% kable_styling
 # Doheatmap for Normal / MCL ================
 markers <-  HumanGenes(T_cells_MCL,c("CCND1","CCND2","CCND3","CD19","MS4A1","CD79A","CD5","CD40",
                                      "CDK4","CDK6","PCNA","CDK1","SOX11",

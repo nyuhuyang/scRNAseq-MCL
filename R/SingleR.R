@@ -10,7 +10,7 @@ source("../R/SingleR_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.1 Create Singler Object  ==========================================
-(load(file = "./data/MCL_Harmony_23_20181205.Rda"))
+(load(file="data/MCL_Harmony_12_20181121.Rda"))
 MCL@scale.data = NULL; GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();
 (load(file = 'data/ref_MCL_blue_encode.RData'))
 
@@ -82,23 +82,24 @@ MCL@meta.data$singler2sub %>% table() %>% kable() %>% kable_styling()
 singler_colors <- readxl::read_excel("./doc/singler.colors.xlsx")
 singler_colors1 = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
 singler_colors2 = as.vector(singler_colors$singler.color2[!is.na(singler_colors$singler.color2)])
-singler_colors1[duplicated(singler_colors1)];singler_colors2[duplicated(singler_colors2)]
-length(singler_colors1);length(singler_colors2)
+singler_colors3 = as.vector(singler_colors$singler.color3[!is.na(singler_colors$singler.color3)])
+singler_colors1[duplicated(singler_colors1)]
+singler_colors2[duplicated(singler_colors2)]
+singler_colors3[duplicated(singler_colors3)]
+length(singler_colors1);length(singler_colors2);length(singler_colors3)
 apply(MCL@meta.data[,c("singler1sub","singler1main","singler2sub","singler2main")],
       2,function(x) length(unique(x)))
 MCL@meta.data[,c("singler2sub")] %>% table() %>% kable() %>% kable_styling()
 MCL <- AddMetaColor(object = MCL, label= "singler1sub", colors = singler_colors1[1:42])
-MCL <- AddMetaColor(object = MCL, label= "singler2sub", colors = singler_colors2[1:35])
+MCL <- AddMetaColor(object = MCL, label= "singler2sub", colors = singler_colors2[1:41])
+MCL <- AddMetaColor(object = MCL, label= "singler2main", colors = singler_colors3[1:8])
 MCL <- SetAllIdent(object = MCL, id = "singler2sub")
 TSNEPlot.1(MCL, colors.use = ExtractMetaColor(MCL),no.legend = F)
-
-write.csv(MCL@meta.data,file = "output/MCL_metadata_20181107.csv")
-
 ##############################
 # draw tsne plot
 ##############################
-p3 <- TSNEPlot.1(object = MCL, do.label = T, group.by = "ident", 
-                 do.return = TRUE, no.legend = T, 
+p3 <- TSNEPlot.1(object = MCL, do.label = T, group.by = "ident",
+                 do.return = TRUE, no.legend = T,
                  colors.use = ExtractMetaColor(MCL),
                  pt.size = 1,label.size = 3,force = 2)+
   ggtitle("Supervised cell type labeling by Blueprint + Encode + MCL")+
@@ -110,7 +111,7 @@ jpeg(paste0(path,"PlotTsne_sub2.jpeg"), units="in", width=10, height=7,
 print(p3)
 dev.off()
 
-save(MCL,file="./data/MCL_Harmony_20181127.Rda")
+save(MCL,file="data/MCL_Harmony_12_20181121.Rda")
 ##############################
 # subset Seurat
 ###############################
@@ -118,20 +119,23 @@ table(MCL@meta.data$orig.ident)
 table(MCL@ident)
 
 df_samples <- readxl::read_excel("doc/181002_Single_cell_sample list.xlsx")
-tests <- paste0("test",c(1,3:4))
+MCL <- SetAllIdent(MCL, id="singler2sub")
+tests <- paste0("test",c(2))
+control = "MD"
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
-        samples <- unique(df_samples$samples[sample_n])
-        print(samples)
+        samples <- unique(df_samples$sample[sample_n])
+        print(c(control,samples))
         
-        cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% samples]
+        cell.use <- rownames(MCL@meta.data)[MCL@meta.data$orig.ident %in% 
+                                                      c(control,samples)]
         subset.MCL <- SubsetData(MCL, cells.use = cell.use)
         
         g <- SplitTSNEPlot(subset.MCL,group.by = "ident",split.by = "orig.ident",
-                           #select.plots = c(1,5,4,3,2),
+                           select.plots = c(1,5,4,3,2),
                            no.legend = T,do.label =F,label.size=3,
                            return.plots =T, label.repel = T,force=2)
-        jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,
+        jpeg(paste0(path,test,"_B_TSNEPlot.jpeg"), units="in", width=10, height=7,
              res=600)
         print(do.call(plot_grid, g))
         dev.off()

@@ -57,7 +57,7 @@ dev.off()
 
 df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-# subset Seurat module in SingleR 
+# run "subset Seurat" module in SingleR to generate SplitTSNEPlot
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="orig.ident")
 tests <- paste0("test",c(3:4))
 control = ""
@@ -92,3 +92,84 @@ GSEA_output %>% .[-c(2,3,12)] %>% head(50) %>% kable() %>% kable_styling()
 CombPngs(GSEA.plots, ncol = 3)
 file.rename(paste0(path,list.files(path,pattern=paste0("GSEA.plots_CombPngs"))), 
             paste0(path,"test4_B_1.c6.all.Gsea.1545890081484",".jpeg"))
+
+##################################
+# select T cells only
+##################################
+
+# T cells only ================
+MCL <- SetAllIdent(MCL, id="res.0.6")
+table(MCL@ident)
+TSNEPlot.1(MCL,do.label = T)
+T_cells_MCL <- SubsetData(MCL, ident.use = c(1,4,5))
+T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2sub")
+table(T_cells_MCL@ident)
+
+T_cells_MCL <- SubsetData(T_cells_MCL, 
+                          ident.remove = c("NK_cells","MCL:2PB1","MCL:8PB1",
+                                           "MCL:15PB1","MCL:27PB1","Monocytes",
+                                           "MEP","GMP","B_cells:Memory",
+                                           "B_cells:Naive_B_cells"))
+table(T_cells_MCL@meta.data$singler2main)
+T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2main")
+T_cells_MCL <- SubsetData(T_cells_MCL, ident.remove = c("HSC","MCL"))
+T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2sub")
+
+p1 <- TSNEPlot.1(T_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, 
+                 colors.use = ExtractMetaColor(T_cells_MCL), no.legend =T)
+T_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.3, 
+                              dims.use = 1:50,
+                              save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
+                              force.recalc = TRUE, print.output = FALSE)
+p2 <- TSNEPlot.1(T_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, 
+                 no.legend =T)
+T_cells_MCL <- StashIdent(object = T_cells_MCL, save.name = "4_clusters")
+
+jpeg(paste0(path,"/T_cells_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
+plot_grid(p2, p1)+
+        ggtitle("T cells")+
+        theme(text = element_text(size=15),							
+              plot.title = element_text(hjust = 0.5,size = 18, face = "bold"))
+dev.off()
+
+##############################
+# Split PrepareGSEA
+###############################
+
+df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
+colnames(df_samples) <- colnames(df_samples) %>% tolower
+# run "subset Seurat" module in SingleR to generate SplitTSNEPlot
+T_cells_MCL <- SetAllIdent(T_cells_MCL, id="orig.ident")
+tests <- paste0("test",c(3:4))
+control = ""
+for(test in tests){
+        sample_n = which(df_samples$tests %in% test)
+        samples <- unique(df_samples$sample[sample_n])
+        print(c(control,samples))
+        
+        cell.use <- rownames(T_cells_MCL@meta.data)[T_cells_MCL@meta.data$orig.ident %in% 
+                                                            c(control,samples)]
+        subset.T_cells_MCL <- SubsetData(T_cells_MCL, cells.use = cell.use)
+        print(continuous.label <- unique(subset.T_cells_MCL@meta.data$orig.ident))#[c(1,4,3,2,5)]
+        PrepareGSEA(subset.T_cells_MCL, k <- 1, continuous.label = NULL)
+        file.rename(paste0(path,list.files(path,pattern=paste0("orig.ident",k,"*"))), 
+                    paste0(path,test,"_T_",k,c(".cls",".txt")))
+}
+
+# Run GSEA and generate reports
+(gsea_path <- paste0("~/gsea_home/output/",tolower(format(Sys.Date(), "%b%d")), 
+                     "/test4_T_1.c6.all.Gsea.1545969145544"))
+#(pos.xls.path <- list.files(gsea_path,pattern="gsea_report_for_.*pos.*xls"))
+(pos.xls.path <- list.files(gsea_path,pattern="gsea_report_for_.*xls")[2])
+GSEA_output <- readr::read_delim(paste0(gsea_path,"/",pos.xls.path),"\t", 
+                                 escape_double = FALSE, trim_ws = TRUE)
+GSEA_output %>% .[-c(2,3,12)] %>% head(50) %>% kable() %>% kable_styling()
+
+(GSEA.plots <- sapply(GSEA_output$NAME[1:9], function(name) {
+        paste0("enplot_",name, "_([0-9]+)*\\.png$")}) %>%
+                sapply(function(x) list.files(path = gsea_path, pattern =x)) %>%
+                .[sapply(.,length)>0] %>% #Remove empty elements from list with character(0)
+                paste(gsea_path, ., sep = "/")) 
+CombPngs(GSEA.plots, ncol = 3)
+file.rename(paste0(path,list.files(path,pattern=paste0("GSEA.plots_CombPngs"))), 
+            paste0(path,"test4_T_1.c6.all.Gsea.1545969145544",".jpeg"))

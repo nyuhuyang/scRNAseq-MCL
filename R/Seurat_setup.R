@@ -22,7 +22,7 @@ if(!dir.exists("./data/")) dir.create("data")
 # read sample summary list
 df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c(paste0("test",1:6)))
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:6)))
 df_samples[sample_n,] %>% kable() %>% kable_styling()
 table(df_samples$tests);nrow(df_samples)
 samples <- df_samples$sample[sample_n]
@@ -108,7 +108,7 @@ table(object@var.genes %in% genes.use)
 
 #======1.5 Add Cell-cycle score =========================
 # Read in a list of cell cycle markers, from Tirosh et al, 2015
-cc.genes <- readLines(con = "./data/seurat_resources/regev_lab_cell_cycle_genes.txt")
+cc.genes <- readLines(con = "../R/seurat_resources/regev_lab_cell_cycle_genes.txt")
 s.genes <- HumanGenes(object,cc.genes[1:43])
 g2m.genes <- HumanGenes(object,cc.genes[44:97])
 object <- CellCycleScoring(object = object, s.genes = s.genes, g2m.genes = g2m.genes, 
@@ -123,27 +123,34 @@ tail(x = object@meta.data)
 
 #======1.6 PCA =========================
 object %<>% ScaleData %>%
-        RunPCA(pc.genes = object@var.genes, pcs.compute = 50, do.print = F)
+        RunPCA(pc.genes = object@var.genes, pcs.compute = 100, do.print = F)
 
 jpeg(paste0(path,"/S1_PCElbowPlot.jpeg"), units="in", width=10, height=7,res=600)
-PCElbowPlot(object, num.pc = 50)
+PCElbowPlot(object, num.pc = 100)
 dev.off()
 
 jpeg(paste0(path,"/S1_PCHeatmap.jpeg"), units="in", width=10, height=7,res=600)
-PCHeatmap(object, pc.use = c(1:3, 15:20), cells.use = 500, do.balanced = TRUE)
+PCHeatmap(object, pc.use = c(1:3, 38:40, 48:50), cells.use = 500, do.balanced = TRUE)
 dev.off()
 
 GC()
 
+system.time({
+        object %<>% RunTSNE(reduction.use = "pca", dims.use = 1:50, do.fast = TRUE) %>%
+                FindClusters(reduction.type = "pca", resolution = 0.6, dims.use = 1:50,
+                             save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
+                             force.recalc = TRUE, print.output = FALSE)
+})
+p0 <- DimPlot(object = object, reduction.use = "tsne", pt.size = 0.3, group.by = "orig.ident", do.return = T)
 #======1.6 RunHarmony=======================
 jpeg(paste0(path,"/S1_RunHarmony.jpeg"), units="in", width=10, height=7,res=600)
-system.time(object %<>% RunHarmony("orig.ident", dims.use = 1:20,
+system.time(object %<>% RunHarmony("orig.ident", dims.use = 1:50,
                                 theta = 2, plot_convergence = TRUE,
                                 nclust = 50, max.iter.cluster = 100))
 dev.off()
 
 object@ident %<>% factor(levels = samples)
-p1 <- DimPlot(object = object, reduction.use = "harmony", pt.size = .1, group.by = "orig.ident", do.return = T)
+p1 <- DimPlot(object = object, reduction.use = "harmony", pt.size = 0.3, group.by = "orig.ident", do.return = T)
 p2 <- VlnPlot(object = object, features.plot = "Harmony1", group.by = "orig.ident", do.return = TRUE,
               x.lab.rot = T)
 jpeg(paste0(path,"/S1_Harmony_vplot.jpeg"), units="in", width=10, height=7,res=600)
@@ -152,33 +159,44 @@ dev.off()
 
 jpeg(paste0(path,"/S1_Harmony_DimHeatmap.jpeg"), units="in", width=10, height=7,res=600)
 DimHeatmap(object = object, reduction.type = "harmony", cells.use = 500, 
-           dim.use = c(1:3,18:20), do.balanced = TRUE)
+           dim.use = c(1:3, 31:33, 48:50), do.balanced = TRUE)
 dev.off()
 
 #========1.6 Seurat tSNE Functions for Integrated Analysis Using Harmony Results=======
 system.time({
-        object %<>% RunTSNE(reduction.use = "harmony", dims.use = 1:20, do.fast = TRUE)
-        object %<>% FindClusters(reduction.type = "harmony", resolution = 0.6, dims.use = 1:20,
+        object %<>% RunTSNE(reduction.use = "harmony", dims.use = 1:50, do.fast = TRUE) %>%
+                FindClusters(reduction.type = "harmony", resolution = 0.6, dims.use = 1:50,
                               save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
                               force.recalc = TRUE, print.output = FALSE)
 })
 
-p3 <- TSNEPlot(object, do.return = T, pt.size = 0.5, group.by = "orig.ident")
-p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.5)
-jpeg(paste0(path,"/S1_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
-plot_grid(p3, p4)
+p3 <- TSNEPlot(object, do.return = T, pt.size = 0.3, group.by = "orig.ident")
+p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.3)
+
+jpeg(paste0(path,"/S1_pca_vs_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
+plot_grid(p0+ggtitle("Raw data")+
+                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),
+          p3+ggtitle("After alignment")+
+                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) )
 dev.off()
 
-g_Harmony <- TSNEPlot.1(object = object, do.label = F, group.by = "ident",
+jpeg(paste0(path,"/S1_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
+plot_grid(p3+ggtitle("group by samples")+
+                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),
+          p4+ggtitle("group by clusters")+
+                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")))
+dev.off()
+
+g_Harmony <- TSNEPlot.1(object = object, do.label = T, group.by = "ident",
                         do.return = TRUE, no.legend = F, 
                         #colors.use = ExtractMetaColor(object),
                         pt.size = 1,label.size = 6 )+
-        ggtitle("Tsne plot of all cell types")+
-        theme(text = element_text(size=15),							
-              plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
+        ggtitle("Tsne plot of all clusters")+
+        theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
 
 jpeg(paste0(path,"/TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=600)
 print(g_Harmony)
 dev.off()
 
-save(object, file = "./data/Islets_Harmony_12_20181216.Rda")
+save(object, file = "data/MCL_Harmony_20_20181231.Rda")
+saveRDS(object@scale.data, file = "data/MCL.scale.data_Harmony_20_20181231.rds")

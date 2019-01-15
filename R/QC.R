@@ -53,26 +53,26 @@ if(length(missing_data)>0){
 }
 
 ## Load the dataset
-object_raw <- list()
-object_list <- list()
+Seurat_raw <- list()
+Seurat_list <- list()
 species <- "hg19"
 for(i in 1:length(samples)){
-        object_raw[[i]] <- Read10X(data.dir = paste0("data/",sample.id[i],
+        Seurat_raw[[i]] <- Read10X(data.dir = paste0("data/",sample.id[i],
                                    "/outs/filtered_gene_bc_matrices/",species))
-        colnames(object_raw[[i]]) = paste0(samples[i],"_",colnames(object_raw[[i]]))
-        rownames(object_raw[[i]]) = gsub(species,"_",rownames(object_raw[[i]]))
-        object_list[[i]] <- CreateSeuratObject(object_raw[[i]],
+        colnames(Seurat_raw[[i]]) = paste0(samples[i],"_",colnames(Seurat_raw[[i]]))
+        rownames(Seurat_raw[[i]]) = gsub(species,"_",rownames(Seurat_raw[[i]]))
+        Seurat_list[[i]] <- CreateSeuratObject(Seurat_raw[[i]],
                                                  project = projects[i],
                                                  min.cells = 0,
                                                  min.genes = 0)
-        object_list[[i]]@meta.data$conditions <- conditions[i]
-        object_list[[i]]@meta.data$tests <- tests[i]
-        object_list[[i]]@meta.data$tissues <- tissues[i]
+        Seurat_list[[i]]@meta.data$conditions <- conditions[i]
+        Seurat_list[[i]]@meta.data$tests <- tests[i]
+        Seurat_list[[i]]@meta.data$tissues <- tissues[i]
 }
-remove(object_raw);GC()
+remove(Seurat_raw);GC()
 #======1.1.2 QC before merge =========================
-cell.number <- sapply(object_list, function(x) ncol(x@data))
-QC_list <- lapply(object_list, function(x) as.matrix(x@data))
+cell.number <- sapply(Seurat_list, function(x) ncol(x@data))
+QC_list <- lapply(Seurat_list, function(x) as.matrix(x@data))
 median.nUMI <- sapply(QC_list, function(x) median(colSums(x)))
 median.nGene <- sapply(QC_list, function(x) median(apply(x,2,function(y) sum(length(y[y>0])))))
 
@@ -87,8 +87,8 @@ QC.list %>% kable() %>% kable_styling()
 remove(QC_list,median.nUMI,median.nGene,min.nUMI,min.nGene,QC.list);GC()
 
 #========1.1.3 merge ===================================
-object <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), object_list)
-remove(object_list);GC()
+object <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), Seurat_list)
+remove(Seurat_list);GC()
 
 # read and select mitochondial genes
 (mito.genes <- grep(pattern = "^MT-", x = rownames(object@raw.data), value = TRUE))

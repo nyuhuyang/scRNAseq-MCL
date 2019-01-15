@@ -20,7 +20,7 @@ singler = CreateSinglerObject(as.matrix(object@data), annot = NULL, project.name
                               fine.tune = F, do.signatures = F, clusters = NULL,
                               numCores = SingleR.numCores/2)
 # if singler didn't find all cell labels
-if(length(singler$singler[[1]]$SingleR.single$labels) == ncol(object@data)){
+if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
         all.cell = object@cell.names;length(all.cell)
         know.cell = rownames(singler$singler[[1]]$SingleR.single$labels);length(know.cell)
         object = SubsetData(object, cells.use = know.cell)

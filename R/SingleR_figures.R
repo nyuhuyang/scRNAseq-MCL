@@ -16,7 +16,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 (load(file="./output/singler_MCL_20T_20181231.RData"))
 
 # if singler didn't find all cell labels
-if(length(singler$singler[[1]]$SingleR.single$labels) == ncol(object@data)){
+if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
         all.cell = object@cell.names;length(all.cell)
         know.cell = rownames(singler$singler[[1]]$SingleR.single$labels);length(know.cell)
         object = SubsetData(object, cells.use = know.cell)
@@ -97,7 +97,7 @@ object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.
 df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
 object <- SetAllIdent(object, id="singler1sub")
-tests <- paste0("test",c(5))
+tests <- paste0("test",c(3))
 for(test in tests){
         sample_n = which(df_samples$tests %in% c("control",test))
         samples <- unique(df_samples$sample[sample_n])
@@ -107,12 +107,12 @@ for(test in tests){
         subset.object <- SubsetData(object, cells.use = cell.use)
         subset.object@meta.data$orig.ident %>% unique %>% sort %>% print
         g <- SplitTSNEPlot(subset.object,group.by = "ident",split.by = "orig.ident",
-                           select.plots = c(6,1:5),#c(6:8,1:5)
+                           select.plots = c(1,3,2),#c(6:8,1:5)
                            no.legend = T,do.label =F,label.size=3,size=20,
                            return.plots =T, label.repel = T,force=2)
         jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,
              res=600)
-        print(do.call(plot_grid, g))
+        print(do.call(plot_grid, c(g, ncol = 2)))
         dev.off()
 }
 

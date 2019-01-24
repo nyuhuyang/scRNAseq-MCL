@@ -24,16 +24,16 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 (load(file="data/MCL_Harmony_12_20181121.Rda"))
 
 # T cells only ================
-MCL <- SetAllIdent(MCL, id="res.0.6")
-table(MCL@ident)
-TSNEPlot.1(MCL,do.label = T)
-T_cells_MCL <- SubsetData(MCL, ident.use = c(1,4,5))
-T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2sub")
-table(T_cells_MCL@ident)
+object <- SetAllIdent(object, id="res.0.6")
+table(object@ident)
+TSNEPlot.1(object,do.label = T)
+T_cells_object <- SubsetData(object, ident.use = c(3,4,5,8))
+T_cells_object <- SetAllIdent(T_cells_object, id="singler1sub")
+table(T_cells_object@ident)
 
-T_cells_MCL <- SubsetData(T_cells_MCL, 
+T_cells_object <- SubsetData(T_cells_object, 
                           ident.remove = c("NK_cells","MCL:2PB1","MCL:8PB1",
-                                           "MCL:15PB1","MCL:27PB1","Monocytes",
+                                           "MCL:15PB1","MCL:27PB1",
                                            "MEP","GMP","B_cells:Memory",
                                            "B_cells:Naive_B_cells"))
 #table(T_cells_MCL@meta.data$singler1main)
@@ -77,13 +77,13 @@ dev.off()
 table(T_cells_MCL@meta.data$orig.ident)
 table(T_cells_MCL@ident)
 
-df_samples <- readxl::read_excel("doc/181128_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler2sub")
-tests <- paste0("test",c(3:4))
-control = "MD"
+tests <- paste0("test",c(7))
+control = c("DJ","MD","BH","NZ")
 for(test in tests){
-        sample_n = which(df_samples$tests %in% test)
+        sample_n = which(df_samples$tests %in% c(control,test))
         samples <- unique(df_samples$sample[sample_n])
         print(paste(c(control,samples), collapse = " "))
         
@@ -92,10 +92,10 @@ for(test in tests){
         subset.T_cells_MCL <- SubsetData(T_cells_MCL, cells.use = cell.use)
         
         g <- SplitTSNEPlot(subset.T_cells_MCL,group.by = "ident",split.by = "orig.ident",
-                           #select.plots = c(1,5,4,3,2),
+                           select.plots = c(1:4,6,5,7),
                            no.legend = T,do.label =F,label.size=3,
                            return.plots =T, label.repel = T,force=2)
-        jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,
+        jpeg(paste0(path,test,"_TSNEPlot~.jpeg"), units="in", width=10, height=7,
              res=600)
         print(do.call(plot_grid, g))
         dev.off()

@@ -43,7 +43,6 @@ for(i in 1:length(marker.list)){
 #====== 2.2 focus on MCL heterogeneity, and T cell subsets and NK cells in the tSNE plots =====
 df_markers <- readxl::read_excel("doc/MCL-markers.xlsx")
 (markers <- df_markers[,1] %>% as.matrix %>% as.character %>% HumanGenes(object,marker.genes = .))
-markers <- HumanGenes(object,marker.genes = c("CD19","SOX11","CD5"))
 table(object@meta.data$orig.ident)
 table(object@ident)
 object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
@@ -62,10 +61,10 @@ for(test in tests){
         
         SplitSingleFeaturePlot(subset.object, 
                                select.plots = c(1:4,8:5),#
-                               #alias = df_markers, 
+                               alias = df_markers,
                                group.by = "ident",split.by = "orig.ident",
                                no.legend = T,label.size=3,do.print =T,nrow = 2,
-                               markers = "SOX11", threshold = 1.02)
+                               markers = "CD5", threshold = NULL)
 }
 #' Find threshold using maximal UMI from normal control
 #' @param object Seurat object
@@ -90,6 +89,45 @@ Normal_control <- function(object, marker, control, celltype = NULL){
 Normal_control(subset.object, marker = "SOX11", control = c("BH","DJ","MD","NZ"), 
                celltype =c("B_cells","MCL"))
 
+#######################
+# RidgePlot
+########################
+cell.use <- grep(paste(c("B_cells","MCL"),collapse = "|"),subset.object@ident, value = T)
+subset.subset.object <- SubsetData(subset.object, cells.use = names(cell.use))
+subset.subset.object <- SplitSeurat(subset.subset.object, split.by = "CD5")
 
+jpeg(paste0(path,"/RidgePlot~~.jpeg"), units="in", width=10, height=7,res=600)
+RidgePlot(object = subset.subset.object, features.plot = HumanGenes(object,c("CD5")),
+          group.by = "orig.ident",nCol = 1, y.log = T)
+dev.off()
 
 #object@meta.data$orig.ident =gsub("Pt-11-LN-C14","Pt-11-C14",object@meta.data$orig.ident)
+
+for(i in seq(0.8,2.2,length.out = 15)){
+        SplitSingleFeaturePlot(subset.object, 
+                               select.plots = c(1:4,8:5),#
+                               #alias = df_markers, 
+                               group.by = "ident",split.by = "orig.ident",
+                               no.legend = T,label.size=3,do.print =T,nrow = 2,
+                               markers = "CD5", threshold = i)
+}
+
+#######################
+# RidgePlot
+########################
+object <- SetAllIdent(object, id = "orig.ident")
+sample_n = which(df_samples$tests %in% c("control","test2"))
+(samples <- unique(df_samples$sample[sample_n]))
+subset.object <- SubsetData(object , ident.use = samples )
+
+object.CCND1 <- SplitSeurat(object,split.by = "CCND1")
+jpeg(paste0(path,"RidgePlot_CD5.jpeg"), units="in", width=10, height=7,res=600)
+RidgePlot(object,features.plot = "CD5",ident.include = samples)
+dev.off()
+
+SplitSingleFeaturePlot(subset.object, 
+                       select.plots = c(1:4,8:5),#
+                       #alias = df_markers,
+                       group.by = "ident",split.by = "orig.ident",
+                       no.legend = T,label.size=3,do.print =T,nrow = 2,
+                       markers = "CD5", threshold = 0.001)

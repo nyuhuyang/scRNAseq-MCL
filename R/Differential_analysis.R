@@ -24,7 +24,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 (load(file="data/MCL_Harmony_20_20181231.Rda"))
 df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:6)))
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:7)))
 df_samples[sample_n,] %>% kable() %>% kable_styling()
 table(df_samples$tests);nrow(df_samples)
 (samples <- df_samples$sample[sample_n])
@@ -38,7 +38,7 @@ table(object@meta.data$singler1main, object@meta.data$orig.ident) %>%
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
 TSNEPlot.1(object,do.label = T)
-B_cells_MCL <- SubsetData(object, ident.use = c(0,1,2,3,6,9,10,14,15,16))
+B_cells_MCL <- SubsetData(object, ident.use = c(0,1,2,6,9,10,14,15,16))
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
 table(B_cells_MCL@ident)
 
@@ -77,21 +77,51 @@ plot_grid(p4, p3)+ggtitle("B cell only") +
 dev.off()
 remove(object);GC();GC();GC();GC();GC();GC();GC();GC();GC();
 
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id = "orig.ident")
+Normal <- SubsetData(B_cells_MCL, ident.use = c("BH","DJ","MD","NZ"))
+g1 <- TSNEPlot(Normal)
+X1.4_normal <- SetAllIdent(X1.4_normal, id = "old.ident")
+g2 <- TSNEPlot(X1.4_normal)
+
+jpeg(paste0(path,"/X1.4_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
+plot_grid(g1+xlim(-25, 20)+ylim(-30, 15), g2+xlim(-25, 20)+ylim(-30, 15))+
+        ggtitle("Using 1/4  of B cells from each of the 4 normal samples") + 
+        theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"))
+dev.off()
+
+# average UMI for each subpopulation in each patient
+split_B_cells_MCL <- SplitSeurat(B_cells_MCL, split.by = "orig.ident")
+ave.B_cells_MCL <- lapply(split_B_cells_MCL,AverageExpression)
+for(i in 1:length(ave.B_cells_MCL)) write.csv(ave.B_cells_MCL[[i]],
+                                             file = paste0(path,names(ave.B_cells_MCL[i]),"_exp.csv"))
+# select 1/4 of cell from control
+normal_cells = lapply(c("BH","DJ","MD","NZ"), function(x){
+        rownames(B_cells_MCL@meta.data)[(B_cells_MCL@meta.data$orig.ident %in% x)]
+})
+remove_normal_cells = lapply(normal_cells, function(x) sample(x, size = length(x)*3/4)) %>%
+        unlist
+table(B_cells_MCL@cell.names %in% remove_normal_cells)
+cell.use <- B_cells_MCL@cell.names[!(B_cells_MCL@cell.names %in% remove_normal_cells)]
+B_cells_MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
+
+X1.4_normal <- SubsetData(B_cells_MCL, ident.use = "normal")
+X1.4_normal <- SetAllIdent(X1.4_normal, id = "old.ident")
+g2 <- TSNEPlot(X1.4_normal)
+
 # Doheatmap for Normal / MCL ================
 df_markers <- readxl::read_excel("doc/MCL-markers.xlsx")
 (markers <- df_markers[,1] %>% as.matrix %>% as.character %>% HumanGenes(B_cells_MCL,marker.genes = .))
-
 table(B_cells_MCL@meta.data$orig.ident)
 table(B_cells_MCL@ident)
-B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
-B_cells_MCL <- SetAllIdent(B_cells_MCL,id = "orig.ident")
-Normal.cells <- WhichCells(B_cells_MCL, ident ="Normal")
-B_cells_MCL@meta.data[Normal.cells,"6_clusters"] = "normal"
-B_cells_MCL <- SetAllIdent(B_cells_MCL,id = "6_clusters")
 
+B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
+Normal.cells <- rownames(B_cells_MCL@meta.data)[(B_cells_MCL@meta.data$orig.ident =="Normal")]
+B_cells_MCL@meta.data[Normal.cells,"X6_clusters"] = "normal"
+B_cells_MCL <- SetAllIdent(B_cells_MCL,id = "X6_clusters")
+table(B_cells_MCL@ident)
 
 sample_n = which(df_samples$tests %in% c("test2"))
-(samples <- unique(df_samples$sample[sample_n])[1])
+(samples <- unique(df_samples$sample[sample_n])[2])
 
 control <- "Normal"
 for(sample in samples){
@@ -106,7 +136,7 @@ for(sample in samples){
 
         #---FindAllMarkers.UMI----
         MCL.dent.1 <- subset.MCL@ident %>% unique
-        (MCL.dent.1 = MCL.dent.1[-which(MCL.dent.1 == "normal")] %>% as.numeric %>% sort)
+        (MCL.dent.1 = MCL.dent.1[-which(MCL.dent.1 == "normal")] %>% droplevels %>% as.numeric %>% sort)
         subset.MCL@ident = factor(subset.MCL@ident, levels = c("normal",MCL.dent.1))
         print(table(subset.MCL@ident))
         gde.markers <- FindPairMarkers(subset.MCL, ident.1 = MCL.dent.1, 
@@ -120,9 +150,10 @@ for(sample in samples){
         subset.MCL <- ScaleData(subset.MCL)
         #---DoHeatmap.1----
         g <- DoHeatmap.1(subset.MCL, gde.markers, add.genes = markers, Top_n = 25,
+                         use.scaled = FALSE,
                          ident.use = paste(control, "vs.",sample, "in B and MCL cells"),
                          group.label.rot = F,cex.row = 4,remove.key =F,title.size = 12)
-        jpeg(paste0(path,"/DoHeatmap_",control,"_",sample,".jpeg"), units="in", width=10, height=7,
+        jpeg(paste0(path,"/DoHeatmap_",control,"_",sample,"~.jpeg"), units="in", width=10, height=7,
              res=600)
         print(g)
         dev.off()
@@ -140,7 +171,7 @@ df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
 (df_samples = df_samples[-which(df_samples$sample %in% c("Pt-AA13-Ib-p","AFT-04-LN-C1D1")),] %>%
                 as.data.frame)
-(tests <- paste0("test",3:6))
+(tests <- paste0("test",4))
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         print(samples <- df_samples$sample[sample_n])
@@ -405,4 +436,3 @@ heatmap.2(as.matrix(y),
           col = bluered,
           main = paste("MCL bulk and scRNA top 1000 genes"))
 dev.off()
-

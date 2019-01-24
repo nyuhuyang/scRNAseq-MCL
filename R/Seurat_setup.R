@@ -22,8 +22,8 @@ if(!dir.exists("./data/")) dir.create("data")
 # read sample summary list
 df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:6)))
-df_samples[sample_n,] %>% kable() %>% kable_styling()
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:7)))
+df_samples[sample_n,] %>% kable %>% kable_styling
 table(df_samples$tests);nrow(df_samples)
 samples <- df_samples$sample[sample_n]
 sample.id <- df_samples$sample.id[sample_n]

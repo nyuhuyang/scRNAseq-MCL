@@ -19,7 +19,7 @@ if(!dir.exists("./data/")) dir.create("data")
 # ######################################################################
 #======4.1 copy the data files and read.csv =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx",sheet = "TCR")
+df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:7)))
 df_samples[sample_n,] %>% kable() %>% kable_styling()
@@ -62,7 +62,10 @@ Barcode_table[which(Barcode_table$Freq == 40),]
 contigs[(contigs$Barcode == "Pt-LM_TGCACCTCAACTGGCC-1"),] %>% 
         kable %>% kable_styling
 contigs$cdr3 %in% "None" %>% table
+
 contigs_cdr3 = contigs[!(contigs$cdr3 %in% "None"),]
+table(contigs_cdr3$productive)
+contigs_cdr3 = contigs_cdr3[!(contigs_cdr3$productive %in% "None"),]
 contigs_cdr3$chain %>% table
 
 contigs_cdr3 = contigs_cdr3[(contigs_cdr3$chain %in% "TRB"),]
@@ -123,8 +126,9 @@ top <-  meta.data_new2 %>%
         group_by(clonotype_id) %>% 
         top_n(300, Freq) %>% .[,c("Barcode","orig.ident","res.0.6","singler1sub",
                                   "chain","v_gene","d_gene","j_gene","c_gene","productive",
-                                  "cdr3","Freq","clonotype_id")]
-write.csv(top,file = paste0(path,"TCR.csv"))
+                                  "reads","umis","cdr3","Freq","clonotype_id")]
+write.csv(top,file = paste0(path,"TCR~.csv"))
+
 #======4.4 TSNEplot =========================
 object@meta.data = meta.data_new2
 
@@ -140,32 +144,45 @@ jpeg(paste0(path,"/TSNEplot_clonotype_L.jpeg"), units="in", width=10, height=7,r
 print(g)
 dev.off()
 
-
-
-
-
 table(object@meta.data$orig.ident)
 table(object@ident)
 object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
 
+# T cells only ================
+object <- SetAllIdent(object, id="res.0.6")
+table(object@ident)
+TSNEPlot.1(object,do.label = T)
+T_cells_object <- SubsetData(object, ident.use = c(3,4,5,8))
+T_cells_object <- SetAllIdent(T_cells_object, id="singler1sub")
+table(T_cells_object@ident)
+
+T_cells_object <- SubsetData(T_cells_object, 
+                             ident.remove = c("NK_cells","MCL",
+                                              "MEP","GMP","B_cells:Memory",
+                                              "B_cells:Naive_B_cells"))
+
+# Subset T cell======
 df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-object <- SetAllIdent(object, id="singler1sub")
-tests <- paste0("test",c(7))
+#T_cells_object@meta.data$orig.ident = T_cells_object@meta.data$old.ident
+#T_cells_object <- SetAllIdent(T_cells_object, id="clonotype_id")
+#T_cells_object <- SetAllIdent(T_cells_object, id="singler1sub")
+#T_cells_object@meta.data$orig.ident = gsub("Pt-11-C1$","Pt-11-LN-C1",T_cells_object@meta.data$orig.ident)
+tests <- paste0("test",c(3))
 for(test in tests){
         sample_n = which(df_samples$tests %in% c("control",test))
         samples <- unique(df_samples$sample[sample_n])
         
-        cell.use <- rownames(object@meta.data)[object@meta.data$orig.ident %in% 
-                                                       c("Normal",samples)]
-        subset.object <- SubsetData(object, cells.use = cell.use)
-        subset.object@meta.data$orig.ident %>% unique %>% sort %>% print
-        g <- SplitTSNEPlot(subset.object,group.by = "ident",split.by = "orig.ident",
-                           select.plots = c(1,3,2,4),#c(6:8,1:5)
+        T_cells_object = SetAllIdent(T_cells_object, id = "orig.ident")
+        subset.T_cells_object <- SubsetData(T_cells_object, ident.use = samples )
+        subset.T_cells_object@meta.data$orig.ident %>% unique %>% sort %>% print
+        subset.T_cells_object <- SetAllIdent(subset.T_cells_object, id="clonotype_id")
+        g <- SplitTSNEPlot(subset.T_cells_object,group.by = "ident",split.by = "orig.ident",
+                           select.plots = c(1:4,6,5),#c(6:8,1:5)
                            no.legend = T,do.label =F,label.size=3,size=20,
                            return.plots =T, label.repel = T,force=2)
-        jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,
+        jpeg(paste0(path,test,"_TSNEPlot_TCR.jpeg"), units="in", width=10, height=7,
              res=600)
-        print(do.call(plot_grid, c(g, nrow = 2)))
+        print(do.call(plot_grid, c(g, nrow = 2, ncol = 4)))
         dev.off()
 }

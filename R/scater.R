@@ -25,9 +25,9 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # ######################################################################
 # 0.1. Setting up the data
 # read sample summary list
-df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:6)))
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:7)))
 df_samples[sample_n,] %>% kable() %>% kable_styling()
 table(df_samples$tests);nrow(df_samples)
 samples <- df_samples$sample[sample_n]
@@ -38,7 +38,8 @@ tissues <- df_samples$tissue[sample_n]
 tests <- df_samples$tests[sample_n] 
 
 sce_list <- list()
-species <- "hg19"
+if(unique(df_samples$species[sample_n]) == "Homo_sapiens") species <- "hg19"
+
 for(i in 1:length(samples)){
         fname <- paste0("./data/",sample.id[i],
                         "/outs/filtered_gene_bc_matrices/",species)
@@ -114,4 +115,6 @@ for(i in 1:length(sce_list)){
 #        print(paste0(i,":",length(sce_list)," done"))
 #}
 
-save(sce_list, file = "data/sce_20_20181231.Rda")
+save(sce_list, file = paste0("data/","sce_",length(sample_n),"_",gsub("-","",Sys.Date()),".Rda"))
+
+

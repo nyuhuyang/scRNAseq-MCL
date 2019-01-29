@@ -20,20 +20,21 @@ if(!dir.exists("./data/")) dir.create("data")
 # ######################################################################
 #======1.1 Load the data files and Set up Seurat object =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:7)))
-df_samples[sample_n,] %>% kable %>% kable_styling
+#df_samples[sample_n,] %>% kable() %>% kable_styling()
 table(df_samples$tests);nrow(df_samples)
 samples <- df_samples$sample[sample_n]
 sample.id <- df_samples$sample.id[sample_n]
 conditions <- df_samples$conditions[sample_n]
 projects <- df_samples$project[sample_n]
 tissues <- df_samples$tissue[sample_n]
-tests <- df_samples$tests[sample_n]
+tests <- df_samples$tests[sample_n] 
+notes <- df_samples$notes[sample_n] 
 
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "data/sce_20_20181231.Rda"))
+(load(file = "data/sce_24_20190128.Rda"))
 names(sce_list)
 object_list <- lapply(sce_list, as.seurat) %>%
         lapply(NormalizeData) %>%
@@ -44,6 +45,7 @@ for(i in 1:length(samples)){
         object_list[[i]]@meta.data$tests <- tests[i]
         object_list[[i]]@meta.data$conditions <- conditions[i]
         object_list[[i]]@meta.data$projects <- projects[i]
+        object_list[[i]]@meta.data$notes <- notes[i]
         object_list[[i]]@meta.data$tissues <- tissues[i]
         
 }
@@ -60,11 +62,14 @@ remove(sce_list,object_list);GC()
 
 object = SetAllIdent(object, id = "orig.ident")
 #======1.4 mito, QC, filteration =========================
-(mito.genes <- grep(pattern = "^MT-", x = rownames(x = object@data), value = TRUE))
-percent.mito <- Matrix::colSums(object@raw.data[mito.genes, ])/Matrix::colSums(object@raw.data)
-object <- AddMetaData(object = object, metadata = percent.mito, col.name = "percent.mito")
+object@meta.data$percent.mito = object@meta.data$pct_counts_Mito/100
 
-(load(file = paste0("output/20181231/g1_20_20181231.Rda")))
+(remove <- which(colnames(object@meta.data) %in%c("is_cell_control",
+                                           "pct_counts_in_top_500_features_Mito")))
+meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
+object@meta.data = meta.data 
+
+(load(file = paste0("output/20190128/g1_24_20190128.Rda")))
 
 object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
                    low.thresholds = c(500,800, -Inf), 
@@ -76,7 +81,7 @@ g2 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
                 point.size.use = 0.2,size.x.use = 10, group.by = "ident",
                 x.lab.rot = T, do.return = T)
 })
-save(g2,file= paste0(path,"g2_20_20181231.Rda"))
+save(g2,file= paste0(path,"g2_24_20190128.Rda"))
 
 jpeg(paste0(path,"/S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
@@ -123,10 +128,10 @@ tail(x = object@meta.data)
 
 #======1.6 PCA =========================
 object %<>% ScaleData %>%
-        RunPCA(pc.genes = object@var.genes, pcs.compute = 100, do.print = F)
+        RunPCA(pc.genes = object@var.genes, pcs.compute = 50, do.print = F)
 
 jpeg(paste0(path,"/S1_PCElbowPlot.jpeg"), units="in", width=10, height=7,res=600)
-PCElbowPlot(object, num.pc = 100)
+PCElbowPlot(object, num.pc = 50)
 dev.off()
 
 jpeg(paste0(path,"/S1_PCHeatmap.jpeg"), units="in", width=10, height=7,res=600)
@@ -198,5 +203,6 @@ jpeg(paste0(path,"/TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=6
 print(g_Harmony)
 dev.off()
 
-save(object, file = "data/MCL_Harmony_20_20181231.Rda")
-saveRDS(object@scale.data, file = "data/MCL.scale.data_Harmony_20_20181231.rds")
+saveRDS(object@scale.data, file = "data/MCL.scale.data_Harmony_24_20190128.rds")
+object@scale.data = NULL; GC()
+save(object, file = "data/MCL_Harmony_24_20190128.Rda")

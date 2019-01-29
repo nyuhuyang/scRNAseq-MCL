@@ -21,14 +21,14 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file="data/MCL_Harmony_20_20181231.Rda"))
-df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
+(load(file="data/MCL_Harmony_24_20190128.Rda"))
+df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:7)))
 df_samples[sample_n,] %>% kable() %>% kable_styling()
 table(df_samples$tests);nrow(df_samples)
 (samples <- df_samples$sample[sample_n])
-(tests <- df_samples$tests[sample_n])        
+(tests <- df_samples$tests[sample_n]) %>% unique
 # cell population
 table(object@meta.data$singler1main, object@meta.data$orig.ident) %>% 
         as.data.frame.matrix %>% .[,samples] %>% t %>% kable %>%

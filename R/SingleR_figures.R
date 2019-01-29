@@ -12,7 +12,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
-(load(file="data/MCL_Harmony_20_20181231.Rda"))
+(load(file="data/MCL_Harmony_24_20190128.Rda"))
 (load(file="./output/singler_MCL_20T_20181231.RData"))
 
 # if singler didn't find all cell labels
@@ -160,7 +160,7 @@ object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.
 df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
 object <- SetAllIdent(object, id="singler1sub")
-tests <- paste0("test",c(7))
+tests <- paste0("test",c(2))
 for(test in tests){
         sample_n = which(df_samples$tests %in% c("control",test))
         samples <- unique(df_samples$sample[sample_n])
@@ -170,7 +170,7 @@ for(test in tests){
         subset.object <- SubsetData(object, cells.use = cell.use)
         subset.object@meta.data$orig.ident %>% unique %>% sort %>% print
         g <- SplitTSNEPlot(subset.object,group.by = "ident",split.by = "orig.ident",
-                           select.plots = c(1,3,2,4),#c(6:8,1:5)
+                           select.plots = c(1:4,8:5),#c(6:8,1:5)
                            no.legend = T,do.label =F,label.size=3,size=20,
                            return.plots =T, label.repel = T,force=2)
         jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,

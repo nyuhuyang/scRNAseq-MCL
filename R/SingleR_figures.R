@@ -13,7 +13,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 (load(file="data/MCL_Harmony_24_20190128.Rda"))
-(load(file="./output/singler_MCL_20T_20181231.RData"))
+(load(file="./output/singler_MCL_24F_20190128.Rda"))
 
 # if singler didn't find all cell labels
 if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
@@ -25,9 +25,9 @@ object
 ##############################
 # add singleR label to Seurat
 ###############################
-singlerDF = data.frame("singler1sub"=singler$singler[[1]]$SingleR.single$labels,
-                       "singler1main"=singler$singler[[1]]$SingleR.single.main$labels,
-                       "kang" = FineTune(singler$other, main.type = FALSE),
+singlerDF = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$labels,
+                       "singler1main" = singler$singler[[1]]$SingleR.single.main$labels,
+                       "orig.ident" = object@meta.data$orig.ident,
                        row.names = rownames(singler$singler[[1]]$SingleR.single$labels))
 
 table(rownames(singlerDF) %in% object@cell.names)
@@ -86,15 +86,13 @@ jpeg(paste0(path,"PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
 print(p3)
 dev.off()
 
-save(object,file="data/MCL_Harmony_20_20181231.Rda")
+save(object,file="data/MCL_Harmony_24_20190128.Rda")
 
 ##############################
 # adjust cell label
 ##############################
 # reduce false positive results (B cells are labeled as MCL in normal samples)
 # and false negative results (MCL cells are labeled as B cells in MCL samples)
-#singlerDF = merge(singlerDF,B_cells_MCL@meta.data[,c("orig.ident","kang")],by="row.names",all.y=TRUE)
-#rownames(singlerDF) = singlerDF$Row.names
 # singler1main false positive results  ========
 table(singlerDF$singler1main, singlerDF$orig.ident) %>% t %>% kable %>% kable_styling()
 
@@ -102,7 +100,7 @@ normal_cells <- singlerDF$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(si
 singlerDF[normal_cells,"singler1main"] = gsub("MCL","B_cells",
                                               singlerDF[normal_cells,"singler1main"])
 
-table(singlerDF$singler1main, singlerDF$orig.ident) %>% kable %>% kable_styling()
+table(singlerDF$singler1main, singlerDF$orig.ident) %>% t %>% kable %>% kable_styling()
 
 # singler1sub false positive results  =========
 table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>% kable_styling()
@@ -149,7 +147,7 @@ object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_c
 object <- SetAllIdent(object = object, id = "singler1sub")
 TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F)
 
-save(object,file="data/MCL_Harmony_20_20181231.Rda")
+save(object,file="data/MCL_Harmony_24_20190128.Rda")
 ##############################
 # subset Seurat
 ###############################
@@ -157,10 +155,10 @@ table(object@meta.data$orig.ident)
 table(object@ident)
 object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
 
-df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
 object <- SetAllIdent(object, id="singler1sub")
-tests <- paste0("test",c(2))
+tests <- paste0("test",7)
 for(test in tests){
         sample_n = which(df_samples$tests %in% c("control",test))
         samples <- unique(df_samples$sample[sample_n])
@@ -170,7 +168,7 @@ for(test in tests){
         subset.object <- SubsetData(object, cells.use = cell.use)
         subset.object@meta.data$orig.ident %>% unique %>% sort %>% print
         g <- SplitTSNEPlot(subset.object,group.by = "ident",split.by = "orig.ident",
-                           select.plots = c(1:4,8:5),#c(6:8,1:5)
+                           select.plots = c(1,3,2,4),#c(1,5,2,4,3),#c(6:8,1:5)
                            no.legend = T,do.label =F,label.size=3,size=20,
                            return.plots =T, label.repel = T,force=2)
         jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,

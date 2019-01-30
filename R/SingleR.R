@@ -13,9 +13,8 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 (load(file="data/MCL_Harmony_24_20190128.Rda"))
 object@scale.data = NULL
 (load(file = 'data/ref_MCL_blue_encode.RData'))
-object_data = object@data
-remove(object);GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();
-singler = CreateSinglerObject(as.matrix(object_data), annot = NULL, project.name="EC-MDL",
+GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();GC();
+singler = CreateSinglerObject(as.matrix(object@data), annot = NULL, project.name="EC-MDL",
                               min.genes = 500,technology = "10X", species = "Human", citation = "",
                               ref.list = list(ref),normalize.gene.length = F, variable.genes = "de",
                               fine.tune = F, do.signatures = F, clusters = NULL,
@@ -29,4 +28,4 @@ if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
 singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
 singler$meta.data$xy = object@dr$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = object@ident # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="./output/singler_MCL_20T_20181231.RData")
+save(singler,file="./output/singler_MCL_24F_20190128.Rda")

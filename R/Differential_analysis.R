@@ -38,15 +38,15 @@ table(object@meta.data$singler1main, object@meta.data$orig.ident) %>%
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
 TSNEPlot.1(object,do.label = T)
-B_cells_MCL <- SubsetData(object, ident.use = c(0,1,2,6,9,10,14,15,16))
-B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
+B_cells_MCL <- SubsetData(object, ident.use = c(0,1,4,5,6,9,12,13,14,15)) #0,1,2,6,9,10,14,15,16
+#B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
 table(B_cells_MCL@ident)
 
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","HSC","MCL"))
-table(B_cells_MCL@meta.data$singler1sub)
-B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1sub")
-(ident.remove <- grep("T_cells.",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.remove =  ident.remove)
+#B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","HSC","MCL"))
+#table(B_cells_MCL@meta.data$singler1sub)
+#B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1sub")
+#(ident.remove <- grep("T_cells.",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
+#B_cells_MCL <- SubsetData(B_cells_MCL, ident.remove =  ident.remove)
 
 # cell population
 table(B_cells_MCL@meta.data$singler1main, B_cells_MCL@meta.data$orig.ident) %>% 
@@ -54,24 +54,24 @@ table(B_cells_MCL@meta.data$singler1main, B_cells_MCL@meta.data$orig.ident) %>%
         kable_styling()
 table(B_cells_MCL@meta.data$orig.ident) %>% .[samples] %>% kable %>% kable_styling()
 # tsne plot
-p4 <- TSNEPlot.1(B_cells_MCL, do.label = F, do.return = T, pt.size = 0.5, 
-                 colors.use = ExtractMetaColor(B_cells_MCL), no.legend =T)
+p4 <- TSNEPlot.1(B_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, no.legend =T)
+                 #colors.use = ExtractMetaColor(B_cells_MCL))
 
 B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2, dims.use = 1:50,
              save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
              force.recalc = TRUE, print.output = FALSE)
 idents <- as.data.frame(table(B_cells_MCL@ident))
-old.ident.ids <- idents$Var1
-new.cluster.ids <- c(2,1,3,4,5,6,6)
+(old.ident.ids <- idents$Var1)
+new.cluster.ids <- c(1,3,4,5,2,6,6,6,6,6)
 B_cells_MCL@ident <- plyr::mapvalues(x = B_cells_MCL@ident,
                               from = old.ident.ids, to = new.cluster.ids)
 B_cells_MCL@ident <- factor(B_cells_MCL@ident, levels = 1:6)
-B_cells_MCL <- StashIdent(object = B_cells_MCL, save.name = "6_clusters")
+B_cells_MCL <- StashIdent(object = B_cells_MCL, save.name = "X6_clusters")
 
 p3 <- TSNEPlot.1(B_cells_MCL, do.return = T, pt.size = 0.5, do.label = T, 
                  group.by = "ident",no.legend =T )
 
-jpeg(paste0(path,"/S1_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"/S1_MCL_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p4, p3)+ggtitle("B cell only") + 
         theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"))
 dev.off()
@@ -106,7 +106,7 @@ B_cells_MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
 
 X1.4_normal <- SubsetData(B_cells_MCL, ident.use = "normal")
 X1.4_normal <- SetAllIdent(X1.4_normal, id = "old.ident")
-g2 <- TSNEPlot(X1.4_normal)
+TSNEPlot.1(X1.4_normal,do.label = T, do.print =T, do.return =F)
 
 # Doheatmap for Normal / MCL ================
 df_markers <- readxl::read_excel("doc/MCL-markers.xlsx")
@@ -167,57 +167,79 @@ for(sample in samples){
 }
 
 # Doheatmap for MCL.1 / MCL.2 ================
-df_samples <- readxl::read_excel("doc/181227_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-(df_samples = df_samples[-which(df_samples$sample %in% c("Pt-AA13-Ib-p","AFT-04-LN-C1D1")),] %>%
-                as.data.frame)
-(tests <- paste0("test",4))
-for(test in tests){
-        sample_n = which(df_samples$tests %in% test)
-        print(samples <- df_samples$sample[sample_n])
-        cell.use <- rownames(B_cells_MCL@meta.data)[B_cells_MCL@meta.data$orig.ident %in%
-                                                            samples]
-        subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
+Pairs <-list("11-C1-C14"=c("Pt-11-C1","Pt-11-C14"),
+             "11-C14-C28"=c("Pt-11-C14","Pt-11-C28"),
+             "11-C1-C28"=c("Pt-11-C1","Pt-11-C28"),
+             "11-C1-C1-LN"=c("Pt-11-C1","Pt-11-LN-C1"),
+             "11-C2-C7" = c("Pt-17-C2","Pt-17-C7"),
+             "17-C2-C31" = c("Pt-17-C2","Pt-17-C31"),
+             "17-C7-C31" = c("Pt-17-C7","Pt-17-C31"),
+             "17-C1-LN-C2" = c("Pt-17-LN-C1","Pt-17-C2"))
+B_cells_MCL %<>% SetAllIdent(id="orig.ident")
 
+for(pair in Pairs){
+        subset.MCL <- SubsetData(B_cells_MCL, ident.use = pair)
+        select.plots = match(pair,unique(subset.MCL@meta.data$orig.ident %>% sort))
         #---SplitTSNEPlot----
-        subset.MCL <- SetAllIdent(subset.MCL, id= "singler1sub")
-        SplitTSNEPlot(subset.MCL,do.return = FALSE,do.print = TRUE, do.label = F)
+        #subset.MCL <- SetAllIdent(subset.MCL, id= "singler1sub")
+        #SplitTSNEPlot(subset.MCL,do.return = FALSE,do.print = TRUE, do.label = F)
         subset.MCL <- SetAllIdent(subset.MCL,id = "X6_clusters")
-        SplitTSNEPlot(subset.MCL,do.return = FALSE,do.print = TRUE)
+        SplitTSNEPlot(subset.MCL, select.plots = select.plots,
+                      do.return = FALSE,do.print = TRUE)
+
+        # remove low cell ident
+        subset.MCL@meta.data$clusters_6 <- paste(subset.MCL@meta.data$orig.ident, 
+                                                 subset.MCL@meta.data$X6_clusters, sep = ".")
+        subset.MCL %<>% SetAllIdent(id='clusters_6')
         
+        keep = table(subset.MCL@meta.data$clusters_6) %>% as.data.frame %>% .[.$Freq >2,"Var1"]
+        subset.MCL %<>% SubsetData(ident.use = keep)
         #---FindAllMarkers.UMI----
-        subset.MCL@meta.data$X6_clusters <- paste(subset.MCL@meta.data$orig.ident, 
-                                                  subset.MCL@meta.data$X6_clusters, sep = ".")
-        subset.MCL <- SetAllIdent(subset.MCL,id='X6_clusters')
-        (MCL.dent.1 <- subset.MCL@ident %>% unique %>% as.character %>% sort)
-        (len <- length(MCL.dent.1))
-        subset.MCL@ident = factor(subset.MCL@ident, levels = MCL.dent.1)
+        MCL.dent = list()
+        for(i in 1:length(select.plots)){
+                ident = pair[select.plots[i]]
+                X6_clusters = subset.MCL@meta.data$X6_clusters[(subset.MCL@meta.data$orig.ident %in%
+                                                                        ident)] %>% unique %>% sort
+                MCL.dent[[i]] = paste(ident, X6_clusters, sep = ".")
+        }
+
+        
+        if(length(MCL.dent[[1]]) != length(MCL.dent[[2]])){
+                MCL.dent[[1]] = MCL.dent[[1]][(gsub('.*\\.', '', MCL.dent[[1]]) %in% 
+                                                       gsub('.*\\.', '', MCL.dent[[2]]))]
+                MCL.dent[[2]] = MCL.dent[[2]][(gsub('.*\\.', '', MCL.dent[[2]]) %in% 
+                                                       gsub('.*\\.', '', MCL.dent[[1]]))]
+        }
+
+       subset.MCL %<>% SetAllIdent(id='clusters_6')
         print(table(subset.MCL@ident))
-        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = MCL.dent.1, 
-                                       ident.2 = MCL.dent.1[c((len/2+1):len,1:(len/2))],
+        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = unlist(MCL.dent), 
+                                       ident.2 = c(MCL.dent[[2]],MCL.dent[[1]]),
                                        logfc.threshold = 0.4,min.cells.group =1,
                                        return.thresh = 0.05)
-        write.csv(gde.markers, paste0(path,paste(samples,collapse = "_"),".csv"))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
+        write.csv(gde.markers, paste0(path,paste(pair,collapse = "_"),".csv"))
         GC();GC();GC();GC();GC();GC();GC();GC();
         subset.MCL <- ScaleData(subset.MCL)
         #---DoHeatmap.1----
         g <- DoHeatmap.1(subset.MCL, gde.markers, add.genes = markers, Top_n = 15,
-                         ident.use = paste(paste(samples,collapse = " vs. "), "in B and MCL cells"),
+                         ident.use = paste(paste(pair,collapse = " vs. "), "in MCL cells"),
                          group.label.rot = T,cex.row = 3,remove.key =F,title.size = 12)
-        jpeg(paste0(path,"/DoHeatmap_",paste(samples,collapse = "_"),
+        jpeg(paste0(path,"/DoHeatmap_",paste(pair,collapse = "_"),
                     ".jpeg"), units="in", width=10, height=7,res=600)
         print(g)
         dev.off()
         #---DoHeatmap vertical bar----
         g1 <- MakeCorlorBar(subset.MCL, gde.markers,Top_n = 15, add.genes = markers, do.print = F,
                             do.return = T)
-        jpeg(paste0(path,"/DoHeatmap_",paste(samples,collapse = "_"),
+        jpeg(paste0(path,"/DoHeatmap_",paste(pair,collapse = "_"),
                     "_legend.jpeg"),units="in", width=10, height=7,res=600)
         print(g1)
         dev.off()
-}
+} #20190129
 
 
 control = "Pt-AA13-Ib-p"
@@ -232,9 +254,9 @@ for(sample in samples){
         subset.MCL <- SubsetData(B_cells_MCL, cells.use = cell.use)
         
         #---SplitTSNEPlot----
-        subset.MCL <- SetAllIdent(subset.MCL, id= "singler1sub")
+        #subset.MCL <- SetAllIdent(subset.MCL, id= "singler1sub")
         SplitTSNEPlot(subset.MCL,do.return = FALSE,select.plots = 1:2,do.print = TRUE, do.label = F)
-        subset.MCL <- SetAllIdent(subset.MCL,id = "X6_clusters")
+        subset.MCL <- SetAllIdent(subset.MCL,id = "clusters_6")
         SplitTSNEPlot(subset.MCL,do.return = FALSE,select.plots = 1:2,do.print = TRUE)
         
         #---FindAllMarkers.UMI----

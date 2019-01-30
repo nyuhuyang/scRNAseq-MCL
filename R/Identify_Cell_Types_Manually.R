@@ -2,6 +2,7 @@ library(Seurat)
 library(dplyr)
 library(tidyr)
 library(kableExtra)
+library(magrittr)
 library(gplots)
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
@@ -55,7 +56,10 @@ object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.
 
 # ===== markers======
 df_markers <- readxl::read_excel("doc/MCL-markers.xlsx", sheet = "20190128")
+df_markers <- readxl::read_excel("doc/MCL-markers.xlsx", sheet = "20190128~")
 (markers <- df_markers[,1] %>% as.matrix %>% as.character %>% HumanGenes(object,marker.genes = .))
+object <- B_cells_MCL
+object <- SetAllIdent(object, id="res.0.6")
 table(object@meta.data$orig.ident)
 table(object@ident)
 # ===== sample list ======
@@ -71,39 +75,25 @@ for(test in tests){
         subset.object <- SubsetData(object, cells.use = cell.use)
         subset.object@meta.data$orig.ident %>% unique %>% sort %>% print
         SplitTSNEPlot(subset.object,do.label = F,select.plots = c(1,2,5,3,4), do.print = T, do.return=F)
+        subset.object %<>% SetAllIdent(id = "singler1sub")
+        SplitTSNEPlot(subset.object,do.label = F,select.plots = c(1,2,5,3,4), do.print = T, do.return=F)
         SplitSingleFeaturePlot(subset.object, 
-                               select.plots = c(1,2,5,3,4),#
+                               select.plots = c(1,2,5,3,4),#c(1,5,2,4,3),#
                                alias = df_markers,
                                group.by = "ident",split.by = "orig.ident",
                                no.legend = T,label.size=3,do.print =T,nrow = 2,
                                markers = markers, threshold = NULL)   
         
 }
+object@meta.data$foo = "All samples"
 
+SplitSingleFeaturePlot(object, split.by = "foo",
+                       #select.plots = c(1,5,2,4,3),#
+                       alias = df_markers,
+                       group.by = "ident",
+                       no.legend = T,label.size=3,do.print =T,nrow = 1,
+                       markers = markers, threshold = 0.01)  
 
-
-#' Find threshold using maximal UMI from normal control
-#' @param object Seurat object
-#' @param marker single gene name
-#' @param control control sample name
-#' @param celltype focus on specific celltype
-#' @example Normal_control(subset.object, "CD5", celltype =c("B_cells","MCL"))
-Normal_control <- function(object, marker, control, celltype = NULL){
-        if(!is.null(celltype)){
-                cell.use <- grep(paste(celltype,collapse = "|"),object@ident, value = T)
-                object <- SubsetData(object, cells.use = names(cell.use))
-        } 
-        object@meta.data$orig.ident = gsub(paste(control,collapse = "|"),
-                                                  "Normal",object@meta.data$orig.ident)
-        object <- SetAllIdent(object, id = "orig.ident")
-        subset.object <- SubsetData(object, ident.use = "Normal")
-        
-        normal.max <- subset.object@data[marker,] %>% max 
-        
-        return(normal.max+0.01)
-}
-Normal_control(subset.object, marker = "SOX11", control = c("BH","DJ","MD","NZ"), 
-               celltype =c("B_cells","MCL"))
 
 #######################
 # RidgePlot

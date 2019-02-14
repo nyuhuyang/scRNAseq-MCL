@@ -4,20 +4,23 @@
 library(gplots)
 library(tidyr)
 library(Seurat)
+library(kableExtra)
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 if(!dir.exists("./data/")) dir.create("data")
 
-(load(file="data/MCL_Harmony_20_20181231.Rda"))
+(load(file="data/MCL_Harmony_24_20190128.Rda"))
 
 CBC <- readxl::read_excel("doc/190120 MCL CBC summary.xlsx",sheet = "Sheet2")
 CBC %>% kable %>% kable_styling()
 CBC <- readxl::read_excel("doc/190120 MCL CBC summary.xlsx") %>% as.data.frame()
+CBC %>% kable %>% kable_styling()
 sapply(CBC,class)
 range(CBC$Monocytes)
 median(CBC$Monocytes)
-
+###########################
 #==== CBC barchat=======
+###########################
 y =  CBC[,c("sample","Lymphocytes","Eosinophils","Neutrophils","Basophils","Monocytes")]
 
 df <- gather(y, key = "Cell.Type", value = "counts", -sample)
@@ -34,7 +37,7 @@ jpeg(paste0(path,"/barchart_CBC.jpeg"), units="in", width=10, height=7,res=600)
 p
 dev.off()
 
-#==== CBC barchat no Lymphocytes=======
+#-------CBC barchat no Lymphocytes----------
 y =  CBC[,c("sample","Eosinophils","Neutrophils","Basophils","Monocytes")]
 
 df <- gather(y, key = "Cell.Type", value = "counts", -sample)
@@ -51,8 +54,8 @@ jpeg(paste0(path,"/barchart_CBC_noL.jpeg"), units="in", width=10, height=7,res=6
 p
 dev.off()
 
-#==== CBC percentage barchat Lymphocytes/monoctes=======
-# Adjust cell number
+#------- CBC percentage barchat Lymphocytes/monoctes---------
+# first Adjust cell number in later section
 x =  x_y[,c("Lymphocytes.cbc","Monocytes.cbc")]
 colnames(x) = gsub("\\.cbc","",colnames(x))
 total = rowSums(x)
@@ -76,15 +79,26 @@ dev.off()
 
 y = y[-which(y$sample == "Pt-17-C7"),]
 sapply(y,mean) *mean(total_col)
-
+###########################
+# scRNA-seq 
+###########################
 #==== scRNA-seq cell number barchat Lymphocytes/monoctes =======
+# before merge
+y <- table(object@meta.data$singler1main,object@meta.data$orig.ident) %>%
+        #y <- table(object@meta.data$singler1sub,object@meta.data$orig.ident) %>%
+        as.data.frame %>% spread(Var2, Freq)
+rownames(y) = y$Var1
+y = y[,-1]
+y = as.data.frame(t(y))
+# after merge
 y =  x_y[,-grep("\\.cbc",colnames(x_y))]
 colnames(y) = gsub("\\.sc","",colnames(y))
+#-----------------------
 y[,"B_cells"] = y[,"B_cells"] +y[,"MCL"]
 y = y[,-(which(colnames(y) %in% c("DC","Erythrocytes","Fibroblasts",
                                     "MCL","HSC","total")))]
+#df = y
 total = rowSums(y)
-
 df = sapply(y, function(s) s/total) %>% as.data.frame()
 colnames(df) = paste0(c("Lymphocytes:","","","Lymphocytes:","Lymphocytes:"),colnames(df))
 df$sample = rownames(y)
@@ -92,10 +106,11 @@ df <- gather(df, key = "Cell.Type", value = "percentage", -sample)
 
 p2 <-ggplot(df, aes(sample, percentage))+
         geom_bar(stat = "identity", aes(fill = Cell.Type)) +
-        ylab("cell number")+
+        #ylab("cell number")+
+        ylab("percentage")+
         #ggtitle("cell type summary of all samples in scRNA-seq")+
         theme(text = element_text(size=15),  
-              #legend.position = "none",
+              legend.position = "none",
               plot.title = element_text(size=20,hjust = 0.5),
               axis.text.x = element_text(angle = 90, hjust = 1))+
         scale_fill_manual(values = c("#4DAF4A","#A65628","#377EB8",
@@ -217,40 +232,44 @@ mean(x_y$L_M.cbc);median(x_y$L_M.cbc)
 #use MD as control
 x_y$L_M.cbc = x_y$L_M.cbc / x_y["MD","L_M.cbc"]
 
-
 #==== scRNA-seq cell number barchat Before ajusting =======
 y =  x_y[,-grep("\\.cbc",colnames(x_y))]
 colnames(y) = gsub("\\.sc","",colnames(y))
-y = y[,-(which(colnames(y) %in% c("total","MCL")))] #
+y = y[,-(which(colnames(y) %in% c("total")))] #
+y = y[,-(which(colnames(y) %in% c("total","MCL")))] # remove MCL
 dim(y)
 y$sample = rownames(y)
+
 y <- gather(y, key = "Cell.Type", value = "cell.number", -sample)
 
 singler_colors <- readxl::read_excel("./doc/singler.colors.xlsx")
 singler_colors1 = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
-singler_colors1[duplicated(singler_colors1)]
-length(singler_colors1)
+singler_colors2 = as.vector(singler_colors$singler.color2[!is.na(singler_colors$singler.color2)])
+singler_colors1[duplicated(singler_colors1)];singler_colors2[duplicated(singler_colors2)]
+length(singler_colors1);length(singler_colors2)
 
 
 g1 <-ggplot(y, aes(sample, cell.number))+
         geom_bar(stat = "identity", aes(fill = Cell.Type)) +
         ylab("cell number")+
-        #ggtitle("cell type summary of in scRNA-seq before adjusting cell number")+
+        ggtitle("cell type summary of in scRNA-seq before adjusting cell number")+
         theme(text = element_text(size=15),  
               legend.position = "none",
               plot.title = element_text(size=20,hjust = 0.5),
               axis.text.x = element_text(angle = 90, hjust = 1))+
-        #scale_fill_manual(values = c("#4DAF4A","#FED9A6","#E41A1C","#FFFFCC","#FF7F00","#e94749",
-        #                             "#193b13","#FB9A99","#A65628","#377EB8"))
-        scale_fill_manual(values = c(singler_colors1))
-jpeg(paste0(path,"/barchart_scRNA_noMCL_sub.jpeg"), units="in", width=10, height=7,res=600)
+        #scale_fill_manual(values = c(singler_colors1)) # include MCL
+        #scale_fill_manual(values = c(singler_colors1[-7])) # no MCL
+        #scale_fill_manual(values = c(singler_colors2))
+        scale_fill_manual(values = c(singler_colors2[-15])) # no MCL
+jpeg(paste0(path,"/barchart_scRNA.jpeg"), units="in", width=10, height=7,res=600)
 g1
 dev.off()
 
 #==== scRNA-seq cell number barchat After ajusting =======
-# adjust cell number=============================
+# after adjust cell number=============================
 y =  x_y[,-grep("\\.cbc",colnames(x_y))]
 colnames(y) = gsub("\\.sc","",colnames(y))
+#y = y[,-(which(colnames(y) %in% c("total")))] #
 y = y[,-(which(colnames(y) %in% c("total","MCL")))] #
 y.adj = apply(y,2, function(s) s*x_y$L_M.cbc) %>% as.data.frame
 y.adj$sample = rownames(y)
@@ -259,24 +278,30 @@ y.adj <- gather(y.adj, key = "Cell.Type", value = "cell.number", -sample)
 g2 <-ggplot(y.adj, aes(sample, cell.number))+
         geom_bar(stat = "identity", aes(fill = Cell.Type)) +
         ylab("cell number")+
-        #ggtitle("cell type summary of in scRNA-seq after adjusting cell number")+
+        ggtitle("After")+
         theme(text = element_text(size=15),  
               legend.position = "none",
               plot.title = element_text(size=20,hjust = 0.5),
               axis.text.x = element_text(angle = 90, hjust = 1))+
-        #scale_fill_manual(values = c("#4DAF4A","#FED9A6","#E41A1C","#FFFFCC","#FF7F00","#e94749",
-        #                             "#193b13","#FB9A99","#A65628","#377EB8"))
-        scale_fill_manual(values = c(singler_colors1))
+        #scale_fill_manual(values = c(singler_colors1)) # include MCL
+        #scale_fill_manual(values = c(singler_colors1[-7])) # no MCL
+        #scale_fill_manual(values = c(singler_colors2))
+        scale_fill_manual(values = c(singler_colors2[-15])) # no MCL
 
-jpeg(paste0(path,"/barchart_scRNA_adjusing.noMCL_sub.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"/barchart_scRNA~.jpeg"), units="in", width=10, height=7,res=600)
+g2
+dev.off()
+        
+jpeg(paste0(path,"/barchart_scRNA_adjusting_sub.noMCL.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(g1,g2)+
-        ggtitle("Before and after adjusting scRNA-seq cell number, no MCL cells")+
+        ggtitle("Before and after adjusting scRNA-seq cell number")+
         theme(text = element_text(size=15),  
               legend.position = "none",
               plot.title = element_text(size=20,hjust = 0.5))
 dev.off()
 
-# fill up missing value
+
+# fill up missing value--------------------
 x_y$m.cbc_L = x_y$Monocytes.sc / x_y$WBC_L.cbc/1000000*100
 (m.cbc_L <- median(x_y[which(!is.na(x_y$WBC.cbc) & (x_y$Monocytes.sc >50)),"m.cbc_L"]))
 hist(x_y[which(!is.na(x_y$WBC.cbc) & (x_y$Monocytes.sc >50)),"m.cbc_L"])
@@ -286,8 +311,6 @@ x_y[which(is.na(x_y$WBC_L.cbc)),"WBC_L.cbc"] =
         x_y$Monocytes.sc[which(is.na(x_y$WBC_L.cbc))] / m.cbc_L/1000000*100
 
 x_y
-
-
 x_y$L_T_ratio.x = x_y$Lymphocytes.x/(x_y$Monocytes.x+x_y$Lymphocytes.x)
 x_y$L_T_ratio.y = x_y$Lymphocytes.y/(x_y$total)
 

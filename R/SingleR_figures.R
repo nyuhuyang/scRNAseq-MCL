@@ -13,7 +13,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 (load(file="data/MCL_Harmony_24_20190128.Rda"))
-(load(file="./output/singler_MCL_24F_20190128.Rda"))
+(load(file="output/singler_MCL_24T_20190128.Rda"))
 
 # if singler didn't find all cell labels
 if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
@@ -143,7 +143,7 @@ object@meta.data[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
 
 object <- AddMetaData(object = object,metadata = singlerDF)
 
-object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1[1:25])
+object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1[1:26])
 object <- SetAllIdent(object = object, id = "singler1sub")
 TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F)
 
@@ -151,26 +151,35 @@ save(object,file="data/MCL_Harmony_24_20190128.Rda")
 ##############################
 # subset Seurat
 ###############################
+# select 1/4 of cell from control
+# in Identify_Cell_Types_Manually.R 2.2
+
 table(object@meta.data$orig.ident)
 table(object@ident)
 object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
+object %<>% SetAllIdent(id = "orig.ident")
 
 df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-object <- SetAllIdent(object, id="singler1sub")
-tests <- paste0("test",7)
-for(test in tests){
-        sample_n = which(df_samples$tests %in% c("control",test))
-        samples <- unique(df_samples$sample[sample_n])
 
-        cell.use <- rownames(object@meta.data)[object@meta.data$orig.ident %in% 
-                                                       c("Normal",samples)]
-        subset.object <- SubsetData(object, cells.use = cell.use)
-        subset.object@meta.data$orig.ident %>% unique %>% sort %>% print
-        g <- SplitTSNEPlot(subset.object,group.by = "ident",split.by = "orig.ident",
-                           select.plots = c(1,3,2,4),#c(1,5,2,4,3),#c(6:8,1:5)
-                           no.legend = T,do.label =F,label.size=3,size=20,
-                           return.plots =T, label.repel = T,force=2)
+tests <- paste0("test",2:7)
+for(test in tests){
+        sample_n = which(df_samples$tests %in% test)
+        df <- as.data.frame(df_samples[sample_n,])
+        samples <- unique(df$sample)
+        rownames(df) = samples
+        
+        print(samples <- c("Normal",df$sample[order(df$tsne)]))
+        
+        g <- lapply(samples,function(sample) {
+                SubsetData(object, ident.use = sample) %>%
+                        SetAllIdent(id = "singler1sub") %>%
+                        TSNEPlot.1(no.legend = T,do.label =F,label.size=3,size=20,
+                                   colors.use = ExtractMetaColor(.),
+                                   return.plots =T, label.repel = T,force=2)+
+                        ggtitle(sample)+theme(text = element_text(size=20),
+                              plot.title = element_text(hjust = 0.5))
+        })
         jpeg(paste0(path,test,"_TSNEPlot.jpeg"), units="in", width=10, height=7,
              res=600)
         print(do.call(plot_grid, c(g, nrow = 2)))

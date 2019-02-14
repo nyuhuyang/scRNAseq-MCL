@@ -28,4 +28,4 @@ if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
 singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
 singler$meta.data$xy = object@dr$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = object@ident # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="./output/singler_MCL_24F_20190128.Rda")
+save(singler,file="./output/singler_MCL_24T_20190128.Rda")

@@ -46,6 +46,7 @@ for(i in 1:length(marker.list)){
 normal_cells = lapply(c("BH","DJ","MD","NZ"), function(x){
         rownames(object@meta.data)[(object@meta.data$orig.ident %in% x)]
 })
+set.seed(101)
 remove_normal_cells = lapply(normal_cells, function(x) sample(x, size = length(x)*3/4)) %>%
         unlist
 table(object@cell.names %in% remove_normal_cells)
@@ -65,18 +66,21 @@ table(object@ident)
 # ===== sample list ======
 df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",c(3))
+tests <- paste0("test",c(7))
 for(test in tests){
-        sample_n = which(df_samples$tests %in% c("control",test))
+        sample_n = which(df_samples$tests %in% c("control",tests))
         samples <- unique(df_samples$sample[sample_n])
-        
+
         cell.use <- rownames(object@meta.data)[object@meta.data$orig.ident %in% 
                                                        c("Normal",samples)]
         subset.object <- SubsetData(object, cells.use = cell.use)
-        subset.object@meta.data$orig.ident %>% unique %>% sort %>% print
-        SplitTSNEPlot(subset.object,do.label = F,select.plots = c(1,2,5,3,4), do.print = T, do.return=F)
+        print(subset.object@meta.data$orig.ident %>% unique %>% sort)
+        subset.object %<>% SetAllIdent(id = "X6_clusters")
+        SplitTSNEPlot(subset.object,do.label = T,select.plots = c(1,2,5,3,4), label.size = 5,
+                      no.legend = T,text.repel = F,label.repel = T, do.print = T, do.return=F)
         subset.object %<>% SetAllIdent(id = "singler1sub")
-        SplitTSNEPlot(subset.object,do.label = F,select.plots = c(1,2,5,3,4), do.print = T, do.return=F)
+        SplitTSNEPlot(subset.object,do.label = F,select.plots = c(1,2,5,3,4), 
+                      no.legend = T,do.print = T, do.return=F)
         SplitSingleFeaturePlot(subset.object, 
                                select.plots = c(1,2,5,3,4),#c(1,5,2,4,3),#
                                alias = df_markers,
@@ -92,7 +96,7 @@ SplitSingleFeaturePlot(object, split.by = "foo",
                        alias = df_markers,
                        group.by = "ident",
                        no.legend = T,label.size=3,do.print =T,nrow = 1,
-                       markers = markers, threshold = 0.01)  
+                       markers = "CD8A", threshold = 2)  
 
 
 #######################

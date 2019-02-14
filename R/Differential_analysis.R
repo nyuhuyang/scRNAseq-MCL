@@ -38,15 +38,15 @@ table(object@meta.data$singler1main, object@meta.data$orig.ident) %>%
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
 TSNEPlot.1(object,do.label = T)
-B_cells_MCL <- SubsetData(object, ident.use = c(0,1,4,5,6,9,12,13,14,15)) #0,1,2,6,9,10,14,15,16
-#B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
+B_cells_MCL <- SubsetData(object, ident.use = c(0,1,4,5,6,9))
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
 table(B_cells_MCL@ident)
 
-#B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","HSC","MCL"))
-#table(B_cells_MCL@meta.data$singler1sub)
-#B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1sub")
-#(ident.remove <- grep("T_cells.",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
-#B_cells_MCL <- SubsetData(B_cells_MCL, ident.remove =  ident.remove)
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","HSC","MCL"))
+table(B_cells_MCL@meta.data$singler1sub)
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1sub")
+(ident.remove <- grep("T_cells.",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.remove =  ident.remove)
 
 # cell population
 table(B_cells_MCL@meta.data$singler1main, B_cells_MCL@meta.data$orig.ident) %>% 
@@ -54,7 +54,8 @@ table(B_cells_MCL@meta.data$singler1main, B_cells_MCL@meta.data$orig.ident) %>%
         kable_styling()
 table(B_cells_MCL@meta.data$orig.ident) %>% .[samples] %>% kable %>% kable_styling()
 # tsne plot
-p4 <- TSNEPlot.1(B_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, no.legend =T)
+B_cells_MCL %<>% SetAllIdent(id="res.0.6")
+p2 <- TSNEPlot.1(B_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, no.legend =T)
                  #colors.use = ExtractMetaColor(B_cells_MCL))
 
 B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2, dims.use = 1:50,
@@ -62,17 +63,17 @@ B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2, dims
              force.recalc = TRUE, print.output = FALSE)
 idents <- as.data.frame(table(B_cells_MCL@ident))
 (old.ident.ids <- idents$Var1)
-new.cluster.ids <- c(1,3,4,5,2,6,6,6,6,6)
+new.cluster.ids <- c(1,3,4,5,2,6)
 B_cells_MCL@ident <- plyr::mapvalues(x = B_cells_MCL@ident,
                               from = old.ident.ids, to = new.cluster.ids)
 B_cells_MCL@ident <- factor(B_cells_MCL@ident, levels = 1:6)
 B_cells_MCL <- StashIdent(object = B_cells_MCL, save.name = "X6_clusters")
-
+B_cells_MCL %<>% SubsetData(ident.remove = "6")
 p3 <- TSNEPlot.1(B_cells_MCL, do.return = T, pt.size = 0.5, do.label = T, 
                  group.by = "ident",no.legend =T )
 
 jpeg(paste0(path,"/S1_MCL_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
-plot_grid(p4, p3)+ggtitle("B cell only") + 
+plot_grid(p2, p3)+ggtitle("B cell only") + 
         theme(plot.title = element_text(size = 18, hjust = 0.5, face = "bold"))
 dev.off()
 remove(object);GC();GC();GC();GC();GC();GC();GC();GC();GC();
@@ -188,7 +189,6 @@ for(pair in Pairs){
         subset.MCL <- SetAllIdent(subset.MCL,id = "X6_clusters")
         SplitTSNEPlot(subset.MCL, select.plots = select.plots,
                       do.return = FALSE,do.print = TRUE)
-
         # remove low cell ident
         subset.MCL@meta.data$clusters_6 <- paste(subset.MCL@meta.data$orig.ident, 
                                                  subset.MCL@meta.data$X6_clusters, sep = ".")

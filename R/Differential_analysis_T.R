@@ -129,18 +129,38 @@ write.csv(VarGenes_AveExp,file = paste0(path,"VarGenes_AveExp.csv"))
 ###############################
 # Doheatmap for Normal / MCL
 ###############################
-# remove samples with low T cells======
 df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% paste0("test",2:7))
 (samples <- df_samples$sample[sample_n])
-
+# remove samples with low T cells======
 table_df <- table(T_cells_MCL@meta.data$orig.ident) %>% as.data.frame
 keep <- table_df[table_df$Freq > 100,"Var1"] %>% as.character()
 (samples <- samples[samples %in% keep])
 T_cells_MCL %<>% SetAllIdent(id = "orig.ident")
-for(sample in samples[10]){
-    subset.MCL <- SubsetData(T_cells_MCL, ident.use = c("Normal",sample))
+for(sample in samples){
+    subset.MCL <- SubsetData(T_cells_MCL, ident.use = c(sample,"Normal"))
+    #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
+    subset.MCL %<>% SetAllIdent(id = "X4_orig.ident")
+    x4_cluster <- subset.MCL@ident %>% unique
+    x4_cluster = x4_cluster[-grep("^Normal",x4_cluster)] %>% as.character %>% 
+        gsub('.*\\_',"",.) %>% as.numeric %>% sort
+    print(ident.1 <- paste(sample,x4_cluster,sep="_"))
+    print(ident.2 <- paste("Normal",x4_cluster,sep="_"))
+
+    subset.MCL <- SubsetData(subset.MCL, ident.use = c(ident.1,ident.2))
+    subfolder <- paste0(path,sample,"_vs_Normal")
+    gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
+                                   ident.2 = ident.2,
+                                   logfc.threshold = 0.005,min.cells.group =3,
+                                   min.pct = 0.01,
+                                   return.thresh = 0.5)
+}
+    (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
+    if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
+    GC();GC();GC();GC();GC();GC();GC();GC();
+    subset.MCL <- ScaleData(subset.MCL)
+
     #---SplitTSNEPlot---- "must keep the order"
     #subset.MCL <- SetAllIdent(subset.MCL, id= "singler1sub")
     #SplitTSNEPlot(subset.MCL,do.return = FALSE,do.print = TRUE, do.label = F)
@@ -160,23 +180,6 @@ for(sample in samples[10]){
         print(do.call(plot_grid, c(g, nrow = 1)))
         dev.off()
     }}
-    #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
-    subset.MCL %<>% SetAllIdent(id = "X4_orig.ident")
-    x4_cluster <- subset.MCL@ident %>% unique
-    x4_cluster = x4_cluster[-grep("^Normal",x4_cluster)] %>% as.character %>% 
-            gsub('.*\\_',"",.) %>% as.numeric %>% sort
-    print(dent.1 <- paste("Normal",x4_cluster,sep="_"))
-    print(dent.2 <- paste(sample,x4_cluster,sep="_"))
-    subset.MCL <- SubsetData(subset.MCL, ident.use = c(dent.1,dent.2))
-    gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(dent.1,dent.2), 
-                                   ident.2 = c(dent.2,dent.1),
-                                   logfc.threshold = 0.2,min.cells.group =3,
-                                   return.thresh = 0.05)
-    write.csv(gde.markers, paste0(path,"Normal_",sample,".csv"))
-    (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
-    if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
-    GC();GC();GC();GC();GC();GC();GC();GC();
-    subset.MCL <- ScaleData(subset.MCL)
     #---DoHeatmap.1----
     subset.MCL@ident = factor(subset.MCL@ident, levels = c(dent.1,dent.2))
     markers <-  HumanGenes(subset.MCL,c("CD3D","CD3G","CD4","CD8A","FCGR3A","FCGR3B","NCAM1","KLRC1"))
@@ -351,3 +354,19 @@ object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.
 object %<>% SetAllIdent(id="orig.ident")
 Normal <- SubsetData(object, ident.use= "Normal")
 Normal_Exp <- AverageExpression(Normal)
+
+
+
+#========
+# Add FoldChange column ===========
+output <- "/Users/yah2014/Downloads/20190124_MCL/"
+files <- list.files(output)
+(files =files[grep(".csv",files)])
+for(file in files){
+    gde.markers = read.csv(paste0(output,file))
+    gde.markers$avg_log2FC = log2(exp(1)) * gde.markers$avg_logFC
+    gde.markers = gde.markers[,c( "gene","p_val","avg_log2FC","FC","pct.1","pct.2",
+                        "p_val_adj","UMI.1","UMI.2","cluster1.vs.cluster2")]
+    write.csv(gde.markers, paste0(output,file))
+}
+

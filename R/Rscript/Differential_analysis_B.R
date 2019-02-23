@@ -58,7 +58,7 @@ table_df <- table(B_cells_MCL@meta.data$orig.ident) %>% as.data.frame
 keep <- table_df[table_df$Freq > 100,"Var1"] %>% as.character()
 (samples <- samples[samples %in% keep])
 B_cells_MCL %<>% SetAllIdent(id = "orig.ident")
-for(sample in samples[1]){
+for(sample in samples){
     subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(sample,"Normal"))
     #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
     subset.MCL %<>% SetAllIdent(id = "X6_orig.ident")
@@ -73,7 +73,7 @@ for(sample in samples[1]){
 
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,only.pos = FALSE,
-                                   logfc.threshold = 1.005,min.cells.group =3,
+                                   logfc.threshold = 0.005,min.cells.group =3,
                                    min.pct = 0.01,
                                    return.thresh = 0.5,
                                    save.path = subfolder)
@@ -87,7 +87,7 @@ B_cells_MCL %<>% SetAllIdent(id = "orig.ident")
 samples1 <- c("Pt-11-C1","Pt-11-C14","Pt-11-C28","Pt-11-C28","Pt-17-C2","Pt-17-C7","Pt-17-C31","Pt-17-C31","AFT-03-C1D8","Pt-AA13-Ib-1")
 samples2 <- c("Pt-11-LN-C1","Pt-11-C1","Pt-11-C1","Pt-11-C14","Pt-17-LN-C1","Pt-17-C2","Pt-17-C2","Pt-17-C7","AFT-03-C1D1","Pt-AA13-Ib-p")
 
-for(i in 1:length(samples1[1])){
+for(i in 1:length(samples1)){
     subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(samples1[i],samples2[i]))
 
     #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
@@ -102,7 +102,7 @@ for(i in 1:length(samples1[1])){
     subfolder <- paste0(path,"20190222_B/",samples1[i],"_vs_",samples2[i],"/")
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,only.pos = FALSE,
-                                   logfc.threshold = 1.005,min.cells.group =3,
+                                   logfc.threshold = 0.005,min.cells.group =3,
                                    min.pct = 0.01,
                                    return.thresh = 0.5,
                                    save.path = subfolder)

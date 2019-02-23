@@ -69,10 +69,11 @@ for(sample in samples[1]){
     print(ident.2 <- rep("Normal",length(ident.1)))
     
     subset.MCL <- SubsetData(subset.MCL, ident.use = c(ident.1,ident.2))
-    subfolder <- paste0(path,sample,"_vs_Normal_B")
+    subfolder <- paste0(path,"20190222_B/",sample,"_vs_Normal/")
+
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,only.pos = FALSE,
-                                   logfc.threshold = 0.005,min.cells.group =3,
+                                   logfc.threshold = 1.005,min.cells.group =3,
                                    min.pct = 0.01,
                                    return.thresh = 0.5,
                                    save.path = subfolder)
@@ -83,19 +84,26 @@ for(sample in samples[1]){
 ###############################
 # remove samples with low T cells======
 B_cells_MCL %<>% SetAllIdent(id = "orig.ident")
-samples1 <- c("Pt-11-C28","Pt-17-C7","Pt-17-C31","AFT-03-C1D8")
-samples2 <- c("Pt-11-C14","Pt-17-C2","Pt-17-C7","AFT-03-C1D1")
-for(i in 1:length(samples1)){
+samples1 <- c("Pt-11-C1","Pt-11-C14","Pt-11-C28","Pt-11-C28","Pt-17-C2","Pt-17-C7","Pt-17-C31","Pt-17-C31","AFT-03-C1D8","Pt-AA13-Ib-1")
+samples2 <- c("Pt-11-LN-C1","Pt-11-C1","Pt-11-C1","Pt-11-C14","Pt-17-LN-C1","Pt-17-C2","Pt-17-C2","Pt-17-C7","AFT-03-C1D1","Pt-AA13-Ib-p")
+
+for(i in 1:length(samples1[1])){
     subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(samples1[i],samples2[i]))
 
     #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
     subset.MCL %<>% SetAllIdent(id = "X6_orig.ident")
-    print(ident.1 <- paste(samples1[i],1:4,sep="_"))
-    print(ident.2 <- paste(samples2[i],1:4,sep="_"))
+    x6_cluster <- subset.MCL@ident %>% unique %>% 
+        gsub('.*\\_',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)]
+    
+    print(ident.1 <- paste(samples1[i],x6_cluster,sep="_"))
+    print(ident.2 <- paste(samples2[i],x6_cluster,sep="_"))
     subset.MCL <- SubsetData(subset.MCL, ident.use = c(ident.1,ident.2))
+    
+    subfolder <- paste0(path,"20190222_B/",samples1[i],"_vs_",samples2[i],"/")
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,only.pos = FALSE,
-                                   logfc.threshold = 0.005,min.cells.group =3,
+                                   logfc.threshold = 1.005,min.cells.group =3,
                                    min.pct = 0.01,
-                                   return.thresh = 0.5)
+                                   return.thresh = 0.5,
+                                   save.path = subfolder)
 }

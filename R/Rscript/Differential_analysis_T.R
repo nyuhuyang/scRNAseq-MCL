@@ -86,7 +86,7 @@ for(sample in samples[1]){
 T_cells_MCL %<>% SetAllIdent(id = "orig.ident")
 samples1 <- c("Pt-11-C28","Pt-17-C7","Pt-17-C31","AFT-03-C1D8")
 samples2 <- c("Pt-11-C14","Pt-17-C2","Pt-17-C7","AFT-03-C1D1")
-for(i in 1:length(samples1)){
+for(i in 1:length(samples1[1])){
     subset.MCL <- SubsetData(T_cells_MCL, ident.use = c(samples1[i],samples2[i]))
 
     #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"

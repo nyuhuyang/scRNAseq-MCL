@@ -53,27 +53,30 @@ df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% paste0("test",2:7))
 (samples <- df_samples$sample[sample_n])
-# remove samples with low T cells======
+# remove samples with low B cells======
 table_df <- table(B_cells_MCL@meta.data$orig.ident) %>% as.data.frame
 keep <- table_df[table_df$Freq > 100,"Var1"] %>% as.character()
 (samples <- samples[samples %in% keep])
 B_cells_MCL %<>% SetAllIdent(id = "orig.ident")
-for(sample in samples){
+for(sample in samples[5:length(samples)]){
     subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(sample,"Normal"))
-    #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
     subset.MCL %<>% SetAllIdent(id = "X6_orig.ident")
+    # remove cluster with less than 3 cells======
+    table_subset.MCL <- table(subset.MCL@meta.data$X6_orig.ident) %>% as.data.frame
+    keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character()
+    subset.MCL <- SubsetData(subset.MCL, ident.use = keep.MCL)
+
     x6_cluster <- subset.MCL@ident %>% unique
     x6_cluster = x6_cluster[-grep("^Normal",x6_cluster)] %>% as.character %>% 
         gsub('.*\\_',"",.) %>% as.numeric %>% sort
     print(ident.1 <- paste(sample,x6_cluster,sep="_"))
     print(ident.2 <- rep("Normal",length(ident.1)))
     
-    subset.MCL <- SubsetData(subset.MCL, ident.use = c(ident.1,ident.2))
     subfolder <- paste0(path,"20190222_B/",sample,"_vs_Normal/")
 
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,only.pos = FALSE,
-                                   logfc.threshold = 0.005,min.cells.group =3,
+                                   logfc.threshold = 1.005,min.cells.group =3,
                                    min.pct = 0.01,
                                    return.thresh = 0.5,
                                    save.path = subfolder)
@@ -82,27 +85,29 @@ for(sample in samples){
 ###############################
 # Doheatmap for MCL.1 / MCL.2
 ###############################
-# remove samples with low T cells======
+# remove samples with low B cells======
 B_cells_MCL %<>% SetAllIdent(id = "orig.ident")
 samples1 <- c("Pt-11-C1","Pt-11-C14","Pt-11-C28","Pt-11-C28","Pt-17-C2","Pt-17-C7","Pt-17-C31","Pt-17-C31","AFT-03-C1D8","Pt-AA13-Ib-1")
 samples2 <- c("Pt-11-LN-C1","Pt-11-C1","Pt-11-C1","Pt-11-C14","Pt-17-LN-C1","Pt-17-C2","Pt-17-C2","Pt-17-C7","AFT-03-C1D1","Pt-AA13-Ib-p")
 
 for(i in 1:length(samples1)){
     subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(samples1[i],samples2[i]))
-
-    #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
     subset.MCL %<>% SetAllIdent(id = "X6_orig.ident")
+    # remove cluster with less than 3 cells======
+    table_subset.MCL <- table(subset.MCL@meta.data$X6_orig.ident) %>% as.data.frame
+    keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character()
+    subset.MCL <- SubsetData(subset.MCL, ident.use = keep.MCL)
+    
     x6_cluster <- subset.MCL@ident %>% unique %>% 
         gsub('.*\\_',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)]
     
     print(ident.1 <- paste(samples1[i],x6_cluster,sep="_"))
     print(ident.2 <- paste(samples2[i],x6_cluster,sep="_"))
-    subset.MCL <- SubsetData(subset.MCL, ident.use = c(ident.1,ident.2))
-    
+
     subfolder <- paste0(path,"20190222_B/",samples1[i],"_vs_",samples2[i],"/")
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,only.pos = FALSE,
-                                   logfc.threshold = 0.005,min.cells.group =3,
+                                   logfc.threshold = 1.005,min.cells.group =3,
                                    min.pct = 0.01,
                                    return.thresh = 0.5,
                                    save.path = subfolder)

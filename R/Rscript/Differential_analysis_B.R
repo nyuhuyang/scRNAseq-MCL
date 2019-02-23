@@ -69,12 +69,13 @@ for(sample in samples[1]){
     print(ident.2 <- rep("Normal",length(ident.1)))
     
     subset.MCL <- SubsetData(subset.MCL, ident.use = c(ident.1,ident.2))
-    subfolder <- paste0(path,sample,"_vs_Normal")
+    subfolder <- paste0(path,sample,"_vs_Normal_B")
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,only.pos = FALSE,
                                    logfc.threshold = 0.005,min.cells.group =3,
                                    min.pct = 0.01,
-                                   return.thresh = 0.5)
+                                   return.thresh = 0.5,
+                                   save.path = subfolder)
 }
 
 ###############################

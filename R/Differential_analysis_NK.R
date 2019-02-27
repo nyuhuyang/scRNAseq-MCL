@@ -165,14 +165,14 @@ for(i in 1:length(samples1)){
                      use.scaled = T,
                      ident.use = paste(samples1[i],"vs.",samples2[i], "in NK cells"),
                      group.label.rot = T,cex.row = 3,remove.key =F,title.size = 12)
-    jpeg(paste0(path,"DoHeatmap_Normal_",samples1[i],"_",samples2[i],".jpeg"), units="in", width=10, height=7,
+    jpeg(paste0(path,"DoHeatmap_",samples1[i],"_",samples2[i],".jpeg"), units="in", width=10, height=7,
          res=600)
     print(g)
     dev.off()
     #---DoHeatmap vertical bar----
     g1 <- MakeCorlorBar(subset.MCL, gde.markers,Top_n = 50, add.genes = markers, do.print = F,
                         do.return = T)
-    jpeg(paste0(path,"DoHeatmap_Normal_",samples1[i],"_",samples2[i],"_legend.jpeg"),
+    jpeg(paste0(path,"DoHeatmap_",samples1[i],"_",samples2[i],"_legend.jpeg"),
          units="in", width=10, height=7,res=600)
     print(g1)
     dev.off()

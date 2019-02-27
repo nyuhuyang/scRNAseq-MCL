@@ -149,7 +149,6 @@ for(sample in samples){
     print(ident.2 <- paste("Normal",x4_cluster,sep="_"))
 
     subset.MCL <- SubsetData(subset.MCL, ident.use = c(ident.1,ident.2))
-    subfolder <- paste0(path,sample,"_vs_Normal")
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,
                                    logfc.threshold = 0.005,min.cells.group =3,

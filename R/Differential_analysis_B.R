@@ -143,7 +143,7 @@ for(sample in samples){
         gde.markers <- FindPairMarkers(subset.MCL, ident.1 = MCL.dent.1, 
                                        ident.2 = rep("normal",length(MCL.dent.1)),
                                        logfc.threshold = 0.2,min.cells.group =1,
-                                       return.thresh = 0.05)
+                                       return.thresh = 0.05,save.files = FALSE)
         write.csv(gde.markers, paste0(path,control,"_",sample,".csv"))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]

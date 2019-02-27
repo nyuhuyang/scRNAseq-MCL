@@ -58,7 +58,7 @@ table_df <- table(B_cells_MCL@meta.data$orig.ident) %>% as.data.frame
 keep <- table_df[table_df$Freq > 100,"Var1"] %>% as.character()
 (samples <- samples[samples %in% keep])
 B_cells_MCL %<>% SetAllIdent(id = "orig.ident")
-for(sample in samples[5:length(samples)]){
+for(sample in samples[1:length(samples)]){
     subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(sample,"Normal"))
     subset.MCL %<>% SetAllIdent(id = "X6_orig.ident")
     # remove cluster with less than 3 cells======
@@ -107,7 +107,7 @@ for(i in 1:length(samples1)){
     subfolder <- paste0(path,"20190222_B/",samples1[i],"_vs_",samples2[i],"/")
     gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
                                    ident.2 = ident.2,only.pos = FALSE,
-                                   logfc.threshold = 1.005,min.cells.group =3,
+                                   logfc.threshold = 0.005,min.cells.group =3,
                                    min.pct = 0.01,
                                    return.thresh = 0.5,
                                    save.path = subfolder)

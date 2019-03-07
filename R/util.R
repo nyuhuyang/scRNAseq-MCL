@@ -1,3 +1,21 @@
+#remove duplicate rownames with lower rowsumns
+#' @param mat input as data.frame with gene name
+#' @export mat matrix with gene as rownames, no duplicated genes
+RemoveDup <- function(mat){
+    gene_id <- as.matrix(mat[,1])
+    mat <- mat[,-1]
+    if(!is.matrix(mat)) mat <- sapply(mat,as.numeric)
+    rownames(mat) <- 1:nrow(mat)
+    mat[is.na(mat)] = 0
+    mat <- cbind(mat, "rowSums" = rowSums(mat))
+    mat <- mat[order(mat[,"rowSums"],decreasing = T),]
+    gene_id <- gene_id[as.numeric(rownames(mat))]
+    remove_index <- duplicated(gene_id)
+    mat <- mat[!remove_index,]
+    rownames(mat) <- gene_id[!remove_index]
+    return(mat[,-ncol(mat)])
+}
+
 #' select 1/4 of cell from control
 ScaleDown <- function(object, control=c("BH","DJ","MD","NZ")){
     

@@ -56,7 +56,7 @@ Blueprint_encode = CreateSinglerReference(name = 'Blueprint_encode',
 save(Blueprint_encode,file='../SingleR/data/Blueprint_encode.RData')
 
 # check MCL data==============================
-X181120_MCL_WTS <- readxl::read_excel("doc/181120 MCL WTS.xlsx", col_names = FALSE)
+X181120_MCL_WTS <- readxl::read_excel("data/181120 MCL WTS.xlsx", col_names = FALSE)
 
 # remove NA columns
 (remove_columns <- (X181120_MCL_WTS$X__1 == "gene") %>% which %>% .[1] %>% 
@@ -72,23 +72,6 @@ X181120_MCL_WTS <- X181120_MCL_WTS[!apply(X181120_MCL_WTS,1, function(x) all(is.
 head(X181120_MCL_WTS)
 
 X181120_MCL_WTS <- X181120_MCL_WTS[-((X181120_MCL_WTS$gene == "gene") %>% which %>% .[1]),]
-#remove duplicate rownames with lower rowsumns
-#' @param mat input as data.frame with gene name
-#' @export mat matrix with gene as rownames, no duplicated genes
-RemoveDup <- function(mat){
-        gene_id <- as.matrix(mat[,1])
-        mat <- mat[,-1]
-        if(!is.matrix(mat)) mat <- sapply(mat,as.numeric)
-        rownames(mat) <- 1:nrow(mat)
-        mat[is.na(mat)] = 0
-        mat <- cbind(mat, "rowSums" = rowSums(mat))
-        mat <- mat[order(mat[,"rowSums"],decreasing = T),]
-        gene_id <- gene_id[as.numeric(rownames(mat))]
-        remove_index <- duplicated(gene_id)
-        mat <- mat[!remove_index,]
-        rownames(mat) <- gene_id[!remove_index]
-        return(mat[,-ncol(mat)])
-}
 X181120_MCL_WTS <- RemoveDup(X181120_MCL_WTS)
 dim(X181120_MCL_WTS)
 head(X181120_MCL_WTS)
@@ -109,7 +92,6 @@ colsum <- colSums(MCL_blue_encode)
 scale_factor = median(colsum)
 MCL_blue_encode = MCL_blue_encode/colsum * scale_factor
 testMMM(MCL_blue_encode)
-
 
 jpeg(paste0(path,"boxplot_MCL_blue_encode.jpeg"), units="in", width=10, height=7,res=600)
 boxplot(ref$data) #slow

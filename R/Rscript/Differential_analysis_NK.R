@@ -54,25 +54,25 @@ table_df <- table(NK@meta.data$orig.ident) %>% as.data.frame
 keep <- table_df[table_df$Freq > 10,"Var1"] %>% as.character()
 (samples <- samples[samples %in% keep])
 NK %<>% SetAllIdent(id = "orig.ident")
-#for(sample in samples){
-#    subset.MCL <- SubsetData(NK, ident.use = c(sample,"Normal"))
+for(sample in samples){
+    subset.MCL <- SubsetData(NK, ident.use = c(sample,"Normal"))
     #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
-#    subset.MCL %<>% SetAllIdent(id = "X_orig.ident")
-#    x4_cluster <- subset.MCL@ident %>% unique
-#    x4_cluster = x4_cluster[-grep("^Normal",x4_cluster)] %>% as.character %>% 
-#        gsub('.*\\_',"",.) %>% as.numeric %>% sort
-#    print(ident.1 <- paste(sample,x4_cluster,sep="_"))
-#    print(ident.2 <- paste("Normal",x4_cluster,sep="_"))
+    subset.MCL %<>% SetAllIdent(id = "X_orig.ident")
+    x4_cluster <- subset.MCL@ident %>% unique
+    x4_cluster = x4_cluster[-grep("^Normal",x4_cluster)] %>% as.character %>%
+        gsub('.*\\_',"",.) %>% as.numeric %>% sort
+    print(ident.1 <- paste(sample,x4_cluster,sep="_"))
+    print(ident.2 <- paste("Normal",x4_cluster,sep="_"))
     
     #subset.MCL <- SubsetData(subset.MCL, ident.use = c(ident.1,ident.2))
-#    subfolder <- paste0(path,"NK/",sample,"_vs_Normal/")
-#    gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1, 
-#                                   ident.2 = ident.2,only.pos = FALSE,
-#                                   logfc.threshold = -Inf,min.cells.group =3,
-#                                   min.pct = -Inf,
-#                                   return.thresh = Inf,
-#                                   save.path = subfolder)
-#}
+    subfolder <- paste0(path,"NK/",sample,"_vs_Normal/")
+    gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1,
+                                   ident.2 = ident.2,only.pos = FALSE,
+                                   logfc.threshold = -Inf,min.cells.group =3,
+                                   min.pct = -Inf,
+                                   return.thresh = Inf,
+                                   save.path = subfolder)
+}
 
 ###############################
 # DE for MCL.1 / MCL.2

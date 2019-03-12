@@ -7,6 +7,7 @@ library(dplyr)
 library(magrittr)
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
+source("R/util.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 ####functions===========
@@ -25,8 +26,8 @@ table(is.na(blueprint_encode$data))
 blueprint_encode$data[is.na(blueprint_encode$data)] = 0
 head(colSums(blueprint_encode$data))
 testMMM(blueprint_encode$data)
-boxplot(blueprint_encode$data, main="blueprint_encode")#slow!
-boxplot(blueprint_encode$data[,1:100])#slow!
+#boxplot(blueprint_encode$data, main="blueprint_encode")#slow!
+#boxplot(blueprint_encode$data[,1:100])#slow!
 # remove low quanlity blueprint_encode data
 par(mfrow=c(2,1))
 hist(colMeans(blueprint_encode$data),breaks=ncol(blueprint_encode$data))
@@ -39,7 +40,7 @@ quantile_75_new <- apply(blueprint_encode_rm,2,function(x) quantile(x,probs =0.7
 hist(quantile_75, breaks=ncol(blueprint_encode$data))
 hist(quantile_75_new, breaks=ncol(blueprint_encode_rm),xlim = c(0,4.1))
 par(mfrow=c(1,1))
-boxplot(blueprint_encode_rm)#slow!
+#boxplot(blueprint_encode_rm)#slow!
 title(main="blueprint_encode_rm")
 
 
@@ -56,26 +57,35 @@ Blueprint_encode = CreateSinglerReference(name = 'Blueprint_encode',
 save(Blueprint_encode,file='../SingleR/data/Blueprint_encode.RData')
 
 # check MCL data==============================
-X181120_MCL_WTS <- readxl::read_excel("data/181120 MCL WTS.xlsx", col_names = FALSE)
-
+X181120_MCL_WTS <- readxl::read_excel("data/RNAseq/181120 MCL WTS.xlsx", col_names = FALSE)
+bluk_MCL <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",sheet = "bluk_MCL") %>% as.data.frame
+rownames(bluk_MCL) = bluk_MCL$Sample
 # remove NA columns
-(remove_columns <- (X181120_MCL_WTS$X__1 == "gene") %>% which %>% .[1] %>% 
+(remove_columns <- (X181120_MCL_WTS$..1 == "gene") %>% which %>% .[1] %>% 
         X181120_MCL_WTS[.,] %>% is.na %>% as.vector)
 X181120_MCL_WTS <- X181120_MCL_WTS[,!remove_columns]
 head(X181120_MCL_WTS)
+X181120_MCL_WTS[16:20,]
+
 # remove NA rows
 X181120_MCL_WTS <- X181120_MCL_WTS[!apply(X181120_MCL_WTS,1, function(x) all(is.na(x))),]
-
+head(X181120_MCL_WTS)
 #rename column and remove gene row
-(colnames(X181120_MCL_WTS) <- (X181120_MCL_WTS$X__1 == "gene") %>% which %>% .[1] %>% 
-        X181120_MCL_WTS[.,] %>% as.vector)
+#(colnames(X181120_MCL_WTS) <- (X181120_MCL_WTS$X__1 == "gene") %>% which %>% .[1] %>% 
+#        X181120_MCL_WTS[.,] %>% as.vector)
+# remove Normal_PBCs and 11PB1
+colnames(X181120_MCL_WTS) = as.character(X181120_MCL_WTS[2,])
+#X181120_MCL_WTS <- X181120_MCL_WTS[-((X181120_MCL_WTS$gene == "gene") %>% which %>% .[1]),]
+X181120_MCL_WTS = X181120_MCL_WTS[-2,]
+
+label <- c("MCL_complete_response", "MCL_partial_response","MCL_progressive")
+(keep <- bluk_MCL$Sample[bluk_MCL$Label %in% label])
+X181120_MCL_WTS <- X181120_MCL_WTS[,c("gene",keep)]
 head(X181120_MCL_WTS)
 
-X181120_MCL_WTS <- X181120_MCL_WTS[-((X181120_MCL_WTS$gene == "gene") %>% which %>% .[1]),]
 X181120_MCL_WTS <- RemoveDup(X181120_MCL_WTS)
 dim(X181120_MCL_WTS)
 head(X181120_MCL_WTS)
-X181120_MCL_WTS <- X181120_MCL_WTS[,-c(1:4)]
 testMMM(X181120_MCL_WTS)
 
 # merge MCL and Blueprint_encode
@@ -101,7 +111,7 @@ dev.off()
 # Create Singler Reference
 ref = CreateSinglerReference(name = 'MCL_blue_encode',
                              expr = as.matrix(MCL_blue_encode), # the expression matrix
-                             types = c(paste0("MCL:",colnames(X181120_MCL_WTS)),
+                             types = c(bluk_MCL[colnames(X181120_MCL_WTS),"Label"],
                                        Blueprint_encode$types), 
                              main_types = c(rep("MCL",ncol(X181120_MCL_WTS)),
                                             Blueprint_encode$main_types))

@@ -18,8 +18,8 @@ df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",
 colnames(df_samples) = tolower(colnames(df_samples))
 df_samples$bulk.rnaseq.id = gsub(" ","_",df_samples$bulk.rnaseq.id)
 
-MDL_6669 <- read_excel("data/GRCF-Elemento-MDL-6669-expression.genes.xls")
-MDL_6392 <- read_excel("data/GRCF-Elemento-MDL-6392-expression.genes.xls")
+MDL_6669 <- read_excel("data/RNAseq/GRCF-Elemento-MDL-6669-expression.genes.xls")
+MDL_6392 <- read_excel("data/RNAseq/GRCF-Elemento-MDL-6392-expression.genes.xls")
 
 (sample_6669 <- colnames(MDL_6669)[colnames(MDL_6669) %in% df_samples$bulk.rnaseq.id])
 MDL_6669 = MDL_6669[,c("Gene_name",sample_6669)]
@@ -58,16 +58,19 @@ boxplot(MCL_bulk_sc)
 
 # 3.1.4 Spearman correlation  ==================
 y <- cor(MCL_bulk_sc, method="spearman")
-diag(c) <-NA
+diag(y) <-NA
 ident_num <- ncol(MCL_bulk)
-object_c_gendata <- c[(ident_num+1):nrow(c),1:ident_num]
+short_y <- y[(ident_num+1):nrow(y),1:ident_num]
 
-jpeg(paste0(path,"cluster heatmap.jpeg"), units="in", width=10, height=7,res=600)
-print(pheatmap(object_c_gendata,cex=.9,
-         cluster_rows= F,
-         cluster_cols = T,
+
+hc_c <- hclust(as.dist(1-cor(short_y, method="spearman")), method="complete")
+hc_r <- hclust(as.dist(1-cor(t(short_y), method="spearman")), method="complete")
+jpeg(paste0(path,"cluster_heatmap~.jpeg"), units="in", width=10, height=7,res=600)
+print(pheatmap(short_y,cex=.9,
+         cluster_rows= hc_r,
+         cluster_cols = hc,
          fontsize_row = 15,
          fontsize_col = 15,
          fontsize = 20,
-         main = "cluster heatmap"))
+         main = ""))
 dev.off()

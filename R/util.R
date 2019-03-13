@@ -1,3 +1,20 @@
+#remove NA columns and NA rows, remove duplicate Gene_name
+CleanUp <- function(df){
+    
+    rm_NA_col <- df[which(df[,1] == "Gene_name"),] %>% is.na %>% as.vector
+    df = df[,!rm_NA_col]
+    rm_NA_row <- apply(df,1, function(x) all(is.na(x)))
+    df = df[!rm_NA_row,]
+    colnames(df) = df[which(df[,1] == "Gene_name"),] %>% as.character
+    df = df[-which(df[,1] == "Gene_name"),]
+    
+    rm_col <- colnames(df) %in% c("Gene_id","biotype")
+    df = df[,!rm_col]
+    df = RemoveDup(df)
+    
+    return(df)
+}
+
 #remove duplicate rownames with lower rowsumns
 #' @param mat input as data.frame with gene name
 #' @export mat matrix with gene as rownames, no duplicated genes

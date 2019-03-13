@@ -58,32 +58,14 @@ save(Blueprint_encode,file='../SingleR/data/Blueprint_encode.RData')
 
 # check MCL data==============================
 X181120_MCL_WTS <- readxl::read_excel("data/RNAseq/181120 MCL WTS.xlsx", col_names = FALSE)
-bluk_MCL <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",sheet = "bluk_MCL") %>% as.data.frame
-rownames(bluk_MCL) = bluk_MCL$Sample
-# remove NA columns
-(remove_columns <- (X181120_MCL_WTS$..1 == "gene") %>% which %>% .[1] %>% 
-        X181120_MCL_WTS[.,] %>% is.na %>% as.vector)
-X181120_MCL_WTS <- X181120_MCL_WTS[,!remove_columns]
-head(X181120_MCL_WTS)
-X181120_MCL_WTS[16:20,]
+bulk_MCL <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",sheet = "bulk_MCL") %>% as.data.frame
 
-# remove NA rows
-X181120_MCL_WTS <- X181120_MCL_WTS[!apply(X181120_MCL_WTS,1, function(x) all(is.na(x))),]
-head(X181120_MCL_WTS)
-#rename column and remove gene row
-#(colnames(X181120_MCL_WTS) <- (X181120_MCL_WTS$X__1 == "gene") %>% which %>% .[1] %>% 
-#        X181120_MCL_WTS[.,] %>% as.vector)
-# remove Normal_PBCs and 11PB1
-colnames(X181120_MCL_WTS) = as.character(X181120_MCL_WTS[2,])
-#X181120_MCL_WTS <- X181120_MCL_WTS[-((X181120_MCL_WTS$gene == "gene") %>% which %>% .[1]),]
-X181120_MCL_WTS = X181120_MCL_WTS[-2,]
-
+X181120_MCL_WTS <- CleanUp(X181120_MCL_WTS)
+    
 label <- c("MCL_complete_response", "MCL_partial_response","MCL_progressive")
-(keep <- bluk_MCL$Sample[bluk_MCL$Label %in% label])
-X181120_MCL_WTS <- X181120_MCL_WTS[,c("gene",keep)]
+(keep <- bulk_MCL$Sample[bulk_MCL$Label %in% label])
+X181120_MCL_WTS <- X181120_MCL_WTS[,keep]
 head(X181120_MCL_WTS)
-
-X181120_MCL_WTS <- RemoveDup(X181120_MCL_WTS)
 dim(X181120_MCL_WTS)
 head(X181120_MCL_WTS)
 testMMM(X181120_MCL_WTS)
@@ -111,7 +93,7 @@ dev.off()
 # Create Singler Reference
 ref = CreateSinglerReference(name = 'MCL_blue_encode',
                              expr = as.matrix(MCL_blue_encode), # the expression matrix
-                             types = c(bluk_MCL[colnames(X181120_MCL_WTS),"Label"],
+                             types = c(bulk_MCL[colnames(X181120_MCL_WTS),"Label"],
                                        Blueprint_encode$types), 
                              main_types = c(rep("MCL",ncol(X181120_MCL_WTS)),
                                             Blueprint_encode$main_types))

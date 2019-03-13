@@ -18,18 +18,18 @@ df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",
 colnames(df_samples) = tolower(colnames(df_samples))
 df_samples$bulk.rnaseq.id = gsub(" ","_",df_samples$bulk.rnaseq.id)
 
-MDL_6669 <- read_excel("data/RNAseq/GRCF-Elemento-MDL-6669-expression.genes.xls")
-MDL_6392 <- read_excel("data/RNAseq/GRCF-Elemento-MDL-6392-expression.genes.xls")
+MCL_6669 <- read_excel("data/RNAseq/GRCF-Elemento-MDL-6669-expression.genes.xls")
+MCL_6392 <- read_excel("data/RNAseq/GRCF-Elemento-MDL-6392-expression.genes.xls")
 
-(sample_6669 <- colnames(MDL_6669)[colnames(MDL_6669) %in% df_samples$bulk.rnaseq.id])
-MDL_6669 = MDL_6669[,c("Gene_name",sample_6669)]
+(sample_6669 <- colnames(MCL_6669)[colnames(MCL_6669) %in% df_samples$bulk.rnaseq.id])
+MCL_6669 = MCL_6669[,c("Gene_name",sample_6669)]
 
-(sample_6392 <- colnames(MDL_6392)[colnames(MDL_6392) %in% df_samples$bulk.rnaseq.id])
-MDL_6392 = MDL_6392[,c("Gene_name",sample_6392)]
+(sample_6392 <- colnames(MCL_6392)[colnames(MCL_6392) %in% df_samples$bulk.rnaseq.id])
+MCL_6392 = MCL_6392[,c("Gene_name",sample_6392)]
 
-colnames(MDL_6392)[-1] = paste0(colnames(MDL_6392)[-1],"_bulk")
+colnames(MCL_6392)[-1] = paste0(colnames(MCL_6392)[-1],"_bulk")
 
-MCL_bulk <- merge(MDL_6669, MDL_6392, by = "Gene_name")
+MCL_bulk <- merge(MCL_6669, MCL_6392, by = "Gene_name")
 MCL_bulk <- RemoveDup(MCL_bulk)
 log_MCL_bulk <- log1p(MCL_bulk)
 testMMM(log_MCL_bulk)
@@ -74,3 +74,43 @@ print(pheatmap(short_y,cex=.9,
          fontsize = 20,
          main = ""))
 dev.off()
+
+
+# 3.2 CD19+ sort cells ===========================
+df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",
+                                 sheet = "bulk_MCL")
+colnames(df_samples) = tolower(colnames(df_samples))
+MCL_181120 <- read_excel("data/RNAseq/181120 MCL WTS.xlsx")
+MCL_6669 <- read_excel("data/RNAseq/GRCF-Elemento-MDL-6669-expression.genes.xls")
+MCL_190311 <- read_excel("data/RNAseq/190311 PALIBR samples WTS for scRNAseq.xlsx")
+MCL_AA13 <- read_excel("data/RNAseq/190311 Pt AA13 WTS .xlsx")
+MCL_AFT <- read_excel("data/RNAseq/190311 AFT-03 AFT-04 WTS.xlsx")
+
+keep = colnames(MCL_6669)[colnames(MCL_6669) %in% df_samples$sample]
+MCL_6669 = MCL_6669[,c("Gene_name", keep)] %>% RemoveDup
+
+MCL_181120 = CleanUp(MCL_181120)
+MCL_190311 = CleanUp(MCL_190311)
+MCL_AA13 = CleanUp(MCL_AA13)
+MCL_AFT = CleanUp(MCL_AFT)
+
+MCL_list <- lapply(list(MCL_6669,MCL_181120,MCL_190311,MCL_AA13,MCL_AFT), 
+                   function(x) {
+                       x = as.data.frame(x)
+                       x$rn = rownames(x)
+                       x})
+MCL_bulk <- plyr::join_all(MCL_list, by = 'rn', type = 'inner')
+rownames(MCL_bulk) = MCL_bulk$rn
+MCL_bulk = MCL_bulk[,-which(colnames(MCL_bulk) == "rn")]
+# 3.3 run Seruat pipeline=================
+colnames(MCL_bulk) = gsub(" |_","-", colnames(MCL_bulk))
+bulk <- CreateSeuratObject(raw.data = MCL_bulk, project = "MCL_bulk", min.cells = 1)
+bulk %<>% NormalizeData %>% 
+    ScaleData %>% 
+    FindVariableGenes(do.plot = FALSE) %>%
+    RunPCA %>% 
+    FindClusters %>%
+    RunTSNE(perplexity=5)
+bulk@meta.data$orig.ident = rownames(bulk@meta.data)
+bulk %<>% SetAllIdent("orig.ident")
+TSNEPlot.1(bulk,do.label =T,no.legend = T,label.repel = F,text.repel = T, do.print=T)    

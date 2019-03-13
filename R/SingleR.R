@@ -18,7 +18,7 @@ singler = CreateSinglerObject(as.matrix(object@data), annot = NULL, project.name
                               min.genes = 500,technology = "10X", species = "Human", citation = "",
                               ref.list = list(ref),normalize.gene.length = F, variable.genes = "de",
                               fine.tune = F, do.signatures = F, clusters = NULL,
-                              numCores = SingleR.numCores/4)
+                              numCores = 2)
 # if singler didn't find all cell labels
 if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
         all.cell = object@cell.names;length(all.cell)
@@ -28,4 +28,4 @@ if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
 singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
 singler$meta.data$xy = object@dr$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = object@ident # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="./output/singler_MCL_24T_20190128.Rda")
+save(singler,file="./output/singlerF_MCL_24_20190128.Rda")

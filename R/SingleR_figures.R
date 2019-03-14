@@ -1,27 +1,31 @@
 library(SingleR)
 library(Seurat)
-library(reshape2)
+library(magrittr)
 library(pheatmap)
 library(kableExtra)
 library(dplyr)
 library(tidyr)
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
+source("R/util.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 (load(file="data/MCL_Harmony_24_20190128.Rda"))
-(load(file="output/singler_MCL_24T_20190128.Rda"))
+(load(file="output/singlerF_MCL_24_20190128.Rda"))
 
 # if singler didn't find all cell labels
 if(length(singler$singler[[1]]$SingleR.single$labels) != ncol(object@data)){
-        all.cell = object@cell.names;length(all.cell)
-        know.cell = rownames(singler$singler[[1]]$SingleR.single$labels);length(know.cell)
-        object = SubsetData(object, cells.use = know.cell)
+    all.cell = object@cell.names;length(all.cell)
+    know.cell = rownames(singler$singler[[1]]$SingleR.single$labels);length(know.cell)
+    object = SubsetData(object, cells.use = know.cell)
 }
-object
+singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
+singler$meta.data$xy = object@dr$tsne@cell.embeddings # the tSNE coordinates
+singler$meta.data$clusters = object@ident # the Seurat clusters (if 'clusters' not provided)
+save(singler,file="./output/singlerF_MCL_24_20190128.Rda")
 ##############################
 # add singleR label to Seurat
 ###############################
@@ -58,6 +62,43 @@ singler$meta.data$orig.ident %>% table() %>% kable() %>% kable_styling()
 object@meta.data$singler1sub %>% table() %>% kable() %>% kable_styling()
 
 ##############################
+# adjust cell label
+##############################
+# reduce false positive results (B cells are labeled as MCL in normal samples)
+# and false negative results (MCL cells are labeled as B cells in MCL samples)
+# singler1main false positive results  ========
+table(singlerDF$singler1main, singlerDF$orig.ident) %>% kable %>% kable_styling()
+normal_cells <- singlerDF$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
+singlerDF[normal_cells,"singler1main"] = gsub("MCL","B_cells",
+                                              singlerDF[normal_cells,"singler1main"])
+# singler1sub false positive results  =========
+table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>% kable_styling()
+singlerDF[normal_cells,"singler1sub"] = gsub("MCL_.*$","B_cells:Memory",
+                                              singlerDF[normal_cells,"singler1sub"])
+
+table(singlerDF$singler1main, singlerDF$orig.ident) %>% kable %>% kable_styling()
+table(singlerDF$singler1sub, singlerDF$orig.ident)%>% kable %>% kable_styling()
+
+# false negative results (skip)-------------
+object <- SetAllIdent(object, id = "orig.ident")
+MCL <- SubsetData(object, ident.remove = c("BH","DJ","MD","NZ"))
+
+FeaturePlot(MCL,features.plot = "CCND1")
+CCND1.list <- SplitCells(MCL,split.by = "CCND1")
+CCND1 <- SubsetData(object, cells.use = CCND1.list[[1]])
+FeaturePlot(CCND1,features.plot = "CCND1")
+remove(CCND1);GC()
+
+# singler1main false negative results (skip)-------------
+table(singlerDF[CCND1.list[[2]],"singler1main"]) %>% kable %>% kable_styling()
+singlerDF[CCND1.list[[2]],"singler1main"] = gsub("B_cells","MCL",
+                                             singlerDF[CCND1.list[[2]],"singler1main"])
+# singler1sub false negative results (skip)-------------
+table(singlerDF[CCND1.list[[2]],"singler1sub"]) %>% kable %>% kable_styling()
+singlerDF[CCND1.list[[2]],"singler1sub"] = gsub("B_cells.*","MCL",
+                                                 singlerDF[CCND1.list[[2]],"singler1sub"])
+
+##############################
 # process color scheme
 ##############################
 singler_colors <- readxl::read_excel("./doc/singler.colors.xlsx")
@@ -74,12 +115,12 @@ TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F)
 # draw tsne plot
 ##############################
 p3 <- TSNEPlot.1(object = object, do.label = T, group.by = "ident",
-                 do.return = TRUE, no.legend = T,
+                 do.return = TRUE, no.legend = T,alpha=1,
                  colors.use = ExtractMetaColor(object),
                  pt.size = 1,label.size = 3,force = 2)+
-  ggtitle("Supervised cell type labeling by Blueprint + Encode + MCL")+
-  theme(text = element_text(size=10),							
-        plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
+    ggtitle("Cell type labeling by Blueprint + Encode + MCL")+
+    theme(text = element_text(size=10),							
+          plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
 
 jpeg(paste0(path,"PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
      res=600)
@@ -89,74 +130,13 @@ dev.off()
 save(object,file="data/MCL_Harmony_24_20190128.Rda")
 
 ##############################
-# adjust cell label
-##############################
-# reduce false positive results (B cells are labeled as MCL in normal samples)
-# and false negative results (MCL cells are labeled as B cells in MCL samples)
-# singler1main false positive results  ========
-table(singlerDF$singler1main, singlerDF$orig.ident) %>% t %>% kable %>% kable_styling()
-
-normal_cells <- singlerDF$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
-singlerDF[normal_cells,"singler1main"] = gsub("MCL","B_cells",
-                                              singlerDF[normal_cells,"singler1main"])
-
-table(singlerDF$singler1main, singlerDF$orig.ident) %>% t %>% kable %>% kable_styling()
-
-# singler1sub false positive results  =========
-table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>% kable_styling()
-
-singlerDF$singler1sub = gsub("MCL:.*$","MCL",singlerDF$singler1sub)
-singlerDF[normal_cells,"singler1sub"] = gsub("MCL","B_cells:Memory",
-                                              singlerDF[normal_cells,"singler1sub"])
-
-table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>% kable_styling()
-
-# false negative results ======================
-object <- SetAllIdent(object, id = "orig.ident")
-MCL <- SubsetData(object, ident.remove = c("BH","DJ","MD","NZ"))
-
-FeaturePlot(MCL,features.plot = "CCND1")
-CCND1.list <- SplitCells(MCL,split.by = "CCND1")
-CCND1 <- SubsetData(object, cells.use = CCND1.list[[1]])
-FeaturePlot(CCND1,features.plot = "CCND1")
-remove(CCND1);GC()
-
-# singler1main false negative results ======================
-table(singlerDF[CCND1.list[[2]],"singler1main"]) %>% kable %>% kable_styling()
-singlerDF[CCND1.list[[2]],"singler1main"] = gsub("B_cells","MCL",
-                                             singlerDF[CCND1.list[[2]],"singler1main"])
-# singler1sub false negative results ======================
-table(singlerDF[CCND1.list[[2]],"singler1sub"]) %>% kable %>% kable_styling()
-singlerDF[CCND1.list[[2]],"singler1sub"] = gsub("B_cells.*","MCL",
-                                                 singlerDF[CCND1.list[[2]],"singler1sub"])
-##############################
-# process color scheme
-##############################
-singlerDF$singler1sub %>% table() %>% kable() %>% kable_styling()
-
-singler_colors <- readxl::read_excel("./doc/singler.colors.xlsx")
-singler_colors1 = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
-singler_colors1[duplicated(singler_colors1)]
-length(singler_colors1)
-apply(singlerDF[,c("singler1sub","singler1main")],2,function(x) length(unique(x)))
-object@meta.data[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
-
-object <- AddMetaData(object = object,metadata = singlerDF)
-
-object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1[1:26])
-object <- SetAllIdent(object = object, id = "singler1sub")
-TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F)
-
-save(object,file="data/MCL_Harmony_24_20190128.Rda")
-##############################
 # subset Seurat
 ###############################
 # select 1/4 of cell from control
 # in Identify_Cell_Types_Manually.R 2.2
-
+object <- ScaleDown(object)
 table(object@meta.data$orig.ident)
 table(object@ident)
-object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
 object %<>% SetAllIdent(id = "orig.ident")
 
 df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")

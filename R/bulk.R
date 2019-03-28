@@ -35,37 +35,35 @@ log_MCL_bulk <- log1p(MCL_bulk)
 testMMM(log_MCL_bulk)
 # 3.1.2 load sc RNA-seq data
 (load(file="data/MCL_Harmony_24_20190128.Rda"))
-object %<>% SetAllIdent(id="orig.ident")
-MCL_scRNA <- AverageExpression(object)
+object %<>% SetAllIdent("orig.ident")
+MCL_sc <- AverageExpression(object,use.raw = T)
 testMMM(MCL_scRNA)
 
 # 3.1.3 merge bulk and sc
-MCL_bulk_sc <- merge(log_MCL_bulk, MCL_scRNA, by="row.names")
+MCL_bulk_sc <- merge(log1p(MCL_bulk), log1p(MCL_scRNA), by="row.names")
 table(duplicated(MCL_bulk_sc$Row.names))
 rownames(MCL_bulk_sc) = MCL_bulk_sc$Row.names
 MCL_bulk_sc = MCL_bulk_sc[,-which(colnames(MCL_bulk_sc) %in% "Row.names")]
 testMMM(MCL_bulk_sc)
 dim(MCL_bulk_sc)
 
-var.genes <- rownames(MCL_bulk_sc)[rownames(MCL_bulk_sc) %in% object@var.genes]
+var.genes <- rownames(MCL_bulk_sc)[rownames(MCL_bulk_sc) %in% B_cells_MCL@var.genes]
 length(var.genes)
 MCL_bulk_sc = MCL_bulk_sc[var.genes,]
 
-testMMM(MCL_bulk_sc)
 MCL_bulk_sc <- apply(MCL_bulk_sc, 2, function(x) (x- mean(x))/sd(x))
-
 boxplot(MCL_bulk_sc)
 
 # 3.1.4 Spearman correlation  ==================
-y <- cor(as.matrix(bulk_sc@data), method="spearman")
+y <- cor(MCL_bulk_sc, method="spearman")
 diag(y) <-NA
-ident_num <- ncol(MCL_bulk)
+ident_num <- ncol(as.matrix(MCL_bulk))
 short_y <- y[(ident_num+1):nrow(y),1:ident_num]
 
 
 hc_c <- hclust(as.dist(1-cor(short_y, method="spearman")), method="complete")
 hc_r <- hclust(as.dist(1-cor(t(short_y), method="spearman")), method="complete")
-jpeg(paste0(path,"cluster_heatmap~.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"cluster_heatmap.jpeg"), units="in", width=10, height=7,res=600)
 print(pheatmap(short_y,cex=.9,
          cluster_rows= hc_r,
          cluster_cols = hc_c,
@@ -74,7 +72,6 @@ print(pheatmap(short_y,cex=.9,
          fontsize = 20,
          main = ""))
 dev.off()
-
 
 # 3.2.1 CD19+ sort cells ===========================
 df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",
@@ -99,37 +96,77 @@ MCL_bulk <- plyr::join_all(MCL_list, by = 'rn', type = 'inner')
 rownames(MCL_bulk) = MCL_bulk$rn
 MCL_bulk = MCL_bulk[,-which(colnames(MCL_bulk) == "rn")]
 colnames(MCL_bulk) = df_samples$sample[match(colnames(MCL_bulk),df_samples$sample.id)]
+MCL_bulk = MCL_bulk[,!duplicated(colnames(MCL_bulk))]
 write.csv(MCL_bulk, file="data/RNAseq/MCL_bulk_20190313.csv")
 
 # 3.2.2 AverageExpression scRNA ===========================
-(load(file="data/MCL_Harmony_24_20190128.Rda"))
-object %<>% SetAllIdent("orig.ident")
-MCL_sc <- AverageExpression(object,use.raw = T)
-write.csv(MCL_sc, file="data/RNAseq/MCL_Harmony_24_20190128.csv")
+# generate B_cells_MCL from Differential_analysis_B.R
+B_cells_MCL %<>% SetAllIdent(id="orig.ident")
+MCL_scRNA <- AverageExpression(B_cells_MCL,use.raw = T)
+
 # 3.3 run Seruat pipeline=================
 bulk <- CreateSeuratObject(raw.data = MCL_bulk, project = "bulk", min.cells = 1)
 bulk@meta.data$type = bulk@meta.data$orig.ident
 bulk@meta.data$orig.ident = rownames(bulk@meta.data)
+bulk@meta.data$group = df_samples$group[match(rownames(bulk@meta.data),df_samples$sample)]
 bulk@meta.data$label = df_samples$label[match(rownames(bulk@meta.data),df_samples$sample)]
 
-sc <- CreateSeuratObject(raw.data = MCL_sc, project = "scRNAseq", min.cells = 1)
+sc <- CreateSeuratObject(raw.data = MCL_scRNA, project = "scRNAseq", min.cells = 1)
 sc@meta.data$type = sc@meta.data$orig.ident
 sc@meta.data$orig.ident = rownames(sc@meta.data)
 sc@meta.data$label = df_samples$label[match(rownames(sc@meta.data),df_samples$sample)]
 
 bulk_sc <- MergeSeurat(bulk, sc, add.cell.id1 = "bulk", add.cell.id2 = "sc")
-
-bulk_sc %<>% NormalizeData %>% 
+#=======
+bulk %<>% NormalizeData %>% 
     ScaleData %>% 
     FindVariableGenes(do.plot = FALSE) %>%
-    RunPCA %>% 
-    FindClusters %>%
-    RunTSNE(perplexity=20)
-bulk_sc %<>% SetAllIdent("type")
-TSNEPlot.1(bulk_sc,do.label =T,no.legend = T,label.repel = F,pt.size = 4,
-           text.repel = T, do.print=T)
-bulk_sc %<>% SetAllIdent("type")
-bulk <- SubsetData(bulk_sc, ident.use = "bulk")
+    RunPCA(pcs.compute = 45)
+PCElbowPlot(bulk, num.pc = 45)
+bulk %<>% FindClusters(resolution = 1,dims.use = 1:40) %>%
+    RunTSNE(perplexity=15,dims.use = 1:40)
+bulk %<>% SetAllIdent("res.1")
+TSNEPlot.1(bulk,do.label =T,no.legend = T,label.repel = T,pt.size = 4,
+           text.repel = F, do.print=T)
 bulk %<>% SetAllIdent("orig.ident")
+TSNEPlot.1(bulk,do.label =F,no.legend = T,label.repel = T,pt.size = 3,
+           text.repel = F, do.print=T)
+FeaturePlot(bulk,features.plot = "CCND1",pt.size = 4)
+
+marker.list <- HumanGenes(bulk,c("CD19","CD5","CCND1","MS4A1","CDK4","SOX11"))
+p <- lapply(marker.list, function(marker) {
+    SingleFeaturePlot.1(object = bulk, feature = marker,pt.size = 5,
+                        threshold=NULL,legend.title ="")+ #log(FPKM)
+        ggtitle(paste0(marker))+
+        theme(plot.title = element_text(hjust = 0.5,size = 15, face = "bold"))
+})
+
+jpeg(paste0(path,"B_cells_bulk_RNAseq.jpeg"), units="in", width=10, height=7,res=600)
+print(do.call(plot_grid, p)+ ggtitle("MCL markers")+
+          theme(plot.title = element_text(hjust = 0.5,size = 20, face = "bold")))
+dev.off()
+
+jpeg(paste0(path,"bulk_CCND1.jpeg"), units="in", width=10, height=7,res=600)
+CCND1  <- bulk@data["CCND1",]
+hist(CCND1,breaks = 35)
+dev.off()
+
+sort(CCND1) %>% .[20:39] %>% kable %>% kable_styling()
+
+keep <- names(CCND1)[CCND1 > 0.5]
+(keep = keep[!(keep %in% "6PB1")])
+write.csv(MCL_bulk[,keep],file="data/RNAseq/MCL_bulk.csv")
+
+# prepare MCL-stage
+bulk@meta.data$stage = bulk@meta.data$res.1
+CCND1_high <- names(CCND1)[CCND1 > 2]
+CCND1_median <- names(CCND1)[CCND1 > 0.5 & CCND1 < 2]
+CCND1_low <- names(CCND1)[CCND1 < 0.5]
+
+bulk@meta.data$stage[(bulk@meta.data$orig.ident %in% CCND1_high)] = "CCND1_high"
+bulk@meta.data$stage[(bulk@meta.data$orig.ident %in% CCND1_median)] = "CCND1_median"
+bulk@meta.data$stage[(bulk@meta.data$orig.ident %in% CCND1_low)] = "CCND1_low"
+
+bulk %<>% SetAllIdent("stage")
 TSNEPlot.1(bulk,do.label =T,no.legend = T,label.repel = T,pt.size = 3,
            text.repel = F, do.print=T)

@@ -57,24 +57,25 @@ Blueprint_encode = CreateSinglerReference(name = 'Blueprint_encode',
 save(Blueprint_encode,file='../SingleR/data/Blueprint_encode.RData')
 
 # check MCL data==============================
-X181120_MCL_WTS <- readxl::read_excel("data/RNAseq/181120 MCL WTS.xlsx", col_names = FALSE)
-bulk_MCL <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",sheet = "bulk_MCL") %>% as.data.frame
-
-X181120_MCL_WTS <- CleanUp(X181120_MCL_WTS)
+#X181120_MCL_WTS <- readxl::read_excel("data/RNAseq/181120 MCL WTS.xlsx", col_names = FALSE)
+#bulk_MCL <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",sheet = "bulk_MCL") %>% as.data.frame
+#X181120_MCL_WTS <- CleanUp(X181120_MCL_WTS)
     
-label <- c("MCL_complete_response", "MCL_partial_response","MCL_progressive")
-(keep <- bulk_MCL$Sample[bulk_MCL$Label %in% label])
-X181120_MCL_WTS <- X181120_MCL_WTS[,keep]
-head(X181120_MCL_WTS)
-dim(X181120_MCL_WTS)
-head(X181120_MCL_WTS)
-testMMM(X181120_MCL_WTS)
+#label <- c("MCL_complete_response", "MCL_partial_response","MCL_progressive")
+#(keep <- bulk_MCL$Sample[bulk_MCL$Label %in% label])
+#MCL_bulk <- X181120_MCL_WTS[,keep]
+MCL_bulk <- read.csv(file="data/RNAseq/MCL_bulk.csv",row.names = 1,
+                     check.names=F) #remove X
+
+head(MCL_bulk)
+dim(MCL_bulk)
+testMMM(MCL_bulk)
 
 # merge MCL and Blueprint_encode
 
 (load(file='../SingleR/data/Blueprint_encode.RData'))
 dim(Blueprint_encode$data)
-MCL_blue_encode <- merge(log1p(X181120_MCL_WTS),Blueprint_encode$data,
+MCL_blue_encode <- merge(log1p(MCL_bulk),Blueprint_encode$data,
                          by="row.names",all=FALSE)
 rownames(MCL_blue_encode) = MCL_blue_encode$Row.names
 MCL_blue_encode <- MCL_blue_encode[-which(colnames(MCL_blue_encode)=="Row.names")]
@@ -86,16 +87,17 @@ MCL_blue_encode = MCL_blue_encode/colsum * scale_factor
 testMMM(MCL_blue_encode)
 
 jpeg(paste0(path,"boxplot_MCL_blue_encode.jpeg"), units="in", width=10, height=7,res=600)
-boxplot(ref$data) #slow
+par(mfrow=c(1,1))
+boxplot(MCL_blue_encode) #slow
 title(main = "boxplot for Blueprint + Encode + MCL")
 dev.off()
 
 # Create Singler Reference
 ref = CreateSinglerReference(name = 'MCL_blue_encode',
                              expr = as.matrix(MCL_blue_encode), # the expression matrix
-                             types = c(bulk_MCL[colnames(X181120_MCL_WTS),"Label"],
+                             types = c(paste0("MCL:",bulk@meta.data[colnames(MCL_bulk),"stage"]),
                                        Blueprint_encode$types), 
-                             main_types = c(rep("MCL",ncol(X181120_MCL_WTS)),
+                             main_types = c(rep("MCL",ncol(MCL_bulk)),
                                             Blueprint_encode$main_types))
 
-save(ref,file='data/ref_MCL_blue_encode.RData') # it is best to name the object and the file with the same name.
+save(ref,file='data/ref_MCL_blue_encode_20190315.RData') # it is best to name the object and the file with the same name.

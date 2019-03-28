@@ -9,12 +9,12 @@ source("../R/SingleR_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 2.1 identify phenotype for each cluster  ==========================================
-(load(file="data/MCL_Harmony_24_20190128.Rda"))
+(load(file="data/MCL_Harmony_30_20190320.Rda"))
 
 #blueprint_encode_main = read.csv("../SingleR/output/blueprint_encode_main.csv",row.names =1,header = T,
 #                                 stringsAsFactors = F)
 df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx")
-df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx",sheet = "Human.sub")
+#df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx",sheet = "Human.sub")
 colnames(df_markers) = gsub(" ","_",colnames(df_markers))
 colnames(df_markers) = gsub(":|\\/","_",colnames(df_markers))
 colnames(df_markers) = gsub("\\+","",colnames(df_markers))
@@ -22,7 +22,7 @@ markers = df_markers[,-grep("Alias",colnames(df_markers))]
 marker.list <- df2list(markers)
 
 marker.list %<>% lapply(function(x) x[1:16]) %>% 
-        lapply(function(x) HumanGenes(object,x)) %>% 
+        lapply(function(x) FilterGenes(object,x)) %>% 
         lapply(function(x) x[!is.na(x)])
 marker.list %>% list2df %>% t %>% kable() %>% kable_styling()
 
@@ -41,6 +41,43 @@ for(i in 1:length(marker.list)){
         dev.off()
         print(paste0(i,":",length(marker.list)))
 }
+
+#====== 2.2 Rename ident =========================
+object <- SetAllIdent(object, id = "res.0.6")
+table(object@ident)
+
+idents <- as.data.frame(table(object@ident))
+old.ident.ids <- idents$Var1
+new.cluster.ids <- c("B_cells",
+                     "B_cells",
+                     "T_cells",
+                     "NK_cells",
+                     "B_cells",
+                     "B_cells",
+                     "Monocytes",
+                     "T_cells",
+                     "T_cells",
+                     "Monocytes",
+                     "B_cells",
+                     "B_cells",
+                     "B_cells",
+                     "B_cells",
+                     "T_cells",
+                     "B_cells",
+                     "B_cells")
+
+object@ident <- plyr::mapvalues(x = object@ident,
+                                from = old.ident.ids,
+                                to = new.cluster.ids)
+TSNEPlot.1(object = object,do.label = T, group.by = "ident", 
+           do.return = TRUE, no.legend = T, #colors.use = singler.colors,
+           pt.size = 1,label.size = 4,label.repel = T)+
+        ggtitle("Discovery cell types by marker genes")+
+        theme(text = element_text(size=20),							
+              plot.title = element_text(hjust = 0.5,size=18, face = "bold"))
+object <- StashIdent(object = object, save.name = "manual")
+
+
 #====== 2.2 focus on MCL heterogeneity, and T cell subsets and NK cells in the tSNE plots =====
 # select 1/4 of cell from control
 normal_cells = lapply(c("BH","DJ","MD","NZ"), function(x){

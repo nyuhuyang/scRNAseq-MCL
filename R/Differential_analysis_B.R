@@ -24,7 +24,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 (load(file="data/MCL_Harmony_30_20190320.Rda"))
 
 # select 1/4 of cell from control
-object <- ScaleDown(object = object)
+#object <- ScaleDown(object = object)
 
 # B cells only ================
 object <- SetAllIdent(object, id="res.0.6")
@@ -45,26 +45,35 @@ B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2,
                               save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
                               force.recalc = TRUE, print.output = FALSE)
 TSNEPlot(B_cells_MCL,do.label = T,label.size=5)
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = 0:4)
 B_cells_MCL@ident <- plyr::mapvalues(x = B_cells_MCL@ident,
                                      from = c(0,1,2,3,4),
-                                     to = c(1,2,3,4,5))
+                                     to = c(1,2,4,3,5))
 B_cells_MCL@ident %<>% factor(levels = 1:5)
 B_cells_MCL <- StashIdent(object = B_cells_MCL, save.name = "X5_clusters")
+B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
 B_cells_MCL@meta.data$X5_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
                                             B_cells_MCL@meta.data$X5_clusters, sep = "_")
 B_cells_MCL@meta.data$X5_orig.ident = gsub('^Normal_.*', 'Normal', B_cells_MCL@meta.data$X5_orig.ident)
 
 # tsne plot
 B_cells_MCL %<>% SetAllIdent(id="X5_clusters")
-TSNEPlot(B_cells_MCL, do.label = T)
-
+TSNEPlot.1(B_cells_MCL, do.label = T,do.print = T)
+table(B_cells_MCL@meta.data$X5_orig.ident)
+B_cells_MCL %<>% SetAllIdent(id="X5_orig.ident")
+# remove cluster with less than 3 cells======
+table_B_cells_MCL <- table(B_cells_MCL@meta.data$X5_orig.ident) %>% as.data.frame
+(keep.MCL <- table_B_cells_MCL[table_B_cells_MCL$Freq > 2,"Var1"] %>% as.character())
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = keep.MCL)
+#B_cells_MCL_exp <- AverageExpression(B_cells_MCL)
+#write.csv(B_cells_MCL_exp,paste0(path,"B_MCL_exp.csv"))
 ###############################
 # Doheatmap for Normal / MCL
 ###############################
 df_samples <- readxl::read_excel("doc/190320_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% paste0("test",8))
-(samples <- df_samples$sample[sample_n])
+sample_n = which(df_samples$tests %in% paste0("test",7:8))
+(samples <- df_samples$sample[sample_n[-c(2:3)]])
 # remove samples with low B cells======
 table_df <- table(B_cells_MCL@meta.data$orig.ident) %>% as.data.frame
 keep <- table_df[table_df$Freq > 100,"Var1"] %>% as.character()
@@ -86,7 +95,7 @@ for(sample in samples[1:length(samples)]){
         x6_cluster <- subset.MCL@ident %>% unique
         x6_cluster = x6_cluster[-grep("^Normal",x6_cluster)] %>% as.character %>% 
                 gsub('.*\\_',"",.) %>% as.numeric %>% sort
-        print(ident.1 <- rep("Normal",length(ident.1)))
+        print(ident.1 <- rep("Normal",length(x6_cluster)))
         print(ident.2 <- paste(sample,x6_cluster,sep="_"))
         # FindAllMarkers.UMI======
         subfolder <- paste0(path,sample,"_vs_Normal/")
@@ -122,15 +131,18 @@ for(sample in samples[1:length(samples)]){
 
 
 # Doheatmap for MCL.1 / MCL.2 ================
-samples1 <- c("Pt-11-C14","Pt-25-C24","Pt-25-C24")
-samples2 <- c("Pt-11-C28","Pt-25-C25","Pt-25-AMB-C25")
+samples1 <- c("Pt-11-C14","Pt-25-C1","Pt-25-C24","Pt-25-C25",
+              "Pt-AA13-Ib-p","Pt-AA13-Ib-1")
+samples2 <- c("Pt-11-C28","Pt-25-C25","Pt-25-C25","Pt-25-AMB-C25",
+              "Pt-AA13-Ib-1","Pt-AA13-Ib-R")
 B_cells_MCL %<>% SetAllIdent(id="orig.ident")
 
-for(i in 1:length(samples1)){
+for(i in 6:length(samples1)){
         subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(samples1[i],samples2[i]))
 
         #---SplitTSNEPlot----
         subset.MCL %<>% SetAllIdent(id = "X5_orig.ident")
+        select.plots =1:2
         if(all(c(samples1[i],samples2[i]) != sort(c(samples1[i],samples2[i])))){
                 select.plots =2:1
         }

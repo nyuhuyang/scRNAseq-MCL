@@ -22,41 +22,56 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file="data/MCL_Harmony_24_20190128.Rda"))
+(load(file="data/MCL_Harmony_30_20190320.Rda"))
 # select 1/4 of cell from control
-# in Identify_Cell_Types_Manually.R 2.2
-object <- ScaleDown(object = object)
 
 # T cells only ================
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
 TSNEPlot.1(object,do.label = T)
-T_cells_MCL <- SubsetData(object, ident.use = c(2,3,8))
-T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler1sub")
-table(T_cells_MCL@ident)
+T_cells <- SubsetData(object, ident.use = c(2,3,7,8,13,14))
+T_cells <- SetAllIdent(T_cells, id="singler1sub")
+table(T_cells@ident)
 
-T_cells_MCL <- SubsetData(T_cells_MCL,
-                      ident.remove = c("NK_cells","CLP","MCL","MPP",
-                                           "MEP","GMP","B_cells:Memory",
-                                           "B_cells:Naive_B_cells"))
-table(T_cells_MCL@meta.data$singler1main)
-T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler1main")
-T_cells_MCL <- SubsetData(T_cells_MCL, ident.remove = c("Monocytes","MCL"))
-T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler1sub")
-p1 <- TSNEPlot.1(T_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, 
-                 colors.use = ExtractMetaColor(T_cells_MCL), no.legend =T)
-T_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.3, 
-                              dims.use = 1:50,
+T_cells <- SubsetData(T_cells,
+                      ident.remove = c("NK_cells","CLP","MCL:CCND1_high",
+                                       "MCL:CCND1_median","MPP","Monocytes",
+                                       "MEP","GMP","B_cells:Memory",
+                                       "B_cells:Class-switched_memory",
+                                       "B_cells:Naive_B_cells"))
+table(T_cells@meta.data$singler1main)
+T_cells <- SetAllIdent(T_cells, id="singler1main")
+T_cells <- SubsetData(T_cells, ident.remove = c("Monocytes","MCL","B_cells","HSC"))
+T_cells <- SetAllIdent(T_cells, id="singler1sub")
+
+#remove_cell <- FeaturePlot(T_cells,features.plot = "CD3E",do.identify = T)
+remove_cell <- c("Pt-17-C7_AGTAGTCTCAAGATCC-1","Pt-25-C1D8_TCTGAGATCCATGCTC-1")
+all_cell <- T_cells@cell.names
+cells.use <- all_cell[!(all_cell %in% remove_cell)]
+T_cells <- SubsetData(T_cells,cells.use = cells.use)
+
+TSNEPlot.1(T_cells, do.label = T, do.return = T, pt.size = 0.5, 
+                 colors.use = ExtractMetaColor(T_cells), no.legend =T)
+T_cells %<>% FindClusters(reduction.type = "harmony", resolution = 0.1, 
+                              dims.use = 1:75,
                               save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
                               force.recalc = TRUE, print.output = FALSE)
-T_cells_MCL@ident <- plyr::mapvalues(x = T_cells_MCL@ident,
-                                from = c(1,2,3,0),
-                                to = c(1,2,3,4))
-T_cells_MCL@ident %<>% factor(levels = 1:4)
 
-p2 <- TSNEPlot.1(T_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, 
-                 no.legend =T)
-T_cells_MCL <- StashIdent(object = T_cells_MCL, save.name = "X4_clusters")
+T_cells@ident <- plyr::mapvalues(x = T_cells@ident,
+                                from = c(1,3,0,2),
+                                to = c(1,1,2,2))
+T_cells@ident %<>% factor(levels = 1:2)
+T_cells <- StashIdent(object = T_cells, save.name = "X4_clusters")
+TSNEPlot.1(T_cells, do.label = T, do.return = T, pt.size = 0.5, 
+                 no.legend =T,do.print = T)
+
+T_cells@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",T_cells@meta.data$orig.ident)
+T_cells@meta.data$X4_orig.ident = paste(T_cells@meta.data$orig.ident,
+                                        T_cells@meta.data$X4_clusters, sep = "_")
+T_cells %<>% SetAllIdent("X4_orig.ident")
+T_cells_exp <- AverageExpression(T_cells)
+write.csv(T_cells_exp,paste0(path,"T_cells_exp.csv"))
+
 
 jpeg(paste0(path,"/T_cells_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p1, p2)+
@@ -65,10 +80,10 @@ plot_grid(p1, p2)+
               plot.title = element_text(hjust = 0.5,size = 18, face = "bold"))
 dev.off()
 
-T_cells_MCL <- SetAllIdent(T_cells_MCL, id="singler1main")
+T_cells <- SetAllIdent(T_cells, id="singler1main")
 
-p3 <- TSNEPlot.1(T_cells_MCL, do.label = T, do.return = T, pt.size = 0.5, 
-                 colors.use = ExtractMetaColor(T_cells_MCL), no.legend =T)
+p3 <- TSNEPlot.1(T_cells, do.label = T, do.return = T, pt.size = 0.5, 
+                 colors.use = ExtractMetaColor(T_cells), no.legend =T)
 jpeg(paste0(path,"/T_cells_TSNEPlot1.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p1+ggtitle("Sub cell types")+
                   theme(text = element_text(size=15),							
@@ -82,10 +97,10 @@ dev.off()
 ##############################
 # SplitTSNEPlot
 ###############################
-table(T_cells_MCL@meta.data$orig.ident)
-table(T_cells_MCL@ident)
-#T_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",T_cells_MCL@meta.data$orig.ident)
-T_cells_MCL %<>% SetAllIdent(id="orig.ident")
+table(T_cells@meta.data$orig.ident)
+table(T_cells@ident)
+#T_cells@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",T_cells@meta.data$orig.ident)
+T_cells %<>% SetAllIdent(id="orig.ident")
 
 df_samples <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
@@ -100,7 +115,7 @@ for(test in tests){
         print(samples <- c("Normal",df$sample[order(df$tsne)]))
         
         g <- lapply(samples,function(sample) {
-                SubsetData(T_cells_MCL, ident.use = sample) %>%
+                SubsetData(T_cells, ident.use = sample) %>%
                         SetAllIdent(id = "singler1sub") %>%
                         TSNEPlot.1(no.legend = T,do.label =F,label.size=3,size=20,
                                    colors.use = ExtractMetaColor(.),
@@ -117,13 +132,13 @@ for(test in tests){
 ##############################
 # Split UMI
 ###############################
-T_cells_MCL@meta.data$X4_orig.ident = paste(T_cells_MCL@meta.data$orig.ident,
-                                            T_cells_MCL@meta.data$X4_clusters, sep = "_")
-T_cells_MCL %<>% SetAllIdent(id = "X4_orig.ident")
-All_AveExp <- AverageExpression(T_cells_MCL)
+T_cells@meta.data$X4_orig.ident = paste(T_cells@meta.data$orig.ident,
+                                            T_cells@meta.data$X4_clusters, sep = "_")
+T_cells %<>% SetAllIdent(id = "X4_orig.ident")
+All_AveExp <- AverageExpression(T_cells)
 write.csv(All_AveExp,file = paste0(path,"All_AveExp.csv"))
 
-VarGenes_AveExp <- AverageExpression(T_cells_MCL,genes.use = T_cells_MCL@var.genes)
+VarGenes_AveExp <- AverageExpression(T_cells,genes.use = T_cells@var.genes)
 write.csv(VarGenes_AveExp,file = paste0(path,"VarGenes_AveExp.csv"))
 
 ###############################
@@ -134,12 +149,12 @@ colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% paste0("test",2:7))
 (samples <- df_samples$sample[sample_n])
 # remove samples with low T cells======
-table_df <- table(T_cells_MCL@meta.data$orig.ident) %>% as.data.frame
+table_df <- table(T_cells@meta.data$orig.ident) %>% as.data.frame
 keep <- table_df[table_df$Freq > 100,"Var1"] %>% as.character()
 (samples <- samples[samples %in% keep])
-T_cells_MCL %<>% SetAllIdent(id = "orig.ident")
+T_cells %<>% SetAllIdent(id = "orig.ident")
 for(sample in samples){
-    subset.MCL <- SubsetData(T_cells_MCL, ident.use = c(sample,"Normal"))
+    subset.MCL <- SubsetData(T_cells, ident.use = c(sample,"Normal"))
     #---FindAllMarkers.UMI---- "Keep the shared X4 cluster only"
     subset.MCL %<>% SetAllIdent(id = "X4_orig.ident")
     x4_cluster <- subset.MCL@ident %>% unique
@@ -203,12 +218,12 @@ for(sample in samples){
 # Doheatmap for MCL.1 / MCL.2
 ###############################
 # remove samples with low T cells======
-T_cells_MCL %<>% SetAllIdent(id = "orig.ident")
+T_cells %<>% SetAllIdent(id = "orig.ident")
 samples1 <- c("Pt-11-C14","Pt-17-C2","Pt-17-C7","AFT-03-C1D1")
 samples2 <- c("Pt-11-C28","Pt-17-C7","Pt-17-C31","AFT-03-C1D8")
 
 for(i in 1:length(samples1)){
-    subset.MCL <- SubsetData(T_cells_MCL, ident.use = c(samples1[i],samples2[i]))
+    subset.MCL <- SubsetData(T_cells, ident.use = c(samples1[i],samples2[i]))
     #---SplitTSNEPlot---- "must keep the order"
     #subset.MCL <- SetAllIdent(subset.MCL, id= "singler1sub")
     #SplitTSNEPlot(subset.MCL,do.return = FALSE,do.print = TRUE, do.label = F)
@@ -278,29 +293,29 @@ for(test in tests){
         samples <- unique(df_samples$sample[sample_n])
         print(paste(c(control,samples), collapse = " "))
         
-        cell.use <- rownames(T_cells_MCL@meta.data)[T_cells_MCL@meta.data$orig.ident %in%
+        cell.use <- rownames(T_cells@meta.data)[T_cells@meta.data$orig.ident %in%
                                                             c(control,samples)]
-        subset.T_cells_MCL <- SubsetData(T_cells_MCL, cells.use = cell.use)
-        SplitSingleFeaturePlot(subset.T_cells_MCL, 
+        subset.T_cells <- SubsetData(T_cells, cells.use = cell.use)
+        SplitSingleFeaturePlot(subset.T_cells, 
                                #select.plots = c(1,5,4,3,2),
                                group.by = "ident",split.by = "orig.ident",
                                no.legend = T,label.size=3,do.print =T,
                                markers = markers, threshold = 0.5)
 }
 # Table with quantification of T cell subsets (absolute # and % of total)
-T_cells_MCL <- SetAllIdent(T_cells_MCL, id = "singler2sub")
-table(T_cells_MCL@ident,
-      T_cells_MCL@meta.data$orig.ident) %>% #prop.table(margin = 2) %>%
+T_cells <- SetAllIdent(T_cells, id = "singler2sub")
+table(T_cells@ident,
+      T_cells@meta.data$orig.ident) %>% #prop.table(margin = 2) %>%
         t %>% kable %>% kable_styling
-T_cells_MCL.copy <- T_cells_MCL
+T_cells.copy <- T_cells
 sub('\\_.*', '', x)
-T_cells_MCL.copy@meta.data$singler2sub = gsub('_effector_memory|_central_memory|_Central_memory','',
-                        T_cells_MCL.copy@meta.data$singler2sub)
-table(T_cells_MCL.copy@meta.data$singler2sub,
-      T_cells_MCL@meta.data$orig.ident) %>% prop.table(margin = 2) %>%
+T_cells.copy@meta.data$singler2sub = gsub('_effector_memory|_central_memory|_Central_memory','',
+                        T_cells.copy@meta.data$singler2sub)
+table(T_cells.copy@meta.data$singler2sub,
+      T_cells@meta.data$orig.ident) %>% prop.table(margin = 2) %>%
         t %>% kable %>% kable_styling
 
-table(T_cells_MCL@meta.data$orig.ident) %>% kable %>% kable_styling
+table(T_cells@meta.data$orig.ident) %>% kable %>% kable_styling
 
 # Doheatmap for Normal / MCL.1 / MCL.2 ================
 control <- "MD"
@@ -308,9 +323,9 @@ tests <- c("test3","test4")
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         samples <- df_samples$sample[sample_n]
-        cell.use <- rownames(T_cells_MCL@meta.data)[T_cells_MCL@meta.data$orig.ident %in%
+        cell.use <- rownames(T_cells@meta.data)[T_cells@meta.data$orig.ident %in%
                                                             c(control,samples)]
-        subset.MCL <- SubsetData(T_cells_MCL, cells.use = cell.use)
+        subset.MCL <- SubsetData(T_cells, cells.use = cell.use)
         #---plot_grid(p1, p2)----
         p1 <- TSNEPlot.1(subset.MCL, do.return = T, pt.size = 0.5, do.label = T, 
                          group.by = "ident",no.legend =T )

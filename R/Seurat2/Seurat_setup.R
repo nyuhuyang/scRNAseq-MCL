@@ -31,7 +31,7 @@ samples = sample
 #======1.2 load  SingleCellExperiment =========================
 (load(file = "data/sce_30_20190320.Rda"))
 names(sce_list)
-object_list <- lapply(sce_list, as.seurat) %>%
+object_list <- lapply(sce_list, as.Seurat) %>%
         lapply(NormalizeData) %>%
         #lapply(ScaleData) %>%
         lapply(FindVariableGenes, do.plot = FALSE)
@@ -93,7 +93,7 @@ print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+
                         scale_y_log10(limits = c(100,10000))))
 dev.off()
 jpeg(paste0(path,"/S1_nUMI.jpeg"), units="in", width=10, height=7,res=600)
-print(plot_grid(g1[[2]]+ggtitle("nUMI in raw data")+ 
+print(plot_grid(g1[[2]]+ggtitle("nUMI in raw data")
                         scale_y_log10(limits = c(500,100000)),
                 g2[[2]]+ggtitle("nUMI after filteration")+ 
                         scale_y_log10(limits = c(500,100000))))

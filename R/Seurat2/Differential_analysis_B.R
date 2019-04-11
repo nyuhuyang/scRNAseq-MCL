@@ -132,12 +132,12 @@ for(sample in samples[1:length(samples)]){
 
 # Doheatmap for MCL.1 / MCL.2 ================
 samples1 <- c("Pt-11-C14","Pt-25-C1","Pt-25-C24","Pt-25-C25",
-              "Pt-AA13-Ib-p","Pt-AA13-Ib-1")
+              "Pt-AA13-Ib-p","Pt-AA13-Ib-1","Pt-25-SB-C1")
 samples2 <- c("Pt-11-C28","Pt-25-C25","Pt-25-C25","Pt-25-AMB-C25",
-              "Pt-AA13-Ib-1","Pt-AA13-Ib-R")
+              "Pt-AA13-Ib-1","Pt-AA13-Ib-R","Pt-25-AMB-C25")
 B_cells_MCL %<>% SetAllIdent(id="orig.ident")
 
-for(i in 6:length(samples1)){
+for(i in 7:length(samples1)){
         subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(samples1[i],samples2[i]))
 
         #---SplitTSNEPlot----

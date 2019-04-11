@@ -301,13 +301,6 @@ TCR_Split_TSNEPlot(T_cell_Untreated,split.by="orig.ident",
                    do.return = T,do.print = F)
 
 
-
-
-
-
-
-
-
 # label Persistent TCR---skip-----
 cdr3_samples <- table(meta.data_new4$cdr3, meta.data_new4$orig.ident) %>% 
         as.data.frame %>% spread(Var1,Freq) 

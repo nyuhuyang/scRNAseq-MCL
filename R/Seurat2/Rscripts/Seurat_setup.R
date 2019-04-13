@@ -18,76 +18,7 @@ if(!dir.exists("data/")) dir.create("data")
 #  1 Data preprocessing
 # 
 # ######################################################################
-#======1.1 Load the data files and Set up Seurat object =========================
-# read sample summary list
-df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
-df_samples
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
-df_samples = df_samples[sample_n,]
-attach(df_samples)
-samples = sample
-
-#======1.2 load  SingleCellExperiment =========================
-(load(file = "data/sce_36_20190410.Rda"))
-names(sce_list)
-object_list <- lapply(sce_list, as.seurat)
-
-for(i in 1:length(samples)){
-        object_list[[i]]@meta.data$tests <- tests[i]
-        object_list[[i]]@meta.data$conditions <- conditions[i]
-        object_list[[i]]@meta.data$projects <- project[i]
-        object_list[[i]]@meta.data$groups <- group[i]
-        object_list[[i]]@meta.data$tissues <- tissue[i]
-        object_list[[i]]@meta.data$tsne <- tsne[i]
-}
-
-#========1.3 merge ===================================
-object <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), object_list)
-remove(sce_list,object_list);GC()
-
-object = SetAllIdent(object, id = "orig.ident")
-#======1.4 mito, QC, filteration =========================
-object@meta.data$percent.mito = object@meta.data$pct_counts_Mito/100
-
-(remove <- which(colnames(object@meta.data) %in%c("is_cell_control",
-                                           "pct_counts_in_top_500_features_Mito")))
-meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
-object@meta.data = meta.data 
-
-remove(meta.data)
-(load(file = paste0(path,"g1_36_20190410.Rda")))
-
-object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
-                   low.thresholds = c(500,800, -Inf), 
-                   high.thresholds = c(Inf,Inf, 0.5))
-
-object@ident = factor(object@ident,levels = samples)
-g2 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
-        VlnPlot(object = object, features.plot = features, nCol = 3, 
-                point.size.use = 0.2,size.x.use = 10, group.by = "ident",
-                x.lab.rot = T, do.return = T)+
-                theme(axis.text.x = element_text(size=8),legend.position="none")
-})
-save(g2,file= paste0(path,"g2_36_20190412.Rda"))
-
-jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
-print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
-                        scale_y_log10(limits = c(100,10000)),
-                g2[[1]]+ggtitle("nGene after filteration")+ 
-                        scale_y_log10(limits = c(100,10000))))
-dev.off()
-jpeg(paste0(path,"S1_nUMI.jpeg"), units="in", width=10, height=7,res=600)
-print(plot_grid(g1[[2]]+ggtitle("nUMI in raw data")+
-                        scale_y_log10(limits = c(500,100000)),
-                g2[[2]]+ggtitle("nUMI after filteration")+ 
-                        scale_y_log10(limits = c(500,100000))))
-dev.off()
-jpeg(paste0(path,"S1_mito.jpeg"), units="in", width=10, height=7,res=600)
-print(plot_grid(g1[[3]]+ggtitle("mito % in raw data")+ 
-                        ylim(c(0,50)),
-                g2[[3]]+ggtitle("mito % after filteration")+ 
-                        ylim(c(0,0.5))))
-dev.off()
+(load( file = "data/MCL_36_20190412.Rda"))
 #======1.5 FindVariableGenes=======================
 object <- NormalizeData(object = object)
 jpeg(paste0(path,"S1_dispersion.jpeg"), units="in", width=10, height=7,res=600)
@@ -104,8 +35,6 @@ s.genes <- FilterGenes(object,cc.genes[1:43])
 g2m.genes <- FilterGenes(object,cc.genes[44:97])
 object <- CellCycleScoring(object = object, s.genes = s.genes, g2m.genes = g2m.genes, 
                         set.ident = FALSE)
-RidgePlot(object = object, features.plot = FilterGenes(object,c("CCND1","CDK4","CCND2","CDK6","CCND3","RB1")), 
-          nCol = 2)
 object@meta.data$CC.Difference <- object@meta.data$S.Score - object@meta.data$G2M.Score
 object@meta.data$S.Score = object@meta.data$S.Score - min(object@meta.data$S.Score)
 object@meta.data$G2M.Score = object@meta.data$G2M.Score - min(object@meta.data$G2M.Score)
@@ -114,7 +43,6 @@ tail(x = object@meta.data)
 
 #======1.6 PCA =========================
 object %<>% ScaleData
-saveRDS(object@scale.data, file = "data/MCL2.scale.data_Harmony_36_20190412.rds")
 object %<>% RunPCA(pc.genes = object@var.genes, pcs.compute = 100, do.print = F)
 
 jpeg(paste0(path,"/S1_PCElbowPlot.jpeg"), units="in", width=10, height=7,res=600)
@@ -194,4 +122,3 @@ dev.off()
 #saveRDS(object@scale.data, file = "data/MCL.scale.data_Harmony_36_20190412.rds")
 object@scale.data = NULL; GC()
 save(object, file = "data/MCL_Harmony_36_20190412~.Rda")
-save(object, file = "data/MCL_36_20190412.Rda")

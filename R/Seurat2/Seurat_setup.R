@@ -20,7 +20,7 @@ if(!dir.exists("data/")) dir.create("data")
 # ######################################################################
 #======1.1 Load the data files and Set up Seurat object =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/190320_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
 df_samples = df_samples[sample_n,]
@@ -29,12 +29,9 @@ df_samples %>% kable() %>% kable_styling()
 samples = sample
 
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "data/sce_30_20190320.Rda"))
+(load(file = "data/sce_36_20190410.Rda"))
 names(sce_list)
-object_list <- lapply(sce_list, as.Seurat) %>%
-        lapply(NormalizeData) %>%
-        #lapply(ScaleData) %>%
-        lapply(FindVariableGenes, do.plot = FALSE)
+object_list <- lapply(sce_list, as.seurat)
 
 for(i in 1:length(samples)){
         object_list[[i]]@meta.data$tests <- tests[i]
@@ -45,21 +42,9 @@ for(i in 1:length(samples)){
         object_list[[i]]@meta.data$tsne <- tsne[i]
         
 }
-# we will take the union of the top 1k variable genes in each dataset for alignment
-intersect.gene = 300
-genes.use = c()
-while(length(genes.use) < 2500){
-        genes.use <- object_list %>% 
-                lapply(function(object) head(rownames(object@hvg.info), 
-                                             intersect.gene)) %>%
-                unlist %>% unique
-        intersect.gene =intersect.gene+100
-}
-print(paste0("genes.use: ",length(genes.use)))
 
 #========1.3 merge ===================================
 object <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), object_list)
-object@var.genes = genes.use
 remove(sce_list,object_list);GC()
 
 object = SetAllIdent(object, id = "orig.ident")
@@ -72,7 +57,7 @@ meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
 object@meta.data = meta.data 
 
 remove(meta.data)
-(load(file = paste0(path,"g1_30_20190320.Rda")))
+(load(file = paste0(path,"g1_36_20190410.Rda")))
 
 object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
                    low.thresholds = c(500,800, -Inf), 
@@ -82,33 +67,34 @@ object@ident = factor(object@ident,levels = samples)
 g2 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
         VlnPlot(object = object, features.plot = features, nCol = 3, 
                 point.size.use = 0.2,size.x.use = 10, group.by = "ident",
-                x.lab.rot = T, do.return = T)
+                x.lab.rot = T, do.return = T)+
+                theme(axis.text.x = element_text(size=8),legend.position="none")
 })
-save(g2,file= paste0(path,"g2_30_20190320.Rda"))
+save(g2,file= paste0(path,"g2_36_20190412.Rda"))
 
-jpeg(paste0(path,"/S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
                         scale_y_log10(limits = c(100,10000)),
                 g2[[1]]+ggtitle("nGene after filteration")+ 
                         scale_y_log10(limits = c(100,10000))))
 dev.off()
-jpeg(paste0(path,"/S1_nUMI.jpeg"), units="in", width=10, height=7,res=600)
-print(plot_grid(g1[[2]]+ggtitle("nUMI in raw data")
+jpeg(paste0(path,"S1_nUMI.jpeg"), units="in", width=10, height=7,res=600)
+print(plot_grid(g1[[2]]+ggtitle("nUMI in raw data")+
                         scale_y_log10(limits = c(500,100000)),
                 g2[[2]]+ggtitle("nUMI after filteration")+ 
                         scale_y_log10(limits = c(500,100000))))
 dev.off()
-jpeg(paste0(path,"/S1_mito.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_mito.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[3]]+ggtitle("mito % in raw data")+ 
-                        ylim(c(0,1)),
+                        ylim(c(0,50)),
                 g2[[3]]+ggtitle("mito % after filteration")+ 
-                        ylim(c(0,1))))
+                        ylim(c(0,0.5))))
 dev.off()
 #======1.5 FindVariableGenes=======================
 object <- NormalizeData(object = object)
-jpeg(paste0(path,"/S1_dispersion.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_dispersion.jpeg"), units="in", width=10, height=7,res=600)
 object <- FindVariableGenes(object = object, mean.function = ExpMean, 
-                            dispersion.function = LogVMR, do.plot = F, 
+                            dispersion.function = LogVMR, do.plot = T, 
                             x.low.cutoff = 0.1, x.high.cutoff = 8, y.cutoff = 0.5)
 dev.off()
 length(object@var.genes)

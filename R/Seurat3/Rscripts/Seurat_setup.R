@@ -25,28 +25,27 @@ colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
 df_samples = df_samples[sample_n,]
 attach(df_samples)
-df_samples %>% kable() %>% kable_styling()
+df_samples
 samples = sample
 
 #======1.2 load  SingleCellExperiment =========================
 (load(file = "data/sce_36_20190410.Rda"))
 names(sce_list)
-object_list <- lapply(sce_list, as.Seurat) %>%
-        lapply(NormalizeData) %>%
-        lapply(FindVariableFeatures,verbose = FALSE)
+object_list <- lapply(sce_list, as.Seurat)
 
 for(i in 1:length(samples)){
-        object_list[[i]]@meta.data$tests <- tests[i]
-        object_list[[i]]@meta.data$conditions <- conditions[i]
-        object_list[[i]]@meta.data$projects <- project[i]
-        object_list[[i]]@meta.data$groups <- group[i]
-        object_list[[i]]@meta.data$tissues <- tissue[i]
-        object_list[[i]]@meta.data$tsne <- tsne[i]
+        object_list[[i]]@meta.data$tests <- df_samples$tests[i]
+        object_list[[i]]@meta.data$conditions <- df_samples$conditions[i]
+        object_list[[i]]@meta.data$projects <- df_samples$project[i]
+        object_list[[i]]@meta.data$groups <- df_samples$group[i]
+        object_list[[i]]@meta.data$tissues <- df_samples$tissue[i]
+        object_list[[i]]@meta.data$tsne <- df_samples$tsne[i]
         
 }
 #========1.3 merge ===================================
 object <- Reduce(function(x, y) merge(x, y, do.normalize = F), object_list)
 remove(sce_list,object_list);GC()
+save(object, file = "data/MCL_Harmony_36_20190411.Rda")
 
 #======1.4 mito, QC, filteration =========================
 # store mitochondrial percentage in object meta data
@@ -95,7 +94,8 @@ object <- CellCycleScoring(object = object, s.features = s.genes, g2m.features =
 
 #======1.6 NormalizeData and ScaleData =========================
 # run sctransform============
-object <- SCTransform(object = object, vars.to.regress = c("percent.mt","orig.ident"), verbose = T)
+object <- SCTransform(object = object, vars.to.regress = "orig.ident", verbose = T)
+
 
 #======1.6 PCA Determine statistically significant principal components=======================
 # Run the standard workflow for visualization and clustering
@@ -120,31 +120,28 @@ object <- FindNeighbors(object, reduction = "pca", dims = 1:dim)
 object <- FindClusters(object, reduction = "pca", resolution = 0.8)
 
 #======1.7 RunHarmony=======================
-#object <- RunTSNE(object, reduction = "pca",dims = 1:dim)
-object <- RunUMAP(object = object, dims = 1:dim, verbose = FALSE)
-DimPlot(object = object, label = TRUE, reduction="umap")
-p0 <- UMAPPlot(object, group.by="orig.ident",pt.size = 1,label = T,
-              label.size = 4, repel = T)+ NoLegend()+
-        ggtitle("Clustering without harmonization")
+object <- RunTSNE(object, reduction = "pca",dims = 1:dim)
+p0 <- TSNEPlot.1(object, group.by="orig.ident",pt.size = 1,label = T,
+                 label.size = 4, repel = T)+ NoLegend()+
+        ggtitle("Clustering without harmonization")+
+        theme(plot.title = element_text(hjust = 0.5))
 system.time(object <- RunHarmony.1(object, group.by.vars= "orig.ident", dims.use = 1:dim,
                                    theta = 0, plot_convergence = TRUE,
                                    nclust = 100, max.iter.cluster = 100))
-#jpeg(paste0(path,"S1_Harmony_DimHeatmap.jpeg"), units="in", width=10, height=7,res=600)
-#DimHeatmap(object, reduction = "harmony", dims = 1, cells = 500, balanced = TRUE)
-#dev.off()
 
 #========1.6 Seurat tSNE Functions for Integrated Analysis Using Harmony Results=======
 object <- FindNeighbors(object, reduction = "harmony", dims = 1:dim)
 object <- FindClusters(object, reduction = "harmony", resolution = 0.8)
-object <- RunUMAP(object = object,reduction = "harmony", dims = 1:dim, verbose = FALSE)
+object@reductions$tsne = NULL
+object <- RunTSNE(object = object,reduction = "harmony", dims = 1:dim, verbose = FALSE)
 
-p1 <- UMAPPlot(object, group.by="orig.ident",pt.size = 1,label = T,
-               label.size = 4, repel = T)+ NoLegend()
+p1 <- TSNEPlot.1(object, group.by="orig.ident",pt.size = 1,label = T,
+                 label.size = 4, repel = T)+ NoLegend()
 
-p2 <- UMAPPlot(object, group.by="orig.ident",pt.size = 1,label = F,
-               label.size = 4, repel = T)+ NoLegend()
-p3 <- UMAPPlot(object, group.by="SCT_snn_res.0.8",pt.size = 1,label = T,
-               label.size = 4, repel = T)+ NoLegend()
+p2 <- TSNEPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,
+                 label.size = 4, repel = T)+ NoLegend()
+p3 <- TSNEPlot.1(object, group.by="RNA_snn_res.0.8",pt.size = 1,label = T,
+                 label.size = 4, repel = T)+ NoLegend()
 
 jpeg(paste0(path,"S1_pca_vs_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p0+ggtitle("Clustering without harmonization")+
@@ -160,14 +157,15 @@ plot_grid(p2+ggtitle("group by samples")+
                   theme(plot.title = element_text(hjust = 0.5,size = 18)))
 dev.off()
 
-g_Harmony <- UMAPPlot(object = object, label = T, group.by = "ident",
-                        #colors.use = ExtractMetaColor(object),
+g_Harmony <- TSNEPlot.1(object = object, label = T, group.by = "ident",
                         label.size = 6 )+ NoLegend()+
-        ggtitle("UMAP plot of all clusters")+
-        theme(plot.title = element_text(hjust = 0.5,size = 18)) 
+        ggtitle("TSNE plot of all clusters")+
+        theme(plot.title = element_text(hjust = 0.5,size = 18))
 
-jpeg(paste0(path,"UMAPplot-Harmony.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=600)
 print(g_Harmony)
 dev.off()
-
-save(object, file = "data/MCL_Harmony_36_20190411.Rda")
+save(object, file = "data/MCL_full_Harmony_36_20190412.Rda")
+saveRDS(object@assays$RNA@scale.data, file = "data/MCL.scale.data_36_20190412.Rds")
+object@assays$RNA@scale.data =matrix()
+save(object, file = "data/MCL_Harmony_36_20190412.Rda")

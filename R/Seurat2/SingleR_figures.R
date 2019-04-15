@@ -15,8 +15,8 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
 #save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
-(load(file="data/MCL_Harmony_30_20190320.Rda"))
-(load(file="output/singlerT_MCL_30_20190320.Rda"))
+(load(file="data/MCL3_Harmony_36_20190412.Rda"))
+(load(file="output/singlerF_MCL_36_20190410.Rda"))
 # if singler didn't find all cell labels
 length(singler$singler[[1]]$SingleR.single$labels) == ncol(object@data)
 if(length(singler$singler[[1]]$SingleR.single$labels) < ncol(object@data)){
@@ -105,15 +105,17 @@ singlerDF[CCND1.list[[2]],"singler1sub"] = gsub("B_cells.*","MCL",
 ##############################
 # process color scheme
 ##############################
-singler_colors <- readxl::read_excel("./doc/singler.colors.xlsx")
+singlerDF$singler1sub =  gsub("MCL:.*","MCL",singlerDF$singler1sub)
+
+singler_colors <- readxl::read_excel("doc/singler.colors.xlsx")
 singler_colors1 = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
 singler_colors1[duplicated(singler_colors1)]
 length(singler_colors1)
 apply(singlerDF[,c("singler1sub","singler1main")],2,function(x) length(unique(x)))
 singlerDF[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
 object <- AddMetaData(object = object,metadata = singlerDF)
-object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1[1:37])
-object <- SetAllIdent(object = object, id = "singler1sub.s")
+object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1)
+object <- SetAllIdent(object = object, id = "singler1sub")
 TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F)
 ##############################
 # draw tsne plot
@@ -121,22 +123,25 @@ TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F)
 p3 <- TSNEPlot.1(object = object, do.label = T, group.by = "ident",
                  do.return = TRUE, no.legend = T,alpha=1,
                  colors.use = ExtractMetaColor(object),
-                 pt.size = 1,label.size = 3,force = 2)+
-    ggtitle("Cell type labeling by Blueprint + Encode + MCL")+
-    theme(text = element_text(size=10),							
-          plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
+                 pt.size = 1,label.size = 3,force = 2)
+p3 = p3 +  ggtitle("Cell type labeling by Blueprint + Encode + MCL")
+p3 = p3 +  theme(text = element_text(size=10),	
+                 plot.title = element_text(hjust = 0.5,size = 18)) 
 
 jpeg(paste0(path,"PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
      res=600)
 print(p3)
 dev.off()
 
-save(object,file="data/MCL_Harmony_30_20190320.Rda")
+save(object,file="data/MCL_Harmony_36_20190413.Rda")
 
-object@meta.data$singler1sub.s =object@meta.data$singler1sub
-object@meta.data$singler1sub.s = gsub("MCL:.*","MCL",object@meta.data$singler1sub.s)
-object@meta.data$singler1sub.s.colors = object@meta.data$singler1sub.colors
-object@meta.data$singler1sub.s.colors = gsub("#097f09","#1b601e",object@meta.data$singler1sub.s.colors)
+singlerDF$singler1sub =  gsub("MCL:.*","MCL",singlerDF$singler1sub)
+object@meta.data$singler1sub.s = as.character(object@meta.data$singler1sub)
+object@meta.data$singler1sub.s = gsub("MCL:CCND1_high","MCL",object@meta.data$singler1sub.s)
+object@meta.data$singler1sub.s = gsub("MCL:CCND1_median","MCL",object@meta.data$singler1sub.s)
+object@meta.data$singler1sub.s.colors = gsub("#097f09","#1b601e",
+                                             as.character(object@meta.data$singler1sub.colors))
+
 object <- SetAllIdent(object = object, id = "singler1sub.s")
 
 ##############################
@@ -150,32 +155,32 @@ table(object@ident)
 
 object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
 object %<>% SetAllIdent(id = "orig.ident")
-df_samples <- readxl::read_excel("doc/190320_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",8)
+tests <- paste0("test",2:10)
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])
         samples <- unique(df$sample)
         rownames(df) = samples
         
-        print(samples <- c(df$sample[order(df$tsne)]))
-        
-        g <- lapply(samples,function(sample) {
+        samples <- c(ifelse(length(samples)>5,NA,"Normal"),df$sample[order(df$tsne)])
+        print(samples <- samples[!is.na(samples)])
+
+                g <- lapply(samples,function(sample) {
                 SubsetData(object, ident.use = sample) %>%
-                        SetAllIdent(id = "singler1sub.s") %>%
-                        TSNEPlot.1(no.legend = T,do.label =T,label.size=3,size=20,
+                        SetAllIdent(id = "singler1sub") %>%
+                        TSNEPlot.1(no.legend = T,do.label =F,label.size=3,size=20,
                                    colors.use = ExtractMetaColor(.),
                                    do.return = T, label.repel = T,force=2,do.print = F)+
-                        ggtitle(sample)+theme(text = element_text(size=20),
+                        ggtitle(sample)+theme(text = element_text(size=15),
                               plot.title = element_text(hjust = 0.5))
         })
-        jpeg(paste0(path,test,"_TSNEPlot~.jpeg"), units="in", width=10, height=7,
+        jpeg(paste0(path,test,"_Plots.jpeg"), units="in", width=10, height=7,
              res=600)
-        print(do.call(plot_grid, c(g, nrow = 2)))
+        print(do.call(cowplot::plot_grid, c(g, nrow = ifelse(length(samples)>2,2,1))))
         dev.off()
 }
-
 ###################################
 # creat seurat object
 ###################################

@@ -22,10 +22,11 @@ if(!dir.exists("data/")) dir.create("data")
 # read sample summary list
 df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
 df_samples
+colnames(df_samples) = tolower(colnames(df_samples))
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
 df_samples = df_samples[sample_n,]
 attach(df_samples)
-samples = sample
+samples = df_samples$sample
 
 #======1.2 load  SingleCellExperiment =========================
 (load(file = "data/sce_36_20190410.Rda"))
@@ -55,7 +56,7 @@ meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
 object@meta.data = meta.data 
 
 remove(meta.data)
-(load(file = paste0(path,"g1_36_20190410.Rda")))
+(load(file = paste0(path,"g1_36_20190413.Rda")))
 
 object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
                    low.thresholds = c(500,800, -Inf), 
@@ -66,9 +67,9 @@ g2 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
         VlnPlot(object = object, features.plot = features, nCol = 3, 
                 point.size.use = 0.2,size.x.use = 10, group.by = "ident",
                 x.lab.rot = T, do.return = T)+
-                theme(axis.text.x = element_text(size=8),legend.position="none")
+                theme(axis.text.x = element_text(size=8))
 })
-save(g2,file= paste0(path,"g2_36_20190412.Rda"))
+save(g2,file= paste0(path,"g2_36_20190413.Rda"))
 
 jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
@@ -84,9 +85,9 @@ print(plot_grid(g1[[2]]+ggtitle("nUMI in raw data")+
 dev.off()
 jpeg(paste0(path,"S1_mito.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[3]]+ggtitle("mito % in raw data")+ 
-                        ylim(c(0,50)),
+                        ylim(c(0,1)),
                 g2[[3]]+ggtitle("mito % after filteration")+ 
-                        ylim(c(0,0.5))))
+                        ylim(c(0,1))))
 dev.off()
 #======1.5 FindVariableGenes=======================
 object <- NormalizeData(object = object)
@@ -117,11 +118,11 @@ object %<>% ScaleData
 saveRDS(object@scale.data, file = "data/MCL2.scale.data_Harmony_36_20190412.rds")
 object %<>% RunPCA(pc.genes = object@var.genes, pcs.compute = 100, do.print = F)
 
-jpeg(paste0(path,"/S1_PCElbowPlot.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_PCElbowPlot.jpeg"), units="in", width=10, height=7,res=600)
 PCElbowPlot(object, num.pc = 100)
 dev.off()
 
-jpeg(paste0(path,"/S1_PCHeatmap.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_PCHeatmap.jpeg"), units="in", width=10, height=7,res=600)
 PCHeatmap(object, pc.use = c(1:3, 48:50,73:75), cells.use = 500, do.balanced = TRUE)
 dev.off()
 
@@ -135,21 +136,21 @@ system.time({
 })
 p0 <- DimPlot(object = object, reduction.use = "tsne", pt.size = 0.3, group.by = "orig.ident", do.return = T)
 #======1.6 RunHarmony=======================
-jpeg(paste0(path,"S1_RunHarmony~.jpeg"), units="in", width=10, height=7,res=600)
-system.time(object %<>% RunHarmony("orig.ident", dims.use = pcs,epsilon.harmony = -Inf,
+jpeg(paste0(path,"S1_RunHarmony.jpeg"), units="in", width=10, height=7,res=600)
+system.time(object %<>% RunHarmony("orig.ident", dims.use = pcs,#epsilon.harmony = -Inf,
                                 theta = 2, plot_convergence = TRUE,
-                                nclust = 100, max.iter.cluster = 100))
+                                nclust = 50, max.iter.cluster = 100))
 dev.off()
 
 object@ident %<>% factor(levels = samples)
 p1 <- DimPlot(object = object, reduction.use = "harmony", pt.size = 0.3, group.by = "orig.ident", do.return = T)
 p2 <- VlnPlot(object = object, features.plot = "Harmony1", group.by = "orig.ident", do.return = TRUE,
               x.lab.rot = T)
-jpeg(paste0(path,"S1_Harmony_vplot~.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_Harmony_vplot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p1,p2)
 dev.off()
 
-jpeg(paste0(path,"S1_Harmony_DimHeatmap~.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_Harmony_DimHeatmap.jpeg"), units="in", width=10, height=7,res=600)
 DimHeatmap(object = object, reduction.type = "harmony", cells.use = 500, 
            dim.use =c(1:3, 48:50,73:75), do.balanced = TRUE)
 dev.off()
@@ -166,14 +167,14 @@ system.time(
 p3 <- TSNEPlot(object, do.return = T, pt.size = 0.3, group.by = "orig.ident")
 p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.3)
 
-jpeg(paste0(path,"S1_pca_vs_Harmony_TSNEPlot~.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_pca_vs_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p0+ggtitle("Raw data")+
                   theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),
           p3+ggtitle("After alignment")+
                   theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) )
 dev.off()
 
-jpeg(paste0(path,"S1_Harmony_TSNEPlot~.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p3+ggtitle("group by samples")+
                   theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),
           p4+ggtitle("group by clusters")+
@@ -181,17 +182,17 @@ plot_grid(p3+ggtitle("group by samples")+
 dev.off()
 
 g_Harmony <- TSNEPlot.1(object = object, do.label = T, group.by = "ident",
-                        do.return = TRUE, no.legend = F, 
+                        do.return = TRUE, no.legend = T, 
                         #colors.use = ExtractMetaColor(object),
                         pt.size = 1,label.size = 6 )+
         ggtitle("Tsne plot of all clusters")+
         theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
 
-jpeg(paste0(path,"TSNEplot-Harmony~.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=600)
 print(g_Harmony)
 dev.off()
 
 #saveRDS(object@scale.data, file = "data/MCL.scale.data_Harmony_36_20190412.rds")
 object@scale.data = NULL; GC()
-save(object, file = "data/MCL_Harmony_36_20190412~.Rda")
+save(object, file = "data/MCL_Harmony_36_20190413.Rda")
 save(object, file = "data/MCL_36_20190412.Rda")

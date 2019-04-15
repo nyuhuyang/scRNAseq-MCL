@@ -120,6 +120,7 @@ object@ident = factor(object@ident,levels = list_samples$sample)
 g1 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
         VlnPlot(object = object, features.plot = features, nCol = 3, 
                 point.size.use = 0.2,size.x.use = 10, group.by = "ident",
-                x.lab.rot = T, do.return = T)
+                x.lab.rot = T, do.return = T)+
+                theme(axis.text.x = element_text(size=8),legend.position="none")
         })
 save(g1,file= paste0(path,"g1","_",length(sample_n),"_",gsub("-","",Sys.Date()),".Rda"))

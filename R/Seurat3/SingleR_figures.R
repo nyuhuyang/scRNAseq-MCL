@@ -16,7 +16,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
 #save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
-(load(file = "data/MCL_Harmony_36_20190410.Rda"))
+(load(file = "data/MCL3_Harmony_36_20190412.Rda"))
 (load(file="output/singlerF_MCL_36_20190410.Rda"))
 
 # if singler didn't find all cell labels

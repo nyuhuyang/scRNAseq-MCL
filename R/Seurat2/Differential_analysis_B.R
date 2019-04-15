@@ -30,25 +30,28 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
 TSNEPlot(object,do.label = T)
-B_cells_MCL <- SubsetData(object, ident.use = c(0,1,4,5,10,12))
+B_cells_MCL <- SubsetData(object, ident.use = c(0,5,7,8,11,12,14,15,17,19,21))
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
 table(B_cells_MCL@ident)
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","HSC","MCL"))
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","MCL"))
 table(B_cells_MCL@meta.data$singler1sub) %>% as.data.frame %>%
         .[.[,"Freq"] >0,]
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1sub") 
-(ident.remove <- grep("T_cells.",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.remove =  ident.remove)
+(keep <- grep("B_cells.|MCL",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use =  keep)
 remove(object);GC()
-B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2, 
-                              dims.use = 1:75,
-                              save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
-                              force.recalc = TRUE, print.output = FALSE)
+system.time(
+        B_cells_MCL %<>% RunTSNE(reduction.use = "harmony", dims.use = 1:75, do.fast = TRUE))
+system.time(
+        B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2, dims.use = 1:75,
+                                 save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
+                                 force.recalc = TRUE, print.output = FALSE))
+
 TSNEPlot(B_cells_MCL,do.label = T,label.size=5)
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = 0:4)
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c(0:4,7))
 B_cells_MCL@ident <- plyr::mapvalues(x = B_cells_MCL@ident,
-                                     from = c(0,1,2,3,4),
-                                     to = c(1,2,4,3,5))
+                                     from = c(0,1,2,3,4,7),
+                                     to =   c(2,3,4,1,2,5))
 B_cells_MCL@ident %<>% factor(levels = 1:5)
 B_cells_MCL <- StashIdent(object = B_cells_MCL, save.name = "X5_clusters")
 B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
@@ -67,13 +70,54 @@ table_B_cells_MCL <- table(B_cells_MCL@meta.data$X5_orig.ident) %>% as.data.fram
 B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = keep.MCL)
 #B_cells_MCL_exp <- AverageExpression(B_cells_MCL)
 #write.csv(B_cells_MCL_exp,paste0(path,"B_MCL_exp.csv"))
+
+# add color to cluster
+gg_color_hue <- function(n) {
+        hues = seq(15, 375, length = n + 1)
+        grDevices::hcl(h = hues, l = 65, c = 100)[1:n]
+}
+gg_color_hue(5)
+B_cells_MCL <- AddMetaColor(object = B_cells_MCL, label= "X5_clusters", colors = gg_color_hue(5))
+
+
+B_cells_MCL %<>% SetAllIdent(id = "orig.ident")
+df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
+colnames(df_samples) <- tolower(colnames(df_samples))
+tests <- paste0("test",2:10)
+for(test in tests){
+        sample_n = which(df_samples$tests %in% test)
+        df <- as.data.frame(df_samples[sample_n,])
+        samples <- unique(df$sample)
+        rownames(df) = samples
+        
+        samples <- c(ifelse(length(samples)>5,NA,"Normal"),df$sample[order(df$tsne)])
+        print(samples <- samples[!is.na(samples)])
+        
+        g <- lapply(samples,function(sample) {
+                SubsetData(B_cells_MCL, ident.use = sample) %>%
+                        SetAllIdent(id = "X5_clusters") %>%
+                        TSNEPlot.1(no.legend = T,do.label =F,label.size=3,size=20,
+                                   colors.use = ExtractMetaColor(.),
+                                   do.return = T, label.repel = T,force=2,do.print = F)+
+                        ggtitle(sample)+theme(text = element_text(size=15),
+                                              plot.title = element_text(hjust = 0.5))
+        })
+        jpeg(paste0(path,"X5_clusters/",test,"B_cluster_tsnePlots.jpeg"), units="in", width=10, height=7,
+             res=600)
+        print(do.call(cowplot::plot_grid, c(g, nrow = ifelse(length(samples)>2,2,1))))
+        dev.off()
+}
+
 ###############################
 # Doheatmap for Normal / MCL
 ###############################
-df_samples <- readxl::read_excel("doc/190320_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% paste0("test",7:8))
-(samples <- df_samples$sample[sample_n[-c(2:3)]])
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
+df_samples = df_samples[sample_n,]
+attach(df_samples)
+samples = df_samples$sample
+
 # remove samples with low B cells======
 table_df <- table(B_cells_MCL@meta.data$orig.ident) %>% as.data.frame
 keep <- table_df[table_df$Freq > 100,"Var1"] %>% as.character()

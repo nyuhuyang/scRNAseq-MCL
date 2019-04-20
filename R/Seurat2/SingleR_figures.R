@@ -15,7 +15,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
 #save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
-(load(file="data/MCL3_Harmony_36_20190412.Rda"))
+(load(file="data/MCL_Harmony_36_20190416.Rda"))
 (load(file="output/singlerF_MCL_36_20190410.Rda"))
 # if singler didn't find all cell labels
 length(singler$singler[[1]]$SingleR.single$labels) == ncol(object@data)
@@ -120,7 +120,7 @@ TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F)
 ##############################
 # draw tsne plot
 ##############################
-p3 <- TSNEPlot.1(object = object, do.label = T, group.by = "ident",
+p3 <- TSNEPlot.1(object = object, do.label = F, group.by = "ident",
                  do.return = TRUE, no.legend = T,alpha=1,
                  colors.use = ExtractMetaColor(object),
                  pt.size = 1,label.size = 3,force = 2)

@@ -1,13 +1,11 @@
-library(Seurat)
-library(dplyr)
-library(tidyr)
-library(kableExtra)
-library(magrittr)
-library(gplots)
+invisible(sapply(c("Seurat","dplyr","tidyr","magrittr","dplyr","gplots"), function(x) {
+        suppressPackageStartupMessages(library(x,character.only = T))
+}))
 source("../R/Seurat_functions.R")
 source("R/util.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
+
 #3.1  Compare DE across all major cell types==================
 #We would need the data for all clusters, as well the subclusters.
 #detect changes in gene expression between young and aged, 
@@ -16,41 +14,56 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file="data/MCL_Harmony_30_20190320.Rda"))
+(load(file="data/MCL_Harmony_36_20190413.Rda"))
 # select 1/4 of cell from control
-object <- ScaleDown(object = object)
-
 # B cells only ================
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
-TSNEPlot(object,do.label = T)
-B_cells_MCL <- SubsetData(object, ident.use = c(0,1,4,5,10,12))
+#TSNEPlot(object,do.label = T)
+B_cells_MCL <- SubsetData(object, ident.use = c(0,1,5,7,8,11,12,14,15,17,19,21))
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
 table(B_cells_MCL@ident)
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","HSC","MCL"))
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","MCL"))
 table(B_cells_MCL@meta.data$singler1sub) %>% as.data.frame %>%
-        .[.[,"Freq"] >0,]
-B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1sub") 
-(ident.remove <- grep("T_cells.",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.remove =  ident.remove)
-remove(object);GC()
-B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2, 
-                              dims.use = 1:75,
-                              save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
-                              force.recalc = TRUE, print.output = FALSE)
-TSNEPlot(B_cells_MCL,do.label = T,label.size=5)
+.[.[,"Freq"] >0,]
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1sub")
+(keep <- grep("B_cells.|MCL",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
+B_cells_MCL <- SubsetData(B_cells_MCL, ident.use =  keep)
+
+g_Harmony <- TSNEPlot.1(object = B_cells_MCL, do.label = T, group.by = "ident",
+                        do.return = TRUE, no.legend = T,
+                        colors.use = ExtractMetaColor(B_cells_MCL),
+                        pt.size = 1,label.size = 5 )+
+                        ylim(-25,25)+
+                ggtitle("Tsne plot of all B and MCL cells")+
+                theme(plot.title = element_text(hjust = 0.5,size = 18))
+
+jpeg(paste0(path,"TSNEplot-B_cells_MCL_sub.jpeg"), units="in", width=10, height=7,res=600)
+print(g_Harmony)
+dev.off()
+
+#remove(object);GC()
+system.time(
+            B_cells_MCL <- RunTSNE(B_cells_MCL, reduction.use = "harmony", dims.use = 1:75,
+            perplexity = 30, do.fast = TRUE))
+system.time(
+            B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2, dims.use = 1:75,
+            save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
+            force.recalc = TRUE, print.output = FALSE))
+TSNEPlot(B_cells_MCL,do.label = T,label.size=5,do.print=T)
 B_cells_MCL@ident <- plyr::mapvalues(x = B_cells_MCL@ident,
-                                     from = c(0,1,2,3,4),
-                                     to = c(1,2,3,4,5))
+                                     from = c(0,1,2,3,4,5,6,7,8,9,10),
+                                     to = c(1,3,4,2,5,5,5,5,5,5,5))
 B_cells_MCL@ident %<>% factor(levels = 1:5)
 B_cells_MCL <- StashIdent(object = B_cells_MCL, save.name = "X5_clusters")
+B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
 B_cells_MCL@meta.data$X5_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
                                             B_cells_MCL@meta.data$X5_clusters, sep = "_")
 B_cells_MCL@meta.data$X5_orig.ident = gsub('^Normal_.*', 'Normal', B_cells_MCL@meta.data$X5_orig.ident)
 ###############################
 # Doheatmap for Normal / MCL
 ###############################
-df_samples <- readxl::read_excel("doc/190320_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% paste0("test",8))
 (samples <- df_samples$sample[sample_n])

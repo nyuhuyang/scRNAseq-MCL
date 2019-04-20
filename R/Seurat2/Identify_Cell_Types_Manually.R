@@ -31,7 +31,7 @@ for(i in 1:length(marker.list)){
                 SingleFeaturePlot.1(object = object, feature = marker,pt.size = 0.5,
                                     gradient.use = c("lightblue", "blue3"),threshold=0.1)+
                         ggtitle(paste0(marker,Alias(df = df_markers,gene = marker)))+
-                        theme(plot.title = element_text(hjust = 0.5,size = 15, face = "bold"))
+                        theme(plot.title = element_text(hjust = 0.5,size = 15))
                 })
 
         jpeg(paste0(path,names(marker.list)[i],".jpeg"),

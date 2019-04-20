@@ -25,8 +25,8 @@ df_samples
 colnames(df_samples) = tolower(colnames(df_samples))
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
 df_samples = df_samples[sample_n,]
-attach(df_samples)
 samples = df_samples$sample
+attach(df_samples)
 
 #======1.2 load  SingleCellExperiment =========================
 (load(file = "data/sce_36_20190410.Rda"))
@@ -183,10 +183,10 @@ dev.off()
 
 g_Harmony <- TSNEPlot.1(object = object, do.label = T, group.by = "ident",
                         do.return = TRUE, no.legend = T, 
-                        #colors.use = ExtractMetaColor(object),
-                        pt.size = 1,label.size = 6 )+
+                        colors.use = ExtractMetaColor(object),
+                        pt.size = 1,label.size = 5 )+
         ggtitle("Tsne plot of all clusters")+
-        theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
+        theme(plot.title = element_text(hjust = 0.5,size = 18)) 
 
 jpeg(paste0(path,"TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=600)
 print(g_Harmony)

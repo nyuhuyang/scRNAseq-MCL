@@ -14,6 +14,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 args <- commandArgs(trailingOnly = TRUE)
 args[1] = as.character(args[1])
 (load(file = args[1]))
+
 df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx")
 #df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx",sheet = "Human.sub")
 colnames(df_markers) = gsub(" ","_",colnames(df_markers))
@@ -32,13 +33,13 @@ for(i in 1:length(marker.list)){
                 SingleFeaturePlot.1(object = object, feature = marker,pt.size = 0.5,
                                     gradient.use = c("lightblue", "blue3"),threshold=0.1)+
                         ggtitle(paste0(marker,Alias(df = df_markers,gene = marker)))+
-                        theme(plot.title = element_text(hjust = 0.5,size = 15, face = "bold"))
+                        theme(plot.title = element_text(hjust = 0.5,size = 15,face = "plain"))
                 })
 
         jpeg(paste0(path,names(marker.list)[i],".jpeg"),
              units="in", width=10, height=7,res=600)
         print(do.call(plot_grid, p)+ ggtitle(paste(names(marker.list)[i],"markers"))+
-                      theme(plot.title = element_text(hjust = 0.5,size = 20, face = "bold")))
+                      theme(plot.title = element_text(hjust = 0.5,size = 20)))
         dev.off()
         print(paste0(i,":",length(marker.list)))
 }

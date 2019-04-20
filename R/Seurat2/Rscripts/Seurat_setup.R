@@ -13,20 +13,81 @@ source("../R/Seurat_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 if(!dir.exists("data/")) dir.create("data")
+set.seed=101
 ########################################################################
 #
 #  1 Data preprocessing
 # 
 # ######################################################################
 df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
-df_samples
-colnames(df_samples) = tolower(colnames(df_samples))
+colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
 df_samples = df_samples[sample_n,]
-attach(df_samples)
 samples = df_samples$sample
+attach(df_samples)
+attach(df_samples)
 
-(load( file = "data/MCL_raw_36_20190412.Rda"))
+#======1.2 load  SingleCellExperiment =========================
+(load(file = "data/sce_36_20190410.Rda"))
+names(sce_list)
+object_list <- lapply(sce_list, as.seurat)
+
+for(i in 1:length(samples)){
+    object_list[[i]]@meta.data$tests <- df_samples$tests[i]
+    object_list[[i]]@meta.data$conditions <- df_samples$conditions[i]
+    object_list[[i]]@meta.data$projects <- df_samples$project[i]
+    object_list[[i]]@meta.data$groups <- df_samples$group[i]
+    object_list[[i]]@meta.data$tissues <- df_samples$tissue[i]
+    object_list[[i]]@meta.data$tsne <- df_samples$tsne[i]
+}
+
+#========1.3 merge ===================================
+object <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), object_list)
+remove(sce_list,object_list);GC()
+
+object = SetAllIdent(object, id = "orig.ident")
+#======1.4 mito, QC, filteration =========================
+object@meta.data$percent.mito = object@meta.data$pct_counts_Mito/100
+
+(remove <- which(colnames(object@meta.data) %in%c("is_cell_control",
+                                                  "pct_counts_in_top_500_features_Mito")))
+meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
+object@meta.data = meta.data 
+
+remove(meta.data)
+(load(file = paste0(path,"g1_36_20190413.Rda")))
+
+object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
+                      low.thresholds = c(500,800, -Inf), 
+                      high.thresholds = c(Inf,Inf, 0.5))
+
+object@ident = factor(object@ident,levels = samples)
+g2 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
+        VlnPlot(object = object, features.plot = features, nCol = 3, 
+                point.size.use = 0.2,size.x.use = 10, group.by = "ident",
+                x.lab.rot = T, do.return = T)+
+                theme(axis.text.x = element_text(size=8))
+})
+save(g2,file= paste0(path,"g2_36_2019019.Rda"))
+
+jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
+print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
+                        scale_y_log10(limits = c(100,10000)),
+                g2[[1]]+ggtitle("nGene after filteration")+ 
+                        scale_y_log10(limits = c(100,10000))))
+dev.off()
+jpeg(paste0(path,"S1_nUMI.jpeg"), units="in", width=10, height=7,res=600)
+print(plot_grid(g1[[2]]+ggtitle("nUMI in raw data")+
+                        scale_y_log10(limits = c(500,100000)),
+                g2[[2]]+ggtitle("nUMI after filteration")+ 
+                        scale_y_log10(limits = c(500,100000))))
+dev.off()
+jpeg(paste0(path,"S1_mito.jpeg"), units="in", width=10, height=7,res=600)
+print(plot_grid(g1[[3]]+ggtitle("mito % in raw data")+ 
+                        ylim(c(0,1)),
+                g2[[3]]+ggtitle("mito % after filteration")+ 
+                        ylim(c(0,1))))
+dev.off()
 #======1.5 FindVariableGenes=======================
 object <- NormalizeData(object = object)
 jpeg(paste0(path,"S1_dispersion.jpeg"), units="in", width=10, height=7,res=600)
@@ -46,8 +107,6 @@ object <- CellCycleScoring(object = object, s.genes = s.genes, g2m.genes = g2m.g
 object@meta.data$CC.Difference <- object@meta.data$S.Score - object@meta.data$G2M.Score
 object@meta.data$S.Score = object@meta.data$S.Score - min(object@meta.data$S.Score)
 object@meta.data$G2M.Score = object@meta.data$G2M.Score - min(object@meta.data$G2M.Score)
-tail(x = object@meta.data)
-
 
 #======1.6 PCA =========================
 object %<>% ScaleData
@@ -100,7 +159,6 @@ system.time(
                               save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
                               force.recalc = TRUE, print.output = FALSE))
 
-
 p3 <- TSNEPlot(object, do.return = T, pt.size = 0.3, group.by = "orig.ident", no.legend = T)
 p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.3, no.legend = T)
 
@@ -131,4 +189,4 @@ dev.off()
 
 #saveRDS(object@scale.data, file = "data/MCL.scale.data_Harmony_36_20190412.rds")
 object@scale.data = NULL; GC()
-save(object, file = "data/MCL_Harmony_36_20190413.Rda")
+save(object, file = "data/MCL_Harmony_36_20190420.Rda")

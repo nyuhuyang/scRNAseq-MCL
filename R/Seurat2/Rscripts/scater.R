@@ -24,7 +24,8 @@ print(df_samples)
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
-df_samples <- df_samples[sample_n,]
+new <- as.character(df_samples$date) %in% "2019-04-06"
+df_samples <- df_samples[sample_n & !new,]
 attach(df_samples)
 samples = sample
 #df_samples[sample_n,] %>% kable() %>% kable_styling()
@@ -43,8 +44,8 @@ if(species == "hg19") suppressPackageStartupMessages(library(EnsDb.Hsapiens.v86)
 if(species == "mm10") suppressPackageStartupMessages(library(EnsDb.Mmusculus.v79))
 
 for(i in 1:length(list_samples$sample)){
-        fname <- paste0("./data/",list_samples$sample.id[i],
-                        "/outs/filtered_gene_bc_matrices/",species)
+        fname <- paste("data/scRNA-seq",list_samples$sample.id[i],
+                        "outs/filtered_gene_bc_matrices",species,sep="/")
         sce_list[[i]] <- read10xCounts.1(fname, col.names=TRUE,
                                          add.colnames = list_samples$sample[i])
 }
@@ -80,9 +81,6 @@ for(i in 1:length(samples)){
 sce_list <- lapply(sce_list, function(x) calculateQCMetrics(x,compact = FALSE,
                         feature_controls=list(Mito=which(location=="MT"))))
 
-for(i in 1:length(sce_list)){
-        logcounts(sce_list[[i]]) <- as(log1p(assay(sce_list[[i]], "counts")),"dgCMatrix")
-}
 ########################################################################
 
 # Ideally, we would remove cells with low library sizes or total number of expressed features as described previously.
@@ -113,6 +111,6 @@ for(i in 1:length(samples)){
 for(i in 1:length(sce_list)){
         logcounts(sce_list[[i]]) <- as(log1p(assay(sce_list[[i]], "counts")),"dgCMatrix")
 }
-save(sce_list, file = paste0("data/","sce_",length(sample_n),"_",gsub("-","",Sys.Date()),".Rda"))
+save(sce_list, file = paste0("data/","sce_",length(samples),"_",gsub("-","",Sys.Date()),".Rda"))
 
 

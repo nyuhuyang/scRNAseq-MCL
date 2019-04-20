@@ -36,7 +36,7 @@ keep = sapply(list_samples, function(n) length(n[!is.na(n)])>1)
 list_samples =list_samples[keep]
 
 # check missing data
-(current <- list.files("data")[!grepl(".Rda|RData",list.files("data"))])
+(current <- list.files("data/scRNA-seq")[!grepl(".Rda|RData",list.files("data"))])
 (missing_data <- list_samples$sample.id[!(list_samples$sample.id %in% current)])
 
 # select species
@@ -53,7 +53,7 @@ if(length(missing_data)>0){
                 old.pth  <- paste("~/Downloads", missing_dat,"outs",
                                   "filtered_gene_bc_matrices",species,sep = "/")
                 list.of.files <- list.files(old.pth)
-                new.folder <- paste("./data", missing_dat,"outs",
+                new.folder <- paste("data/scRNA-seq", missing_dat,"outs",
                                     "filtered_gene_bc_matrices",species,sep = "/")
                 if(!dir.exists(new.folder)) dir.create(new.folder, recursive = T)
                 # copy the files to the new folder

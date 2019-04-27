@@ -15,8 +15,8 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
 #save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
-(load(file="data/MCL_Harmony_36_20190416.Rda"))
-(load(file="output/singlerF_MCL_36_20190410.Rda"))
+(load(file="data/MCL_Harmony_36_20190420.Rda"))
+(load(file="output/singlerT_MCL_36_20190420.Rda"))
 # if singler didn't find all cell labels
 length(singler$singler[[1]]$SingleR.single$labels) == ncol(object@data)
 if(length(singler$singler[[1]]$SingleR.single$labels) < ncol(object@data)){
@@ -29,7 +29,7 @@ table(names(singler$singler[[1]]$SingleR.single$labels) %in% object@cell.names)
 singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
 singler$meta.data$xy = object@dr$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = object@ident # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="./output/singlerT_MCL_30_20190320.Rda")
+save(singler,file="output/singlerT_MCL_36_20190420.Rda")
 ##############################
 # add singleR label to Seurat
 ###############################
@@ -83,25 +83,6 @@ singlerDF[normal_cells,"singler1sub"] = gsub("MCL:.*$","B_cells:Memory",
 table(singlerDF$singler1main, singlerDF$orig.ident) %>% kable %>% kable_styling()
 table(singlerDF$singler1sub, singlerDF$orig.ident)%>% kable %>% kable_styling()
 
-# false negative results (skip)-------------
-object <- SetAllIdent(object, id = "orig.ident")
-MCL <- SubsetData(object, ident.remove = c("BH","DJ","MD","NZ"))
-
-FeaturePlot(MCL,features.plot = "CCND1")
-CCND1.list <- SplitCells(MCL,split.by = "CCND1")
-CCND1 <- SubsetData(object, cells.use = CCND1.list[[1]])
-FeaturePlot(CCND1,features.plot = "CCND1")
-remove(CCND1);GC()
-
-# singler1main false negative results (skip)-------------
-table(singlerDF[CCND1.list[[2]],"singler1main"]) %>% kable %>% kable_styling()
-singlerDF[CCND1.list[[2]],"singler1main"] = gsub("B_cells","MCL",
-                                             singlerDF[CCND1.list[[2]],"singler1main"])
-# singler1sub false negative results (skip)-------------
-table(singlerDF[CCND1.list[[2]],"singler1sub"]) %>% kable %>% kable_styling()
-singlerDF[CCND1.list[[2]],"singler1sub"] = gsub("B_cells.*","MCL",
-                                                 singlerDF[CCND1.list[[2]],"singler1sub"])
-
 ##############################
 # process color scheme
 ##############################
@@ -133,16 +114,7 @@ jpeg(paste0(path,"PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
 print(p3)
 dev.off()
 
-save(object,file="data/MCL_Harmony_36_20190413.Rda")
-
-singlerDF$singler1sub =  gsub("MCL:.*","MCL",singlerDF$singler1sub)
-object@meta.data$singler1sub.s = as.character(object@meta.data$singler1sub)
-object@meta.data$singler1sub.s = gsub("MCL:CCND1_high","MCL",object@meta.data$singler1sub.s)
-object@meta.data$singler1sub.s = gsub("MCL:CCND1_median","MCL",object@meta.data$singler1sub.s)
-object@meta.data$singler1sub.s.colors = gsub("#097f09","#1b601e",
-                                             as.character(object@meta.data$singler1sub.colors))
-
-object <- SetAllIdent(object = object, id = "singler1sub.s")
+save(object,file="data/MCL_Harmony_36_20190420~.Rda")
 
 ##############################
 # subset Seurat

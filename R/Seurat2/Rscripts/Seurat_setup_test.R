@@ -14,7 +14,10 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 if(!dir.exists("data/")) dir.create("data")
 set.seed=101
 slurm_arrayid <- Sys.getenv('SLURM_ARRAY_TASK_ID')
-args <- slurm_arrayid
+if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
+# coerce the value to an integer
+args <- as.numeric(slurm_arrayid)
+print(paste0("slurm_arrayid=",args))
 ########################################################################
 #
 #  1 Data preprocessing
@@ -29,7 +32,6 @@ df_samples = df_samples[sample_n,]
 samples = df_samples$sample
 (new_samples <- samples[as.character(df_samples$date) %in% "2019-04-06"])
 
-args[1] = as.integer(args[1])
 new_sample1 <- new_samples[c(args[1],4:6)]
 print(paste("add new sample:",paste(new_sample1[1],",Pt-27")))
 sample_pth <- paste0(path,new_sample1[1],"_Pt-27")

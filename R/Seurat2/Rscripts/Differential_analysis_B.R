@@ -14,13 +14,13 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file="data/MCL_Harmony_36_20190413.Rda"))
+(load(file="data/MCL_Harmony_36_20190420.Rda"))
 # select 1/4 of cell from control
 # B cells only ================
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
 #TSNEPlot(object,do.label = T)
-B_cells_MCL <- SubsetData(object, ident.use = c(0,1,5,7,8,11,12,14,15,17,19,21))
+B_cells_MCL <- SubsetData(object, ident.use = c(0,1,6,7,10,12,13,14,17))
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
 table(B_cells_MCL@ident)
 B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","MCL"))

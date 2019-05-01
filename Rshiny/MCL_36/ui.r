@@ -7,7 +7,7 @@ shinyUI(fluidPage(
 
       radioButtons(inputId ="Dataset1",
                   label=h3("Data Set"),choices=as.list(samples),                  
-                  selected="Normal"),
+                  selected=samples[1]),
       textInput(inputId ="text", label = h3("Input Gene Name"), value = "Enter SINGLE gene only..."),
       actionButton(inputId = "update", "Update Plot !"),
       p("Click the above button to Update Plot After Input Gene Name (Required), e.g. CD8A, MS4A1, SOX119"),

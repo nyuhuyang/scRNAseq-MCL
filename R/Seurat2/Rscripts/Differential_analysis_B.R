@@ -1,4 +1,4 @@
-invisible(sapply(c("Seurat","dplyr","tidyr","magrittr","dplyr","gplots"), function(x) {
+ invisible(sapply(c("Seurat","dplyr","tidyr","magrittr","dplyr","gplots"), function(x) {
         suppressPackageStartupMessages(library(x,character.only = T))
 }))
 source("../R/Seurat_functions.R")

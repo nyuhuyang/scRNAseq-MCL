@@ -20,24 +20,23 @@ if(!dir.exists("data/")) dir.create("data")
 # ######################################################################
 #======1.1 Load the data files and Set up Seurat object =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
 df_samples
 colnames(df_samples) = tolower(colnames(df_samples))
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples = df_samples[sample_n,]
 samples = df_samples$sample
 attach(df_samples)
-
+attach(df_samples)
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "data/sce_36_20190410.Rda"))
+(load(file = "data/sce_43_20190429.Rda"))
 names(sce_list)
 object_list <- lapply(sce_list, as.seurat)
 
 for(i in 1:length(samples)){
         object_list[[i]]@meta.data$tests <- tests[i]
-        object_list[[i]]@meta.data$conditions <- conditions[i]
-        object_list[[i]]@meta.data$projects <- project[i]
         object_list[[i]]@meta.data$groups <- group[i]
+        object_list[[i]]@meta.data$projects <- project[i]
         object_list[[i]]@meta.data$tissues <- tissue[i]
         object_list[[i]]@meta.data$tsne <- tsne[i]
 }
@@ -45,7 +44,7 @@ for(i in 1:length(samples)){
 #========1.3 merge ===================================
 object <- Reduce(function(x, y) MergeSeurat(x, y, do.normalize = F), object_list)
 remove(sce_list,object_list);GC()
-
+save(object, file = "data/MCL_raw_43_20190429.Rda")
 object = SetAllIdent(object, id = "orig.ident")
 #======1.4 mito, QC, filteration =========================
 object@meta.data$percent.mito = object@meta.data$pct_counts_Mito/100
@@ -56,7 +55,7 @@ meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
 object@meta.data = meta.data 
 
 remove(meta.data)
-(load(file = paste0(path,"g1_36_20190413.Rda")))
+(load(file = paste0(path,"g1_43_20190430.Rda")))
 
 object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
                    low.thresholds = c(500,800, -Inf), 
@@ -67,9 +66,9 @@ g2 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
         VlnPlot(object = object, features.plot = features, nCol = 3, 
                 point.size.use = 0.2,size.x.use = 10, group.by = "ident",
                 x.lab.rot = T, do.return = T)+
-                theme(axis.text.x = element_text(size=8))
+                theme(axis.text.x = element_text(size=6))
 })
-save(g2,file= paste0(path,"g2_36_20190413.Rda"))
+save(g2,file= paste0(path,"g2_43_20190430.Rda"))
 
 jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
@@ -194,5 +193,5 @@ dev.off()
 
 #saveRDS(object@scale.data, file = "data/MCL.scale.data_Harmony_36_20190412.rds")
 object@scale.data = NULL; GC()
-save(object, file = "data/MCL_Harmony_36_20190413.Rda")
-save(object, file = "data/MCL_36_20190412.Rda")
+save(object, file = "data/MCL_Harmony_43_20190430.Rda")
+

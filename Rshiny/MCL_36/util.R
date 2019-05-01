@@ -49,8 +49,8 @@ ChangeColorScale <- function(p1, alpha.use = 1,
 # prepare gene_exp_coordinates
 PrepareExpTsne <- function(exp_dat=exp_dat, coord_dat=coord_dat, input=input){
     
-    gene_exp <- matrix(exp_dat[(row.names(exp_dat) == input$text),], nrow = 1,
-    dimnames = list(input$text,colnames(exp_dat)))
+    gene_exp <- matrix(exp_dat[(row.names(exp_dat) == toupper(input$text)),], nrow = 1,
+    dimnames = list(toupper(input$text),colnames(exp_dat)))
     gene_exp_t=t(gene_exp)
     gene_exp_t=data.frame(gene_exp_t)
     colnames(gene_exp_t)="gene"
@@ -91,12 +91,11 @@ Shinnyplot <- function(data = gene_exp_coordinates, input = input,
               panel.background = element_blank())
     g = g + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
     g = g + theme(axis.title.x = element_text(size = rel(1.5), angle = 00))
-    g = g + theme(axis.text=element_text(size=22,angle=90),
-                  axis.title=element_text(size=20),
-                  plot.title = element_text(size=25, hjust = 0.5),
+    g = g + theme(axis.text=element_text(size=30,angle=90),
+                  axis.title=element_text(size=25),
+                  plot.title = element_text(size=35, hjust = 0.5),
                   legend.text = element_text(size = 20, colour = "black"),
                   legend.title = element_text(size = 25, colour = "black"))
-    g = g + (ggtitle(paste(input$text,"in" ,input$Dataset1))) + 
-        theme(plot.title = element_text(size = rel(2.4)))
+    g = g + (ggtitle(paste(toupper(input$text),"in" ,input$Dataset1)))
     return(g)
 }

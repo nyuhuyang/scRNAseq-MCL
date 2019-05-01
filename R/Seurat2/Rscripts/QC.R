@@ -24,19 +24,20 @@ df_samples <- readxl::read_excel(args[1])
 print(df_samples)
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples <- df_samples[sample_n,]
+samples = df_samples$sample
 attach(df_samples)
-samples = sample
 #df_samples[sample_n,] %>% kable() %>% kable_styling()
 table(df_samples$tests);nrow(df_samples)
 list_samples <- lapply(colnames(df_samples), function(col) df_samples[,col])
 names(list_samples) = colnames(df_samples)
 keep = sapply(list_samples, function(n) length(n[!is.na(n)])>1)
-list_samples =list_samples[keep]
+(list_samples =list_samples[keep])
 
 # check missing data
-(current <- list.files("data/scRNA-seq")[!grepl(".Rda|RData",list.files("data"))])
+current <- list.files("data/scRNA-seq")
+(current <- current[!grepl(".Rda|RData",current)])
 (missing_data <- list_samples$sample.id[!(list_samples$sample.id %in% current)])
 
 # select species
@@ -67,7 +68,7 @@ message("Loading the datasets")
 Seurat_raw <- list()
 Seurat_list <- list()
 for(i in 1:length(list_samples$sample)){
-        Seurat_raw[[i]] <- Read10X(data.dir = paste0("data/",list_samples$sample.id[i],
+        Seurat_raw[[i]] <- Read10X.1(data.dir = paste0("data/scRNA-seq/",list_samples$sample.id[i],
                                    "/outs/filtered_gene_bc_matrices/",species))
         colnames(Seurat_raw[[i]]) = paste0(list_samples$sample[i],"_",colnames(Seurat_raw[[i]]))
         rownames(Seurat_raw[[i]]) = gsub(species,"_",rownames(Seurat_raw[[i]]))
@@ -121,6 +122,6 @@ g1 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
         VlnPlot(object = object, features.plot = features, nCol = 3, 
                 point.size.use = 0.2,size.x.use = 10, group.by = "ident",
                 x.lab.rot = T, do.return = T)+
-                theme(axis.text.x = element_text(size=8),legend.position="none")
+                theme(axis.text.x = element_text(size=6),legend.position="none")
         })
 save(g1,file= paste0(path,"g1","_",length(sample_n),"_",gsub("-","",Sys.Date()),".Rda"))

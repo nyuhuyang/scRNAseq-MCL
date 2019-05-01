@@ -21,7 +21,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file="data/MCL_Harmony_36_20190413.Rda"))
+(load(file="data/MCL_Harmony_36_20190420.Rda"))
 
 # select 1/4 of cell from control
 #object <- ScaleDown(object = object)
@@ -30,7 +30,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
 #TSNEPlot(object,do.label = T)
-B_cells_MCL <- SubsetData(object, ident.use = c(0,1,5,7,8,11,12,14,15,17,19,21))
+B_cells_MCL <- SubsetData(object, ident.use = c(0,1,6,7,10,13,14,17))
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
 table(B_cells_MCL@ident)
 B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","MCL"))
@@ -53,6 +53,7 @@ print(g_Harmony)
 dev.off()
 
 #remove(object);GC()
+set.seed(101)
 system.time(
         B_cells_MCL <- RunTSNE(B_cells_MCL, reduction.use = "harmony", dims.use = 1:75, 
                                   perplexity = 30, do.fast = TRUE))
@@ -61,10 +62,11 @@ system.time(
                                  save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
                                  force.recalc = TRUE, print.output = FALSE))
 
-TSNEPlot.1(B_cells_MCL,do.label = F,no.legend = F,label.size=5,do.print=T)
+TSNEPlot.1(B_cells_MCL,do.label = T,no.legend = F,label.size=5,do.print=T)
+B_cells_MCL@dr$tsne@cell.embeddings=-B_cells_MCL@dr$tsne@cell.embeddings
 B_cells_MCL@ident <- plyr::mapvalues(x = B_cells_MCL@ident,
-                                     from = c(0,1,2,3,4,5,6,7,8,9,10),
-                                     to = c(1,3,4,2,5,5,5,5,5,5,5))
+                                     from = c(0,1,2,3,4,5,6),
+                                     to =   c(1,2,4,3,5,5,5))
 B_cells_MCL@ident %<>% factor(levels = 1:5)
 B_cells_MCL <- StashIdent(object = B_cells_MCL, save.name = "X5_clusters")
 B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
@@ -81,8 +83,8 @@ B_cells_MCL %<>% SetAllIdent(id="X5_orig.ident")
 table_B_cells_MCL <- table(B_cells_MCL@meta.data$X5_orig.ident) %>% as.data.frame
 (keep.MCL <- table_B_cells_MCL[table_B_cells_MCL$Freq > 2,"Var1"] %>% as.character())
 B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = keep.MCL)
-#B_cells_MCL_exp <- AverageExpression(B_cells_MCL)
-#write.csv(B_cells_MCL_exp,paste0(path,"B_MCL_exp.csv"))
+B_cells_MCL_exp <- AverageExpression(B_cells_MCL)
+write.csv(B_cells_MCL_exp,paste0(path,"B_MCL_exp.csv"))
 
 # add color to cluster
 gg_color_hue <- function(n) {

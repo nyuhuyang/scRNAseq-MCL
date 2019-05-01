@@ -20,13 +20,13 @@ shinyServer(function(input, output) {
       if(input$update) {
         ## Printing the Error statement if the gene name is not present 
         validate(
-          need(input$text %in% row.names(exp_dat), 'Error: the requested gene was not detected in any cell!')
+          need(toupper(input$text) %in% row.names(exp_dat), 'Error: the requested gene was not detected in any cell!')
         )
 
         gene_exp_coordinates <- PrepareExpTsne(exp_dat=exp_dat, coord_dat=coord_dat, input=input)
       ## Create a table for printing out values in Plot 1 in the below section 
       gene_exp_coordinates_sub=gene_exp_coordinates[,c("x","y","Sample","gene")] 
-      colnames(gene_exp_coordinates_sub)=c("tSNE_1","tSNE_2","Sample",input$text)
+      colnames(gene_exp_coordinates_sub)=c("tSNE_1","tSNE_2","Sample",toupper(input$text))
       rownames(gene_exp_coordinates_sub)=gene_exp_coordinates_sub[,c("Sample")]
       gene_exp_coordinates_sub=gene_exp_coordinates_sub[,-3]
 

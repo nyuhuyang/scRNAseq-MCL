@@ -23,11 +23,9 @@ df_samples <- readxl::read_excel(args[1])
 print(df_samples)
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
-new <- as.character(df_samples$date) %in% "2019-04-06"
-df_samples <- df_samples[sample_n & !new,]
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
+df_samples <- df_samples[sample_n,]
 attach(df_samples)
-samples = sample
 #df_samples[sample_n,] %>% kable() %>% kable_styling()
 table(df_samples$tests);nrow(df_samples)
 list_samples <- lapply(colnames(df_samples), function(col) df_samples[,col])

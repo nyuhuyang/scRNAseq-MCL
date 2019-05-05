@@ -13,32 +13,33 @@ source("../R/Seurat_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 if(!dir.exists("data/")) dir.create("data")
-set.seed=101
+set.seed(101)
 ########################################################################
 #
 #  1 Data preprocessing
 # 
 # ######################################################################
-df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
-colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
+#======1.1 Load the data files and Set up Seurat object =========================
+# read sample summary list
+df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
+df_samples
+colnames(df_samples) = tolower(colnames(df_samples))
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples = df_samples[sample_n,]
 samples = df_samples$sample
 attach(df_samples)
 attach(df_samples)
-
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "data/sce_36_20190410.Rda"))
+(load(file = "data/sce_43_20190429.Rda"))
 names(sce_list)
 object_list <- lapply(sce_list, as.seurat)
 
 for(i in 1:length(samples)){
-    object_list[[i]]@meta.data$tests <- df_samples$tests[i]
-    object_list[[i]]@meta.data$conditions <- df_samples$conditions[i]
-    object_list[[i]]@meta.data$projects <- df_samples$project[i]
-    object_list[[i]]@meta.data$groups <- df_samples$group[i]
-    object_list[[i]]@meta.data$tissues <- df_samples$tissue[i]
-    object_list[[i]]@meta.data$tsne <- df_samples$tsne[i]
+        object_list[[i]]@meta.data$tests <- tests[i]
+        object_list[[i]]@meta.data$groups <- group[i]
+        object_list[[i]]@meta.data$projects <- project[i]
+        object_list[[i]]@meta.data$tissues <- tissue[i]
+        object_list[[i]]@meta.data$tsne <- tsne[i]
 }
 
 #========1.3 merge ===================================
@@ -55,7 +56,7 @@ meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
 object@meta.data = meta.data 
 
 remove(meta.data)
-(load(file = paste0(path,"g1_36_20190413.Rda")))
+(load(file = "output/20190430/g1_43_20190430.Rda")))
 
 object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
                       low.thresholds = c(500,800, -Inf), 
@@ -66,9 +67,9 @@ g2 <- lapply(c("nGene", "nUMI", "percent.mito"), function(features){
         VlnPlot(object = object, features.plot = features, nCol = 3, 
                 point.size.use = 0.2,size.x.use = 10, group.by = "ident",
                 x.lab.rot = T, do.return = T)+
-                theme(axis.text.x = element_text(size=8))
+                theme(axis.text.x = element_text(size=6))
 })
-save(g2,file= paste0(path,"g2_36_2019019.Rda"))
+save(g2,file= paste0(path,"g2_43_20190430.Rda"))
 
 jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nGene in raw data")+ 
@@ -103,10 +104,11 @@ cc.genes <- readLines(con = "../R/seurat_resources/regev_lab_cell_cycle_genes.tx
 s.genes <- FilterGenes(object,cc.genes[1:43])
 g2m.genes <- FilterGenes(object,cc.genes[44:97])
 object <- CellCycleScoring(object = object, s.genes = s.genes, g2m.genes = g2m.genes, 
-                        set.ident = FALSE)
+                           set.ident = FALSE)
 object@meta.data$CC.Difference <- object@meta.data$S.Score - object@meta.data$G2M.Score
 object@meta.data$S.Score = object@meta.data$S.Score - min(object@meta.data$S.Score)
 object@meta.data$G2M.Score = object@meta.data$G2M.Score - min(object@meta.data$G2M.Score)
+
 
 #======1.6 PCA =========================
 object %<>% ScaleData
@@ -128,20 +130,20 @@ system.time({
                              save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
                              force.recalc = TRUE, print.output = FALSE)
 })
-p0 <- DimPlot(object = object, reduction.use = "tsne", pt.size = 0.3, no.legend = T,
-              group.by = "orig.ident", do.return = T)
+p0 <- DimPlot(object = object, reduction.use = "tsne", pt.size = 0.3, group.by = "orig.ident", do.return = T,
+              no.legend = T)
 #======1.6 RunHarmony=======================
 jpeg(paste0(path,"S1_RunHarmony.jpeg"), units="in", width=10, height=7,res=600)
 system.time(object %<>% RunHarmony("orig.ident", dims.use = pcs,
-                                theta = 2, plot_convergence = TRUE,
-                                nclust = 50, max.iter.cluster = 100))
+                                   theta = 2, plot_convergence = TRUE,
+                                   nclust = 50, max.iter.cluster = 100))
 dev.off()
 
 object@ident %<>% factor(levels = samples)
-p1 <- DimPlot(object = object, reduction.use = "harmony", pt.size = 0.3, no.legend = T,
-              group.by = "orig.ident", do.return = T)
-p2 <- VlnPlot(object = object, features.plot = "Harmony1", 
-              group.by = "orig.ident", do.return = TRUE, x.lab.rot = T)
+p1 <- DimPlot(object = object, reduction.use = "harmony", pt.size = 0.3, group.by = "orig.ident",
+              no.legend = T,do.return = T)
+p2 <- VlnPlot(object = object, features.plot = "Harmony1", group.by = "orig.ident", do.return = TRUE,
+              x.lab.rot = T)
 jpeg(paste0(path,"S1_Harmony_vplot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p1,p2)
 dev.off()
@@ -156,32 +158,33 @@ system.time(
         object %<>% RunTSNE(reduction.use = "harmony", dims.use = pcs, do.fast = TRUE))
 system.time(
         object %<>% FindClusters(reduction.type = "harmony", resolution = 0.6, dims.use = pcs,
-                              save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
-                              force.recalc = TRUE, print.output = FALSE))
+                                 save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
+                                 force.recalc = TRUE, print.output = FALSE))
 
-p3 <- TSNEPlot(object, do.return = T, pt.size = 0.3, group.by = "orig.ident", no.legend = T)
-p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.3, no.legend = T)
+
+p3 <- TSNEPlot(object, do.return = T, pt.size = 0.3, group.by = "orig.ident")
+p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.3)
 
 jpeg(paste0(path,"S1_pca_vs_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p0+ggtitle("Before alignment")+
-                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),
+                  theme(plot.title = element_text(hjust = 0.5,size = 18)),
           p3+ggtitle("After alignment")+
-                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) )
+                  theme(plot.title = element_text(hjust = 0.5,size = 18)) )
 dev.off()
 
 jpeg(paste0(path,"S1_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p3+ggtitle("group by samples")+
-                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),
+                  theme(plot.title = element_text(hjust = 0.5,size = 18)),
           p4+ggtitle("group by clusters")+
-                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")))
+                  theme(plot.title = element_text(hjust = 0.5,size = 18)))
 dev.off()
 
 g_Harmony <- TSNEPlot.1(object = object, do.label = T, group.by = "ident",
                         do.return = TRUE, no.legend = T, 
-                        #colors.use = ExtractMetaColor(object),
-                        pt.size = 1,label.size = 6 )+
+                        colors.use = ExtractMetaColor(object),
+                        pt.size = 1,label.size = 5 )+
         ggtitle("Tsne plot of all clusters")+
-        theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) 
+        theme(plot.title = element_text(hjust = 0.5,size = 18)) 
 
 jpeg(paste0(path,"TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=600)
 print(g_Harmony)
@@ -189,4 +192,4 @@ dev.off()
 
 #saveRDS(object@scale.data, file = "data/MCL.scale.data_Harmony_36_20190412.rds")
 object@scale.data = NULL; GC()
-save(object, file = "data/MCL_Harmony_36_20190420.Rda")
+save(object, file = "data/MCL_Harmony_43_20190430.Rda")

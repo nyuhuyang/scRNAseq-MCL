@@ -55,7 +55,7 @@ meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
 object@meta.data = meta.data 
 
 remove(meta.data)
-(load(file = paste0(path,"g1_43_20190430.Rda")))
+(load(file = "output/20190430/g1_43_20190430.Rda")))
 
 object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
                    low.thresholds = c(500,800, -Inf), 
@@ -114,7 +114,6 @@ tail(x = object@meta.data)
 
 #======1.6 PCA =========================
 object %<>% ScaleData
-saveRDS(object@scale.data, file = "data/MCL2.scale.data_Harmony_36_20190412.rds")
 object %<>% RunPCA(pc.genes = object@var.genes, pcs.compute = 100, do.print = F)
 
 jpeg(paste0(path,"S1_PCElbowPlot.jpeg"), units="in", width=10, height=7,res=600)
@@ -167,17 +166,17 @@ p3 <- TSNEPlot(object, do.return = T, pt.size = 0.3, group.by = "orig.ident")
 p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.3)
 
 jpeg(paste0(path,"S1_pca_vs_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
-plot_grid(p0+ggtitle("Raw data")+
-                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),
+plot_grid(p0+ggtitle("Before alignment")+
+                  theme(plot.title = element_text(hjust = 0.5,size = 18)),
           p3+ggtitle("After alignment")+
-                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")) )
+                  theme(plot.title = element_text(hjust = 0.5,size = 18)) )
 dev.off()
 
 jpeg(paste0(path,"S1_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p3+ggtitle("group by samples")+
-                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")),
+                  theme(plot.title = element_text(hjust = 0.5,size = 18)),
           p4+ggtitle("group by clusters")+
-                  theme(plot.title = element_text(hjust = 0.5,size = 18, face = "bold")))
+                  theme(plot.title = element_text(hjust = 0.5,size = 18)))
 dev.off()
 
 g_Harmony <- TSNEPlot.1(object = object, do.label = T, group.by = "ident",

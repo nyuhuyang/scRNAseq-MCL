@@ -55,7 +55,7 @@ meta.data = object@meta.data[,-seq(remove[1], remove[2], by=1)]
 object@meta.data = meta.data 
 
 remove(meta.data)
-(load(file = "output/20190430/g1_43_20190430.Rda")))
+(load(file = "output/20190430/g1_43_20190430.Rda"))
 
 object <- FilterCells(object = object, subset.names = c("nGene","nUMI","percent.mito"),
                    low.thresholds = c(500,800, -Inf), 
@@ -162,8 +162,8 @@ system.time(
                               force.recalc = TRUE, print.output = FALSE))
 
 
-p3 <- TSNEPlot(object, do.return = T, pt.size = 0.3, group.by = "orig.ident")
-p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.3)
+p3 <- TSNEPlot(object, do.return = T, pt.size = 0.3, group.by = "orig.ident",no.legend = T)
+p4 <- TSNEPlot(object, do.label = T, do.return = T, pt.size = 0.3,no.legend = T)
 
 jpeg(paste0(path,"S1_pca_vs_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p0+ggtitle("Before alignment")+

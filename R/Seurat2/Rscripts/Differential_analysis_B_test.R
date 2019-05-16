@@ -16,6 +16,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # 3.1.1 load data
 # Rename ident
 (load(file="data/MCL_Harmony_43_20190430.Rda"))
+object %<>% ScaleData
 args <- commandArgs(trailingOnly = TRUE)
 args[1] <- as.character(args[1])
 # B cells only ================
@@ -63,7 +64,6 @@ if(args[1] == "ScaleData"){
 
 if(args[1] == "RunPCA"){
         B_cells_MCL %<>% RunPCA(pc.genes = B_cells_MCL@var.genes, pcs.compute = 100, do.print = F)
-        
         pcs = 1:75
         system.time(B_cells_MCL %<>% RunHarmony("orig.ident", dims.use = pcs,
                                                 theta = 2, plot_convergence = TRUE,

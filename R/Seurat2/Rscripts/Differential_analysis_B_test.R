@@ -17,6 +17,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Rename ident
 (load(file="data/MCL_Harmony_43_20190430.Rda"))
 args <- commandArgs(trailingOnly = TRUE)
+args[1] <- as.character(args[1])
 # B cells only ================
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)

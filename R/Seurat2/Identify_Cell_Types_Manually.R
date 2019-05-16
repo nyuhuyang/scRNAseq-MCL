@@ -9,7 +9,7 @@ source("../R/SingleR_functions.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 2.1 identify phenotype for each cluster  ==========================================
-(load(file="data/MCL_Harmony_30_20190320.Rda"))
+(load(file="data/MCL_Harmony_43_20190430.Rda"))
 
 #blueprint_encode_main = read.csv("../SingleR/output/blueprint_encode_main.csv",row.names =1,header = T,
 #                                 stringsAsFactors = F)

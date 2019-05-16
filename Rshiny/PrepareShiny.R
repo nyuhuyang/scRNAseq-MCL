@@ -54,7 +54,7 @@ ScaleDown <- function(object, control=c("BH","DJ","MD","NZ")){
         return(object)
 }
 
-(load(file="data/MCL_Harmony_36_20190420.Rda"))
+(load(file="data/MCL_Harmony_43_20190430.Rda"))
 # =========== select 1/4 of cell from control ===============
 object <- ScaleDown(object = object)
 #============== expression Rda ===============

@@ -1,5 +1,6 @@
 library(SingleR)
 library(Seurat)
+library(Matrix)
 library(magrittr)
 library(pheatmap)
 library(kableExtra)
@@ -15,8 +16,8 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
 #save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
-(load(file="data/MCL_Harmony_36_20190420.Rda"))
-(load(file="output/singlerT_MCL_36_20190420.Rda"))
+(load(file="data/MCL_Harmony_43_20190430.Rda"))
+(load(file="output/singlerT_MCL_43_20190430.Rda"))
 # if singler didn't find all cell labels
 length(singler$singler[[1]]$SingleR.single$labels) == ncol(object@data)
 if(length(singler$singler[[1]]$SingleR.single$labels) < ncol(object@data)){
@@ -29,7 +30,7 @@ table(names(singler$singler[[1]]$SingleR.single$labels) %in% object@cell.names)
 singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
 singler$meta.data$xy = object@dr$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = object@ident # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="output/singlerT_MCL_36_20190420.Rda")
+save(singler,file="output/singlerT_MCL_43_20190430.Rda")
 ##############################
 # add singleR label to Seurat
 ###############################
@@ -97,7 +98,7 @@ singlerDF[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
 object <- AddMetaData(object = object,metadata = singlerDF)
 object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1)
 object <- SetAllIdent(object = object, id = "singler1sub")
-TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F)
+TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F, do.print = T)
 ##############################
 # draw tsne plot
 ##############################
@@ -114,7 +115,7 @@ jpeg(paste0(path,"PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
 print(p3)
 dev.off()
 
-save(object,file="data/MCL_Harmony_36_20190420~.Rda")
+save(object,file="data/MCL_Harmony_43_20190430~.Rda")
 
 ##############################
 # subset Seurat

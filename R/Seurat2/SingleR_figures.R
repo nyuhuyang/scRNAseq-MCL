@@ -9,13 +9,11 @@ library(tidyr)
 source("../R/Seurat_functions.R")
 source("../R/SingleR_functions.R")
 source("R/util.R")
-path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
+path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
-#raw_data <- object@raw.data[,object@cell.names]
-#save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
 (load(file="data/MCL_Harmony_43_20190430.Rda"))
 (load(file="output/singlerT_MCL_43_20190430.Rda"))
 # if singler didn't find all cell labels
@@ -42,9 +40,6 @@ singlerDF = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$label
 table(rownames(singlerDF) %in% object@cell.names)
 head(singlerDF)
 apply(singlerDF,2,function(x) length(unique(x)))
-#object <- AddMetaData(object = object,
-#                   metadata = singlerDF)
-#object <- SetAllIdent(object = object, id = "singler1sub")
 
 ##############################
 # check the spearman correlation
@@ -128,9 +123,9 @@ table(object@ident)
 
 object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
 object %<>% SetAllIdent(id = "orig.ident")
-df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",2:10)
+tests <- paste0("test",2:12)
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])

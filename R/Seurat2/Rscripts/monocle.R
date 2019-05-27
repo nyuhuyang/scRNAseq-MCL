@@ -1,16 +1,17 @@
 invisible(sapply(c("R.utils","DDRTree","pheatmap","monocle","magrittr","reshape"), function(x) {
         suppressPackageStartupMessages(library(x,character.only = T))
 }))
-source("../R/Seurat_functions.R")
-source("R/util.R")
+invisible(source("../R/Seurat_functions.R"))
+invisible(source("R/util.R"))
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 5.0 load group number =================
 args <- commandArgs(trailingOnly = TRUE)
-args[1] <- as.numeric(args[1])
+args <- as.numeric(args)
 groups <- c("AFT-03","AFT-04","Pt-11","Pt-13","Pt-17",
             "Pt-AA13","Pt-25", "Pt-27")
+print(args[1])
 print(groups[args[1]])
 # 5.1 Importing data from Seurat object=================
 (load(file="data/B_cells_MCL_43_20190524.Rda"))
@@ -77,6 +78,7 @@ object_Mono <- orderCells(object_Mono)
 
 g1 <- plot_cell_trajectory(object_Mono, color_by = "orig.ident",cell_size = 3)
 g2 <- plot_cell_trajectory(object_Mono, color_by = "State",cell_size = 3)
+g3 <- plot_cell_trajectory(object_Mono, color_by = "Pseudotime",cell_size = 3)
 
 jpeg(paste0(path,groups[args[1]],"_trajectory_B_cells_MCL.jpeg"), units="in", width=10, height=7,res=600)
 g1
@@ -86,4 +88,8 @@ jpeg(paste0(path,groups[args[1]],"_trajectory_B_cells_MCL_state.jpeg"), units="i
 g2
 dev.off()
 
-save(object_Mono, file = paste0("output/",groups[args[1]],"_B_Mono_",gsub("-","",Sys.Date()),"Rda")
+jpeg(paste0(path,groups[args[1]],"_trajectory_B_cells_MCL_Pseudotime.jpeg"), units="in", width=10, height=7,res=600)
+g3
+dev.off()
+
+save(object_Mono, file = paste0("output/",groups[args[1]],"_B_Mono_",gsub("-","",Sys.Date()),"Rda"))

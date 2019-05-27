@@ -67,33 +67,34 @@ singlerDF$singler1sub %>% table() %>% kable() %>% kable_styling()
 # reduce false positive results (B cells are labeled as MCL in normal samples)
 # and false negative results (MCL cells are labeled as B cells in MCL samples)
 # singler1main false positive results  ========
-table(singlerDF$singler1main, object@meta.data$orig.ident) %>% kable %>% kable_styling()
+table(singlerDF$singler1main, object@meta.data$orig.ident) #%>% kable %>% kable_styling()
 normal_cells <- singlerDF$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
 singlerDF[normal_cells,"singler1main"] = gsub("MCL","B_cells",
                                               singlerDF[normal_cells,"singler1main"])
 # singler1sub false positive results  =========
-table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>% kable_styling()
+table(singlerDF$singler1sub, singlerDF$orig.ident) #%>% kable %>% kable_styling()
 singlerDF[normal_cells,"singler1sub"] = gsub("MCL:.*$","B_cells:Memory",
                                               singlerDF[normal_cells,"singler1sub"])
+singlerDF$singler1sub =  gsub("MCL:.*","MCL",singlerDF$singler1sub)
 
-table(singlerDF$singler1main, singlerDF$orig.ident) %>% kable %>% kable_styling()
-table(singlerDF$singler1sub, singlerDF$orig.ident)%>% kable %>% kable_styling()
+table(singlerDF$singler1main, singlerDF$orig.ident) #%>% kable %>% kable_styling()
+table(singlerDF$singler1sub, singlerDF$orig.ident) #%>% kable %>% kable_styling()
 
 ##############################
 # process color scheme
 ##############################
-singlerDF$singler1sub =  gsub("MCL:.*","MCL",singlerDF$singler1sub)
 
 singler_colors <- readxl::read_excel("doc/singler.colors.xlsx")
 singler_colors1 = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
 singler_colors1[duplicated(singler_colors1)]
 length(singler_colors1)
 apply(singlerDF[,c("singler1sub","singler1main")],2,function(x) length(unique(x)))
-singlerDF[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
+singlerDF[,c("singler1sub")] %>% table() #%>% kable() %>% kable_styling()
 object <- AddMetaData(object = object,metadata = singlerDF)
 object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1)
 object <- SetAllIdent(object = object, id = "singler1sub")
-TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F, do.print = T)
+TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F, do.return =F,
+           do.print = T)
 ##############################
 # draw tsne plot
 ##############################
@@ -110,7 +111,7 @@ jpeg(paste0(path,"PlotTsne_sub1.jpeg"), units="in", width=10, height=7,
 print(p3)
 dev.off()
 
-save(object,file="data/MCL_Harmony_43_20190430~.Rda")
+save(object,file="data/MCL_Harmony_43_20190430.Rda")
 
 ##############################
 # subset Seurat
@@ -119,13 +120,13 @@ save(object,file="data/MCL_Harmony_43_20190430~.Rda")
 # in Identify_Cell_Types_Manually.R 2.2
 object <- ScaleDown(object)
 table(object@meta.data$orig.ident)
+table(object@meta.data$X6_clusters)
 table(object@ident)
 
-object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
 object %<>% SetAllIdent(id = "orig.ident")
 df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",2:12)
+tests <- paste0("test",12:12)
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])
@@ -137,8 +138,8 @@ for(test in tests){
 
                 g <- lapply(samples,function(sample) {
                 SubsetData(object, ident.use = sample) %>%
-                        SetAllIdent(id = "singler1sub") %>%
-                        TSNEPlot.1(no.legend = T,do.label =F,label.size=3,size=20,
+                        SetAllIdent(id = "X8_clusters") %>%
+                        TSNEPlot.1(no.legend = T,do.label =T,label.size=3,size=20,
                                    colors.use = ExtractMetaColor(.),
                                    do.return = T, label.repel = T,force=2,do.print = F)+
                         ggtitle(sample)+theme(text = element_text(size=15),

@@ -12,6 +12,7 @@ library(magrittr)
 library(harmony)
 library(gplots)
 source("../R/Seurat_functions.R")
+source("R/util.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #3.1  Compare DE across all major cell types==================
@@ -23,27 +24,26 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # 3.1.1 load data
 # Rename ident
 (load(file="data/MCL_Harmony_43_20190430.Rda"))
-
-# select 1/4 of cell from control
-#object <- ScaleDown(object = object)
+#(load(file="data/B_cells_MCL_43_20190521.Rda"))
+object@meta.data$orig.ident = gsub("Pt-2-D0","Pt-2-C30",object@meta.data$orig.ident)
 
 # B cells only ================
 object <- SetAllIdent(object, id="res.0.6")
 table(object@ident)
-B_cells_MCL <- SubsetData(object, ident.use = c(0,1,5,6,9,13,14,18,19,20))
-B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
-table(B_cells_MCL@ident)
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","MCL","HSC"))
-table(B_cells_MCL@meta.data$singler1sub) %>% as.data.frame %>%
-        .[.[,"Freq"] >0,]
+B_cells_MCL <- SubsetData(object, ident.use = c(0,1,5,6,9,11,13,14,18,19,20))
+#B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1main")
+#table(B_cells_MCL@ident)
+#B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = c("B_cells","MCL","HSC"))
+#table(B_cells_MCL@meta.data$singler1sub) %>% as.data.frame %>%
+#        .[.[,"Freq"] >0,]
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="singler1sub") 
-(keep <- grep("B_cells.|MCL|CLP|HSC",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
-B_cells_MCL <- SubsetData(B_cells_MCL, ident.use =  keep)
+#(keep <- grep("B_cells.|MCL|CLP|HSC",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
+#B_cells_MCL <- SubsetData(B_cells_MCL, ident.use =  keep)
+
 g1 <- TSNEPlot.1(object = B_cells_MCL, do.label = T, group.by = "ident",
-                 do.return = TRUE, no.legend = T, 
+                 do.return = TRUE, no.legend = F, 
                  colors.use = ExtractMetaColor(B_cells_MCL),
-                 pt.size = 1,label.size = 5 )+
-        ylim(-25,25)+
+                 pt.size = 1,label.size = 3 )+
         ggtitle("Tsne plot of all B and MCL cells")+
         theme(plot.title = element_text(hjust = 0.5,size = 18)) 
 
@@ -54,52 +54,102 @@ dev.off()
 ##############################
 # re-scale, PCA, harmony and tsne
 ##############################
-B_cells_MCL <- NormalizeData(B_cells_MCL)
-B_cells_MCL <- FindVariableGenes(object = B_cells_MCL, mean.function = ExpMean, 
-                            dispersion.function = LogVMR, 
-                            x.low.cutoff = 0.1, x.high.cutoff = 8, y.cutoff = 0.5)
-length(B_cells_MCL@var.genes)
+#B_cells_MCL <- NormalizeData(B_cells_MCL)
+#B_cells_MCL <- FindVariableGenes(object = B_cells_MCL, mean.function = ExpMean, 
+#                            dispersion.function = LogVMR, 
+#                            x.low.cutoff = 0.1, x.high.cutoff = 8, y.cutoff = 0.5)
+#length(B_cells_MCL@var.genes)
 
-B_cells_MCL %<>% ScaleData
-B_cells_MCL %<>% RunPCA(pc.genes = B_cells_MCL@var.genes, pcs.compute = 100, do.print = F)
+#B_cells_MCL %<>% ScaleData
+#B_cells_MCL %<>% RunPCA(pc.genes = B_cells_MCL@var.genes, pcs.compute = 100, do.print = F)
 
-pcs = 1:75
-jpeg(paste0(path,"S1_RunHarmony_B.jpeg"), units="in", width=10, height=7,res=600)
-system.time(B_cells_MCL %<>% RunHarmony("orig.ident", dims.use = pcs,
-                                   theta = 2, plot_convergence = TRUE,
-                                   nclust = 50, max.iter.cluster = 100))
-dev.off()
+#pcs = 1:75
+#jpeg(paste0(path,"S1_RunHarmony_B.jpeg"), units="in", width=10, height=7,res=600)
+#system.time(B_cells_MCL %<>% RunHarmony("orig.ident", dims.use = pcs,
+#                                   theta = 2, plot_convergence = TRUE,
+#                                   nclust = 50, max.iter.cluster = 100))
+#dev.off()
 
-system.time(
-        B_cells_MCL <- RunTSNE(B_cells_MCL, reduction.use = "harmony", dims.use = 1:75, 
-                                  perplexity = 30, do.fast = TRUE))
-system.time(
-        B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.2, dims.use = 1:75,
-                                 save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
-                                 force.recalc = TRUE, print.output = FALSE))
+#system.time(
+#        B_cells_MCL <- RunTSNE(B_cells_MCL, reduction.use = "harmony", dims.use = 1:75, 
+#                                  perplexity = 30, do.fast = TRUE))
+#system.time(
+#        B_cells_MCL %<>% FindClusters(reduction.type = "harmony", resolution = 0.5, dims.use = 1:75,
+#                                 save.SNN = TRUE, n.start = 10, nn.eps = 0.5,
+#                                 force.recalc = TRUE, print.output = FALSE))
 
-TSNEPlot.1(B_cells_MCL,do.label = T,no.legend = F,label.size=5,do.print=T)
-save(B_cells_MCL, file = "data/B_Harmony_43_20190516~harmony.Rda")
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id="res.0.6")
+TSNEPlot.1(B_cells_MCL,do.label = T,colors.use = ExtractMetaColor(B_cells_MCL),
+           no.legend = F,label.size=5,do.print=T,do.return = F)
+#save(B_cells_MCL, file = "data/B_cells_MCL_43_20190519.Rda")
 
+#(load("data/B_cells_MCL_43_20190519.Rda"))
+g1 <- TSNEPlot.1(B_cells_MCL,do.label = T, do.return=T)
+B_cells_MCL@meta.data$X8_clusters <- plyr::mapvalues(x = B_cells_MCL@meta.data$res.0.6,
+                                                     from = c(0,1,5,6,9,11,13,14,18,19,20),
+                                                     to =   c(1,2,3,4,5,8, 2, 1, 1, 2, 1))
 
-B_cells_MCL@dr$tsne@cell.embeddings=-B_cells_MCL@dr$tsne@cell.embeddings
-B_cells_MCL@ident <- plyr::mapvalues(x = B_cells_MCL@ident,
-                                     from = c(0,1,2,3,4,5,6),
-                                     to =   c(1,2,4,3,5,5,5))
-B_cells_MCL@ident %<>% factor(levels = 1:5)
-B_cells_MCL <- StashIdent(object = B_cells_MCL, save.name = "X5_clusters")
-B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
-B_cells_MCL@meta.data$X5_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
-                                            B_cells_MCL@meta.data$X5_clusters, sep = "_")
-B_cells_MCL@meta.data$X5_orig.ident = gsub('^Normal_.*', 'Normal', B_cells_MCL@meta.data$X5_orig.ident)
+meta.data = cbind.data.frame(B_cells_MCL@meta.data, B_cells_MCL@dr$tsne@cell.embeddings)
+meta.data[(meta.data$tSNE_1 > -10) & (meta.data$X8_clusters == 5),"X8_clusters"]=7
+meta.data[(meta.data$tSNE_1 < -17.5) & (meta.data$X8_clusters == 5),"X8_clusters"]=6
+B_cells_MCL@meta.data = meta.data
+B_cells_MCL <- SetAllIdent(B_cells_MCL, id="X8_clusters")
+B_cells_MCL@ident %<>% factor(levels = 1:8)
 
 # tsne plot
-B_cells_MCL %<>% SetAllIdent(id="X5_clusters")
-TSNEPlot.1(B_cells_MCL, do.label = T,do.print = T)
-table(B_cells_MCL@meta.data$X5_orig.ident)
-B_cells_MCL %<>% SetAllIdent(id="X5_orig.ident")
+B_cells_MCL %<>% SetAllIdent(id="X8_clusters")
+g2 <- TSNEPlot.1(B_cells_MCL,do.label = T,no.legend = F,label.size=5,do.print=T,do.return=T)
+
+g2 <- TSNEPlot.1(B_cells_MCL, do.label = T, do.return=T)
+jpeg(paste0(path,"rename_tsne_B.jpeg"), units="in", width=10, height=7,res=600)
+plot_grid(g1,g2) +  ggtitle("Rename the clusters")+
+        theme(text = element_text(size=15),
+              plot.title = element_text(hjust = 0.5))
+dev.off()
+SingleFeaturePlot.1(B_cells_MCL, feature = "CD274", threshold = NULL,do.print = T)
+
+save(B_cells_MCL, file = "data/B_cells_MCL_43_20190524.Rda")
+
+##############
+# DE genes between Clusters 5 cluster top 50
+###############
+B_cells_MCL %<>% SetAllIdent(id="X8_clusters")
+table(B_cells_MCL@ident)
+X8_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.01,
+                                          min.pct = 0.01,return.thresh = 0.05)
+write.csv(X8_clusters_markers,paste0(path,"X8_clusters_FC0.01_markers.csv"))
+B_cells_MCL %<>% ScaleData()
+
+#markers <- c("BTK","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
+#             "MS4A1","PDCD1","RB1","SOX11")
+g <- DoHeatmap.1(B_cells_MCL, X8_clusters_markers, Top_n = 50,
+                 use.scaled = T,cex.col = 8,group.cex = 10,
+                 title = paste("Top 50 differentially expressed genes in each B/MCL clusters"),
+                 group.label.rot = F,cex.row = 1.2,remove.key =F,title.size = 12)
+jpeg(paste0(path,"DE_X8clusters_top50.jpeg"), units="in", width=9.5, height=7,
+     res=600)
+print(g)+ theme(strip.text.x = element_text(margin=margin(t = 30, r = 0, b = 0, l = 0)))
+dev.off()
+
+g3 <- MakeCorlorBar(B_cells_MCL, X8_clusters_markers,Top_n = 50, do.print = F,
+                    do.return = T)
+jpeg(paste0(path,"DE_clusters_top50_legend.jpeg"),units="in", width=10, height=7,res=600)
+print(g3)
+dev.off()
+
+MakeHCorlorBar(B_cells_MCL, group_by = "X8_clusters", remove.legend = F,
+              file_name = "DE_clusters_top50",split.by = "singler1sub",do.print = TRUE,do.return=FALSE)
+
+
 # remove cluster with less than 3 cells======
-table_B_cells_MCL <- table(B_cells_MCL@meta.data$X5_orig.ident) %>% as.data.frame
+B_cells_MCL <- ScaleDown(B_cells_MCL)
+B_cells_MCL@meta.data$X8_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
+                                            B_cells_MCL@meta.data$X8_clusters, sep = "_")
+B_cells_MCL@meta.data$X8_orig.ident = gsub('^Normal_.*', 'Normal', B_cells_MCL@meta.data$X8_orig.ident)
+
+table(B_cells_MCL@meta.data$X8_orig.ident)
+B_cells_MCL %<>% SetAllIdent(id="X8_orig.ident")
+table_B_cells_MCL <- table(B_cells_MCL@meta.data$X8_orig.ident) %>% as.data.frame
 (keep.MCL <- table_B_cells_MCL[table_B_cells_MCL$Freq > 2,"Var1"] %>% as.character())
 B_cells_MCL <- SubsetData(B_cells_MCL, ident.use = keep.MCL)
 B_cells_MCL_exp <- AverageExpression(B_cells_MCL)
@@ -110,17 +160,17 @@ gg_color_hue <- function(n) {
         hues = seq(15, 375, length = n + 1)
         grDevices::hcl(h = hues, l = 65, c = 100)[1:n]
 }
-gg_color_hue(5)
-B_cells_MCL <- AddMetaColor(object = B_cells_MCL, label= "X5_clusters", colors = gg_color_hue(5))
+gg_color_hue(8)
+B_cells_MCL <- AddMetaColor(object = B_cells_MCL, label= "X8_clusters", colors = gg_color_hue(8))
 
 B_cells_MCL %<>% SetAllIdent(id = "orig.ident")
-df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",2:10)
+tests <- paste0("test",2:12)
 
-Idents <- c("X5_clusters","singler1sub")
-for(Ident in Idents){
-        folder_path <- paste0(path,Ident,"/")
+tsnes <- c("X8_clusters")#,"singler1sub")
+for(tsne in tsnes){
+        folder_path <- paste0(path,tsne,"/")
         if(!dir.exists(folder_path)) dir.create(folder_path, recursive = T)
         for(test in tests){
                 sample_n = which(df_samples$tests %in% test)
@@ -133,14 +183,14 @@ for(Ident in Idents){
                 
                 g <- lapply(samples,function(sample) {
                         SubsetData(B_cells_MCL, ident.use = sample) %>%
-                                SetAllIdent(id = Ident) %>%
-                                TSNEPlot.1(no.legend = T,do.label =F,label.size=3,size=20,
+                                SetAllIdent(id = tsne) %>%
+                                TSNEPlot.1(no.legend = T,do.label =T,label.size=3,size=20,
                                            colors.use = ExtractMetaColor(.),
-                                           do.return = T, force=2,do.print = F)+
+                                           do.return = T, label.repel = T,force=2,do.print = F)+
                                 ggtitle(sample)+theme(text = element_text(size=15),
                                                       plot.title = element_text(hjust = 0.5))
                 })
-                jpeg(paste0(path,Ident,"/",test,"B_cluster_tsnePlots.jpeg"), units="in", width=10, height=7,
+                jpeg(paste0(folder_path,test,"_Plots.jpeg"), units="in", width=10, height=7,
                      res=600)
                 print(do.call(cowplot::plot_grid, c(g, nrow = ifelse(length(samples)>2,2,1))))
                 dev.off()
@@ -150,9 +200,9 @@ for(Ident in Idents){
 ###############################
 # Doheatmap for Normal / MCL
 ###############################
-df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples = df_samples[sample_n,]
 samples = df_samples$sample
 attach(df_samples)
@@ -165,12 +215,12 @@ for(sample in samples[1:length(samples)]){
         subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(sample,"Normal"))
 
         # SplitTSNEPlot======
-        subset.MCL <- SetAllIdent(subset.MCL,id = "X5_orig.ident")
+        subset.MCL <- SetAllIdent(subset.MCL,id = "X8_orig.ident")
         SplitTSNEPlot(subset.MCL, do.return = FALSE,do.print = TRUE)
         
         # remove cluster with less than 3 cells======
-        subset.MCL %<>% SetAllIdent(id = "X5_orig.ident")
-        table_subset.MCL <- table(subset.MCL@meta.data$X5_orig.ident) %>% as.data.frame
+        subset.MCL %<>% SetAllIdent(id = "X8_orig.ident")
+        table_subset.MCL <- table(subset.MCL@meta.data$X8_orig.ident) %>% as.data.frame
         keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character()
         subset.MCL <- SubsetData(subset.MCL, ident.use = keep.MCL)
         
@@ -227,7 +277,7 @@ for(i in 5:length(samples1)){
         subset.MCL <- SubsetData(B_cells_MCL, ident.use = c(samples1[i],samples2[i]))
 
         #---SplitTSNEPlot----
-        subset.MCL %<>% SetAllIdent(id = "X5_orig.ident")
+        subset.MCL %<>% SetAllIdent(id = "X8_orig.ident")
         select.plots =1:2
         if(all(c(samples1[i],samples2[i]) != sort(c(samples1[i],samples2[i])))){
                 select.plots =2:1
@@ -235,7 +285,7 @@ for(i in 5:length(samples1)){
         SplitTSNEPlot(subset.MCL, do.return = FALSE,do.print = TRUE,select.plots = select.plots)
         # remove cluster with less than 3 cells======
 
-        table_subset.MCL <- table(subset.MCL@meta.data$X5_orig.ident) %>% as.data.frame
+        table_subset.MCL <- table(subset.MCL@meta.data$X8_orig.ident) %>% as.data.frame
         keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character()
         
         x6_cluster <- subset.MCL@ident %>% unique %>% 

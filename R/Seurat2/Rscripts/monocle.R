@@ -1,4 +1,4 @@
-invisible(sapply(c("DDRTree","pheatmap","monocle","magrittr","reshape"), function(x) {
+invisible(sapply(c("R.utils","DDRTree","pheatmap","monocle","magrittr","reshape"), function(x) {
         suppressPackageStartupMessages(library(x,character.only = T))
 }))
 source("../R/Seurat_functions.R")
@@ -11,8 +11,9 @@ args <- commandArgs(trailingOnly = TRUE)
 args[1] <- as.numeric(args[1])
 groups <- c("AFT-03","AFT-04","Pt-11","Pt-13","Pt-17",
             "Pt-AA13","Pt-25", "Pt-27")
+print(groups[args[1]])
 # 5.1 Importing data from Seurat object=================
-(load(file="data/B_cells_MCL_43_20190521.Rda"))
+(load(file="data/B_cells_MCL_43_20190524.Rda"))
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="groups")
 object <- SubsetData(B_cells_MCL, ident.use = groups[args[1]])
 object <- SetAllIdent(object, id="orig.ident")

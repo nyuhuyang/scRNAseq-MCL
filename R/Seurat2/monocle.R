@@ -8,7 +8,7 @@ source("../R/Seurat_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 # 5.1 Importing data from Seurat object=================
-(load(file="data/B_cells_MCL_43_20190521.Rda"))
+(load(file="data/B_cells_MCL_43_20190524.Rda"))
 object <- B_cells_MCL
 table(object@ident)
 object_Mono <- importCDS(object, import_all = TRUE)

@@ -16,47 +16,30 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
 #save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
-(load(file = "data/MCL3_Harmony_36_20190412.Rda"))
-(load(file="output/singlerF_MCL_36_20190410.Rda"))
+(load(file = "data/MCL_V3_Harmony_43_20190610.Rda"))
+(load(file="output/singlerT_MCL_43_20190430.Rda"))
 
 # if singler didn't find all cell labels
-length(singler_36$singler[[1]]$SingleR.single$labels) == ncol(object)
+length(singler$singler[[1]]$SingleR.single$labels) == ncol(object)
 if(length(singler$singler[[1]]$SingleR.single$labels) < ncol(object)){
         all.cell = colnames(object);length(all.cell)
         know.cell = names(singler$singler[[1]]$SingleR.single$labels);length(know.cell)
         object = subset(object, cells = know.cell)
 }
-singler_36 <- singler
-(load(file="output/singlerT_MCL_30_20190320.Rda"))
 
 table(names(singler$singler[[1]]$SingleR.single$labels) %in% colnames(object))
 singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
 singler$meta.data$xy = object@reductions$umap@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = Idents(object) # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="./output/singlerF_MCL_36_20190410.Rda")
+save(singler,file="output/singlerT_MCL_43_20190430.Rda")
 ##############################
 # add singleR label to Seurat
 ###############################
 
-old <- names(singler_36$meta.data$clusters) %in% 
-        gsub('\\-1$',"",names(singler$meta.data$clusters))
-table(old)
-
-
-singlerDF_new = data.frame("singler1sub" = singler_36$singler[[1]]$SingleR.single$labels[!old],
-                       "singler1main" = singler_36$singler[[1]]$SingleR.single.main$labels[!old],
-                       row.names = names(singler_36$singler[[1]]$SingleR.single$labels[!old]))
-singlerDF_old = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$labels,
-                           "singler1main" = singler$singler[[1]]$SingleR.single.main$labels,
-                           row.names = gsub('\\-1$',"",names(singler$singler[[1]]$SingleR.single$labels)))
-singlerDF = rbind.data.frame(singlerDF_old,singlerDF_new)
-singlerDF = singlerDF[rownames(object@meta.data),]
-table(rownames(singlerDF) == rownames(object@meta.data))
-
-singlerDF = merge(singlerDF,object@meta.data[,c("Barcode","orig.ident")], by= "row.names")
-rownames(singlerDF) = singlerDF$Row.names
-singlerDF = singlerDF[,c(-1,-4)]
-table(rownames(singlerDF) %in% colnames(object))
+singlerDF = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$labels,
+                       "singler1main" = singler$singler[[1]]$SingleR.single.main$labels,
+                       "orig.ident"  = object$orig.ident,
+                       row.names = names(singler$singler[[1]]$SingleR.single$labels))
 head(singlerDF)
 apply(singlerDF,2,function(x) length(unique(x)))
 
@@ -75,10 +58,8 @@ dev.off()
 
 #Finally, we can also view the labeling as a table compared to the original identities:
 
-kable(table(singlerDF$singler1sub, singlerDF$orig.ident)) %>%
+table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>%
         kable_styling()
-singlerDF$orig.ident %>% table() %>% kable() %>% kable_styling()
-
 ##############################
 # adjust cell label
 ##############################
@@ -99,6 +80,13 @@ table(singlerDF$singler1sub, singlerDF$orig.ident)%>% kable %>% kable_styling()
 table(singlerDF$singler1sub %>% sort)%>% kable %>% kable_styling()
 
 #singlerDF$singler1sub = gsub("MCL:.*","MCL",singlerDF$singler1sub)
+sub_type <- table(singlerDF$singler1sub, singlerDF$orig.ident) %>% 
+  t %>% as.data.frame.matrix
+write.csv(sub_type,paste0(path,"Sub_celltype.csv"))
+
+major_type <- table(singlerDF$singler1main, singlerDF$orig.ident) %>% 
+  t %>% as.data.frame.matrix
+write.csv(major_type,paste0(path,"Major_celltype.csv"))
 
 ##############################
 # process color scheme

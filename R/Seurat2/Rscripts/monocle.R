@@ -13,6 +13,9 @@ groups <- c("AFT-03","AFT-04","Pt-11","Pt-13","Pt-17",
             "Pt-AA13","Pt-25", "Pt-27")
 print(args[1])
 print(groups[args[1]])
+subfolder <- paste0(path, groups[args[1]],"/")
+if(!dir.exists(subfolder)) dir.create(subfolder, recursive = T)
+
 # 5.1 Importing data from Seurat object=================
 (load(file="data/B_cells_MCL_43_20190524.Rda"))
 B_cells_MCL <- SetAllIdent(B_cells_MCL, id="groups")
@@ -45,7 +48,7 @@ all(row.names(pData(object_Mono)) == names(object@ident))
 #pData(object_Mono)$X8_cluster <- object@ident
 table(pData(object_Mono)$orig.ident)
 
-jpeg(paste0(path,groups[args[1]],"_Pie-cluster.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(subfolder,groups[args[1]],"_Pie-cluster.jpeg"), units="in", width=10, height=7,res=600)
 pie <- ggplot(pData(object_Mono), aes(x = factor(1), fill = factor(orig.ident))) +
   geom_bar(width = 1)
 pie + coord_polar(theta = "y") +
@@ -55,20 +58,21 @@ dev.off()
 # 5.3.1 choosing genes that define progress
 expressed_genes <- row.names(subset(fData(object_Mono), num_cells_expressed >= 10))
 length(expressed_genes)
-diff_test_res <- differentialGeneTest(object_Mono[expressed_genes,],
-                                      fullModelFormulaStr = "~ orig.ident",
-                                      cores = 1) #takes long time
-write.csv(diff_test_res, file = paste0(path,groups[args[1]],"_diff_test_res.csv"))
+#diff_test_res <- differentialGeneTest(object_Mono[expressed_genes,],
+#                                      fullModelFormulaStr = "~ orig.ident",
+#                                      cores = 1) #takes long time
+#write.csv(diff_test_res, file = paste0(subfolder,groups[args[1]],"_diff_test_res.csv"))
+diff_test_res = read.csv(paste0("output/20190526/",groups[args[1]],"_diff_test_res.csv"),row.names = 1)
 ordering_genes <- row.names (subset(diff_test_res, qval < 0.01))
 length(ordering_genes)
 object_Mono <- setOrderingFilter(object_Mono, ordering_genes)
-jpeg(paste0(path,groups[args[1]],"_plot_ordering_genes.jpeg"),units="in", width=10, height=7,res=600)
+jpeg(paste0(subfolder,groups[args[1]],"_plot_ordering_genes.jpeg"),units="in", width=10, height=7,res=600)
 plot_ordering_genes(object_Mono)
 dev.off()
 
 # 5.3.2 reduce data dimensionality
 #Now we're ready to try clustering the cells:.
-jpeg(paste0(path,groups[args[1]],"_plot_pc_variance_explained.jpeg"),units="in", width=10, height=7,res=600)
+jpeg(paste0(subfolder,groups[args[1]],"_plot_pc_variance_explained.jpeg"),units="in", width=10, height=7,res=600)
 plot_pc_variance_explained(object_Mono, return_all = F) # norm_method = 'log',
 dev.off()
 object_Mono <- reduceDimension(object_Mono, max_components = 2,
@@ -84,12 +88,15 @@ jpeg(paste0(path,groups[args[1]],"_trajectory_B_cells_MCL.jpeg"), units="in", wi
 g1
 dev.off()
 
-jpeg(paste0(path,groups[args[1]],"_trajectory_B_cells_MCL_state.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(subfolder,groups[args[1]],"_trajectory_B_cells_MCL.jpeg"), units="in", width=10, height=7,res=600)
+g1
+dev.off()
+
+jpeg(paste0(subfolder,groups[args[1]],"_trajectory_B_cells_MCL_state.jpeg"), units="in", width=10, height=7,res=600)
 g2
 dev.off()
 
-jpeg(paste0(path,groups[args[1]],"_trajectory_B_cells_MCL_Pseudotime.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(subfolder,groups[args[1]],"_trajectory_B_cells_MCL_Pseudotime.jpeg"), units="in", width=10, height=7,res=600)
 g3
 dev.off()
 
-save(object_Mono, file = paste0("output/",groups[args[1]],"_B_Mono_",gsub("-","",Sys.Date()),"Rda"))

@@ -41,8 +41,8 @@ current <- list.files("data/scRNA-seq")
 (missing_data <- list_samples$sample.id[!(list_samples$sample.id %in% current)])
 
 # select species
-if(unique(list_samples$species) == "Homo_sapiens") species <- "hg19"
-if(unique(list_samples$species) == "Mus_musculus") species <- "mm10"
+if(unique(list_samples$species) == "Homo_sapiens","Human") species <- "hg19"
+if(unique(list_samples$species) == "Mus_musculus","Mouse") species <- "mm10"
 if(unique(list_samples$species) == "Danio_rerio") species <- "danRer10"
 if(species == "hg19") suppressPackageStartupMessages(library(EnsDb.Hsapiens.v86))
 if(species == "mm10") suppressPackageStartupMessages(library(EnsDb.Mmusculus.v79))

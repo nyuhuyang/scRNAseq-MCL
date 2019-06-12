@@ -93,7 +93,7 @@ singlerDF[,c("singler1sub")] %>% table() #%>% kable() %>% kable_styling()
 object <- AddMetaData(object = object,metadata = singlerDF)
 object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1)
 object <- SetAllIdent(object = object, id = "singler1sub")
-TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = F, do.return =F,
+TSNEPlot.1(object, colors.use = ExtractMetaColor(object),no.legend = T,do.label = F, do.return =F,
            do.print = T)
 ##############################
 # draw tsne plot
@@ -183,4 +183,4 @@ for(sample in df_samples$sample){
 }
 object@meta.data = meta.data
 object %<>% SetAllIdent(id = "orig.ident")
-TSNEPlot(object,do.label = T)
+TSNEPlot.1(object,do.label = F,no.legend=F,do.print = T)

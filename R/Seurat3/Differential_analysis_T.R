@@ -168,20 +168,23 @@ X4_clusters_markers = X4_clusters_markers[(X4_clusters_markers$cluster %in% c("T
                                                                               "NK_cells")),]
 X4_clusters_markers$cluster = factor(X4_clusters_markers$cluster,
                                      levels = c("T_cells:CD4","T_cells:CD8",
-                                                "NK_cells","HSC/progenitors"))
+                                                "NK_cells"))
 table(X4_clusters_markers$cluster)
 T_NK_cells <- subset(T_NK_cells, idents = c("T_cells:CD4","T_cells:CD8","NK_cells"))
-T_NK_cells %<>% ScaleData#(features=rownames(T_NK_cells))
+T_NK_cells %<>% ScaleData(features=rownames(T_NK_cells))
+
+Idents(T_NK_cells) %<>% factor(levels = c("T_cells:CD4","T_cells:CD8","NK_cells"))
 
 (MT_gene <- grep("^MT-",X4_clusters_markers$gene))
 X4_clusters_markers = X4_clusters_markers[-MT_gene,]
 
-DoHeatmap.1(T_NK_cells, marker_df = X4_clusters_markers,Top_n = 300, do.print=T,angle = 0,
-            group.bar = T,title.size = 15, no.legend = F,size=4,label=T,cex.row=0,
-            title = "Top 300 differentially expressed genes in T and NK clusters",
-            width=7, height=10)
+DoHeatmap.1(T_NK_cells, marker_df = X4_clusters_markers, Top_n = 300, do.print=T, angle = 0,
+            group.bar = T, title.size = 13, no.legend = F,size=5,hjust = 0.5,
+            label=T, cex.row=0, legend.size = 15,width=7, height=20,
+            title = "Top 300 differentially expressed genes in T and NK clusters")
 
-MakeCorlorBar(T_NK_cells,  marker_df = X4_clusters_markers,Top_n = 25)
+MakeCorlorBar(T_NK_cells,  marker_df = X4_clusters_markers,Top_n = 300,do.return =F,do.print = T,
+              legend.size = 15,width=7, height=20)
 # remove cluster with less than 3 cells======
 # no scale down, keep the normal cells.
 T_NK_cells@meta.data$old.ident = T_NK_cells@meta.data$orig.ident
@@ -206,7 +209,7 @@ gg_color_hue <- function(n) {
 gg_color_hue(8)
 T_NK_cells <- AddMetaColor(object = T_NK_cells, label= "X4_clusters", colors = gg_color_hue(8))
 
-T_NK_cells %<>% SetAllIdent(id = "orig.ident")
+Idents(T_NK_cells) = "orig.ident"
 df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
 
@@ -214,8 +217,8 @@ colnames(df_samples) <- tolower(colnames(df_samples))
 #(remove <- colnames(meta.data) %in% "singler1main" %>% which)
 #meta.data = meta.data[,-remove]
 #T_NK_cells@meta.data = meta.data
-tests <- paste0("test",c(2:10,12,11))
-tsnes <- c("X4_clusters")#"cell.type")#,"X4_clusters")
+tests <- paste0("test",c(2:12))
+tsnes <- c("singler1sub")#"cell.type")#,"X4_clusters")
 for(tsne in tsnes){
         folder_path <- paste0(path,tsne,"/")
         if(!dir.exists(folder_path)) dir.create(folder_path, recursive = T)
@@ -228,18 +231,18 @@ for(tsne in tsnes){
                 samples <- c(ifelse(length(samples)>5,NA,"Normal"),df$sample[order(df$tsne)])
                 print(samples <- samples[!is.na(samples)])
                 
-                g <- lapply(samples[1:2],function(sample) {
-                        SubsetData(T_NK_cells, ident.use = sample) %>%
-                                SetAllIdent(id = tsne) %>%
-                                TSNEPlot.1(no.legend = T,do.label =F,label.size=3,size=20,
-                                           #colors.use = ExtractMetaColor(.),
-                                           do.return = T, label.repel = T,force=2,do.print = F)+
-                                ggtitle(sample)+theme(text = element_text(size=15),
-                                                      plot.title = element_text(hjust = 0.5))
+                g <- lapply(samples,function(sample) {
+                        temp <- subset(T_NK_cells, idents = sample)
+                        Idents(temp) <- tsne
+                        TSNEPlot.1(temp, no.legend = T,label = F, label.size=3,size=20,
+                                   cols = ExtractMetaColor(temp),pt.size =1,
+                                   do.return = T, repel = F, do.print = F)+
+                        ggtitle(sample)+theme(text = element_text(size=15),
+                                              plot.title = element_text(hjust = 0.5))
                 })
-                jpeg(paste0(folder_path,test,"_Plots_L.jpeg"), units="in", width=10, height=7,
+                jpeg(paste0(folder_path,test,"_Plots.jpeg"), units="in", width=10, height=7,
                      res=600)
-                print(do.call(cowplot::plot_grid, c(g, nrow = ifelse(length(samples[1:2])>2,2,1))))
+                print(do.call(cowplot::plot_grid, c(g, nrow = ifelse(length(samples)>2,2,1))))
                 dev.off()
         }
 }
@@ -285,8 +288,6 @@ for(sample in list_samples$MCL){
         GC()
         #DoHeatmap.1======
         subset.MCL <- ScaleData(subset.MCL)
-        markers <- c("BTK","CCND1","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
-                     "MS4A1","PDCD1","RB1","SOX11")
         Top_n =25
         g1 <- DoHeatmap.1(subset.MCL, gde.markers, add.genes = markers, Top_n = 25,
                          use.scaled = T,group.order = c("Normal",ident.2),
@@ -297,7 +298,7 @@ for(sample in list_samples$MCL){
         print(g1)
         dev.off()
         #---DoHeatmap vertical bar----
-        g2 <- MakeCorlorBar(subset.MCL, gde.markers,Top_n = 25, add.genes = markers, do.print = F,
+        g2 <- MakeCorlorBar(subset.MCL, gde.markers,Top_n = 25, do.print = F,
                             do.return = T)
         jpeg(paste0(subfolder,"DoHeatmap_Normal_",sample,"_legend.jpeg"),units="in", width=10, height=7,res=600)
         print(g2)

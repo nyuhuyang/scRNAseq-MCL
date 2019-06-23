@@ -25,25 +25,19 @@ print(df_samples)
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
-df_samples <- df_samples[sample_n,]
-samples = sample
-attach(df_samples)
-#df_samples[sample_n,] %>% kable() %>% kable_styling()
-table(tests);nrow(df_samples)
-list_samples <- lapply(colnames(df_samples), function(col) df_samples[,col])
-names(list_samples) = colnames(df_samples)
-keep = sapply(list_samples, function(n) length(n[!is.na(n)])>1)
-list_samples =list_samples[keep]
+df_samples = df_samples[sample_n,]
+df_samples
+samples = df_samples$sample
 
 # check missing data
 current <- list.files("data/scRNA-seq")
 (current <- current[!grepl(".Rda|RData",current)])
-(missing_data <- list_samples$sample.id[!(list_samples$sample.id %in% current)])
+(missing_data <- df_samples$sample.id[!(df_samples$sample.id %in% current)])
 
 # select species
-if(unique(list_samples$species) == "Homo_sapiens","Human") species <- "hg19"
-if(unique(list_samples$species) == "Mus_musculus","Mouse") species <- "mm10"
-if(unique(list_samples$species) == "Danio_rerio") species <- "danRer10"
+if(unique(df_samples$species) == "Homo_sapiens","Human") species <- "hg19"
+if(unique(df_samples$species) == "Mus_musculus","Mouse") species <- "mm10"
+if(unique(df_samples$species) == "Danio_rerio") species <- "danRer10"
 if(species == "hg19") suppressPackageStartupMessages(library(EnsDb.Hsapiens.v86))
 if(species == "mm10") suppressPackageStartupMessages(library(EnsDb.Mmusculus.v79))
 
@@ -67,14 +61,14 @@ message("Loading the datasets")
 ## Load the dataset
 Seurat_raw <- list()
 Seurat_list <- list()
-for(i in 1:length(list_samples$sample)){
-        Seurat_raw[[i]] <- Read10X(data.dir = paste0("data/",list_samples$sample.id[i],
+for(i in 1:length(df_samples$sample)){
+        Seurat_raw[[i]] <- Read10X(data.dir = paste0("data/",df_samples$sample.id[i],
                                    "/outs/filtered_gene_bc_matrices/",species))
-        colnames(Seurat_raw[[i]]) = paste0(list_samples$sample[i],"_",colnames(Seurat_raw[[i]]))
+        colnames(Seurat_raw[[i]]) = paste0(df_samples$sample[i],"_",colnames(Seurat_raw[[i]]))
         Seurat_list[[i]] <- CreateSeuratObject(Seurat_raw[[i]],
                                                  min.cells = 0,
                                                min.features = 0)
-        Seurat_list[[i]]@meta.data$tests <- list_samples$tests[i]
+        Seurat_list[[i]]@meta.data$tests <- df_samples$tests[i]
 
 }
 remove(Seurat_raw);GC()

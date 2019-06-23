@@ -184,3 +184,22 @@ ScaleDown <- function(object, control=c("BH","DJ","MD","NZ")){
         
         return(object)
 }
+
+#' select 10% of cell from control
+#' Seurat 3
+ScaleDown.1 <- function(object, control=c("BH","DJ","MD","NZ"), scale.down=0.1){
+    
+    normal_cells = lapply(control, function(x){
+        rownames(object@meta.data)[(object@meta.data$orig.ident %in% x)]
+    })
+    set.seed(101)
+    remove_normal_cells = lapply(normal_cells, function(x) {
+        sample(x, size = length(x)*(1-scale.down))
+        }) %>% unlist
+    table(colnames(object) %in% remove_normal_cells)
+    cell.use <- colnames(object)[!(colnames(object) %in% remove_normal_cells)]
+    object <- object[, cell.use]
+    object@meta.data$orig.ident = gsub(paste(control,collapse = "|"),"Normal",object@meta.data$orig.ident)
+    
+    return(object)
+}

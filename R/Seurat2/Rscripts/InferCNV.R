@@ -19,20 +19,23 @@ colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples = df_samples[sample_n,]
 
-B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
-
-samples = unique(B_cells_MCL@meta.data$orig.ident)
+meta.data = B_cells_MCL@meta.data
+meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",meta.data$orig.ident)
+samples = unique(meta.data$orig.ident)
 (samples = samples[!(samples %in% "Normal")])
 
-Idents(B_cells_MCL) = "orig.ident"
-subset_B <- subset(B_cells_MCL, idents = c("Normal",samples[args]))
-meta.data = subset_B@meta.data[,c("Barcode","orig.ident")]
+cell.use <- rownames(meta.data)[meta.data$orig.ident %in% c("Normal",samples[args])]
+
+# subset
+counts <- B_cells_MCL@assays$RNA@counts[,cell.use]
+meta.data <- meta.data[cell.use,c("Barcode","orig.ident")]
+
 meta.data$Barcode = rownames(meta.data)
 colnames(meta.data) =NULL
 write.table(meta.data, file = paste0(path,samples[args],"_annotations_file.txt"), 
     row.names=FALSE,sep="\t", quote = FALSE)
 
-infercnv_obj = CreateInfercnvObject(raw_counts_matrix=subset_B@assays$RNA@counts,
+infercnv_obj = CreateInfercnvObject(raw_counts_matrix = counts,
                             annotations_file=paste0(path,samples[args],"_annotations_file.txt"),
                             delim="\t",
                             gene_order_file="data/gencode_v19_gene_pos.txt",

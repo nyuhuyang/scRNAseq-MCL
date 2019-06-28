@@ -23,11 +23,11 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file="data/MCL_V3_Harmony_43_20190610.Rda"))
+(load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
 # B cells only ================
 Idents(object) <-  "singler1sub"
 object <- sortIdent(object)
-TSNEPlot.1(object,label = T,no.legend=T,cols = ExtractMetaColor(object),repel = T,
+TSNEPlot.1(object,label = F,no.legend=F,cols = ExtractMetaColor(object),repel = T,
            do.print = F)
 Idents(object) <-  "res.0.6"
 table(Idents(object))
@@ -57,6 +57,61 @@ TSNEPlot.1(object = B_cells_MCL, label = F, group.by = "ident",
            do.return = TRUE, no.legend = F, 
            cols = ExtractMetaColor(B_cells_MCL),
            pt.size = 1,label.size = 3,title = "Tsne plot of all B and MCL cells")
+
+##############################
+# 
+###############################
+B_cells_MCL@meta.data$old.ident = B_cells_MCL@meta.data$orig.ident
+B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
+
+# Doheatmap for MCL longitudinal ================
+
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
+colnames(df_samples) =  tolower(colnames(df_samples))
+df_samples[df_samples$sample %in% "MD","tsne"] = 0
+df_samples[df_samples$sample %in% "MD","sample"] = "Normal"
+
+Idents(B_cells_MCL) = "groups"
+#groups = c("Untreated","Pt-11","Pt-17","AFT-03","AFT-04","Pt-AA13","Pt-25","Pt-27")
+groups = c("Untreated","Pt-17","Pt-25")
+for(i in 1:length(groups)){
+        
+        subset.MCL <- subset(B_cells_MCL, idents = c("Normal",groups[i]))
+
+        (samples = unique(subset.MCL$orig.ident))
+        df = df_samples[df_samples$sample %in% samples,]
+        subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident, 
+                                                 levels = df$sample[order(df$tsne)])
+        Idents(subset.MCL) %<>% factor()
+        Idents(subset.MCL) = "orig.ident"
+        samples = samples[-which(samples %in% "Normal")]
+        gde.markers_list <- list()
+        for(k in 1:length(samples)){
+                gde.markers_list[[k]] <- FindMarkers.UMI(subset.MCL,
+                                                         ident.1 = samples[k],
+                                                       ident.2 = "Normal",
+                                                       logfc.threshold = 0.1, only.pos = F,
+                                                       test.use = "MAST")
+                gde.markers_list[[k]]$cluster <- samples[k]
+                gde.markers_list[[k]]$gene <- rownames(x = gde.markers_list[[k]])
+        }
+        gde.markers <- do.call(rbind, gde.markers_list)
+        write.csv(gde.markers,paste0(path,"B/B_MCL_DE/B_",groups[i],".csv"))
+        
+        gde.markers = read.csv(file = paste0("output/20190622/B/B_MCL_DE/B_",groups[i],".csv"))
+        (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
+        if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
+        GC()
+        #DoHeatmap.1======
+        subset.MCL %<>% ScaleData(features= unique(gde.markers$gene))
+        Top_n = 20
+        DoHeatmap.1(subset.MCL, marker_df = gde.markers, Top_n = Top_n, do.print=T, angle = 0,
+                    group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    label=T, cex.row=5, legend.size = NULL,width=10, height=7,unique.name = T,
+                    title = paste("Top",Top_n,"DE genes of",groups[i],
+                                  "MCL cells over Normal B cells"))
+}
+
 ##############################
 # re-scale, PCA, harmony and tsne
 ##############################
@@ -79,17 +134,17 @@ TSNEPlot.1(object = B_cells_MCL, label = F, group.by = "ident",
 #system.time(
 #        B_cells_MCL <- RunTSNE(B_cells_MCL, reduction.use = "harmony", dims.use = 1:75,
 #                                  perplexity = 30, do.fast = TRUE))
-npcs =75
-B_cells_MCL <- FindNeighbors(B_cells_MCL, reduction = "harmony",dims = 1:npcs) %>%
-        FindClusters(reduction = "harmony",resolution = 0.8,
-                     dims.use = 1:npcs,print.output = FALSE)
-Idents(B_cells_MCL) <- "RNA_snn_res.0.8"
-B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
-TSNEPlot.1(B_cells_MCL, pt.size = 1,label = T,do.print = F,
-           label.size = 4, repel = T,title = "all clusters")
-save(B_cells_MCL, file = "data/B_cells_MCL_43_20190615.Rda")
+#npcs =75
+#B_cells_MCL <- FindNeighbors(B_cells_MCL, reduction = "harmony",dims = 1:npcs) %>%
+#        FindClusters(reduction = "harmony",resolution = 0.8,
+#                     dims.use = 1:npcs,print.output = FALSE)
+#Idents(B_cells_MCL) <- "RNA_snn_res.0.8"
+#B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
+#TSNEPlot.1(B_cells_MCL, pt.size = 1,label = T,do.print = F,
+#           label.size = 4, repel = T,title = "all clusters")
+save(B_cells_MCL, file = "data/B_cells_MCL_43_20190627.Rda")
 
-(load("data/B_cells_MCL_43_20190615.Rda"))
+(load("data/B_cells_MCL_43_20190627.Rda"))
 B_cells_MCL@reductions$tsne@cell.embeddings %<>% .[colnames(B_cells_MCL),]
 meta.data = cbind.data.frame(B_cells_MCL@meta.data, B_cells_MCL@reductions$tsne@cell.embeddings)
 meta.data[(meta.data$tSNE_1 > -10) & (meta.data$res.0.6 == 9),"res.0.6"]=21
@@ -97,59 +152,60 @@ meta.data[(meta.data$tSNE_1 < -17.5) & (meta.data$res.0.6 == 9),"res.0.6"]=21
 B_cells_MCL@meta.data = meta.data
 Idents(B_cells_MCL) <- "res.0.6"
 B_cells_MCL <- subset(B_cells_MCL, idents = 21, invert = TRUE)
-B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
+B_cells_MCL %<>% sortIdent(numeric = T)
 g1 <- TSNEPlot.1(B_cells_MCL, pt.size = 1,label = T,do.print = F,
                  label.size = 4, repel = T)
 
-B_cells_MCL@meta.data[(B_cells_MCL$tSNE_2 < -15 & B_cells_MCL$RNA_snn_res.0.8 %in% 5),"res.0.6"]=22
+#B_cells_MCL@meta.data[(B_cells_MCL$tSNE_2 < -15 & B_cells_MCL$RNA_snn_res.0.8 %in% 5),"res.0.6"]=22
 B_cells_MCL@meta.data[(B_cells_MCL$tSNE_1 < -3 & B_cells_MCL$res.0.6 %in% 5),"res.0.6"]=6
 B_cells_MCL@meta.data[(B_cells_MCL$tSNE_2 > -10 & B_cells_MCL$res.0.6 %in% 6),"res.0.6"]=2
-B_cells_MCL@meta.data$X6_clusters <- plyr::mapvalues(x = B_cells_MCL@meta.data$res.0.6,
-                                                     from = c(0,1,5,6,9,13,14,18,19,20,22),
-                                                     to =   c(1,2,3,4,5,2, 1, 1, 2, 1,6))
-Idents(B_cells_MCL) <- "X6_clusters"
+B_cells_MCL@meta.data$X5_clusters <- plyr::mapvalues(x = B_cells_MCL@meta.data$res.0.6,
+                                                     from = c(0,1,5,6,9,13,14,18,19,20),
+                                                     to =   c(1,2,3,4,5,2, 1, 1, 2, 1))
+Idents(B_cells_MCL) <- "X5_clusters"
 B_cells_MCL %<>% sortIdent
-g2 <- TSNEPlot.1(B_cells_MCL, pt.size = 1,label = T,do.print = T,
+g2 <- TSNEPlot.1(B_cells_MCL, pt.size = 1,label = T,do.print = F,
                  label.size = 4, repel = T)
 jpeg(paste0(path,"rename_tsne_B~.jpeg"), units="in", width=10, height=7,res=600)
-plot_grid(g1+NoLegend(),g2+NoLegend()) +  ggtitle("Rename the clusters")+
+cowplot::plot_grid(g1+NoLegend(),g2+NoLegend()) +  ggtitle("Rename the clusters")+
         theme(text = element_text(size=15),
               plot.title = element_text(hjust = 0.5))
 dev.off()
 
 TSNEPlot.1(B_cells_MCL, pt.size = 1,label = F,do.print = T,no.legend = F,
            label.size = 4, repel = T, title = "6 clusters in B/MCL cells")
-save(B_cells_MCL, file = "data/B_cells_MCL_43_20190615.Rda")
-(load(file = "data/B_cells_MCL_43_20190615.Rda"))
+save(B_cells_MCL, file = "data/B_cells_MCL_43_20190627.Rda")
+(load(file = "data/B_cells_MCL_43_20190627.Rda"))
 
 
 ##############
 # DE genes between Clusters 5 cluster top 50
 ###############
-Idents(B_cells_MCL) <- "X6_clusters"
+Idents(B_cells_MCL) <- "X5_clusters"
 B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
 table(Idents(B_cells_MCL))
-X6_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = -Inf,only.pos = FALSE, 
-                                          min.pct = 0.01,return.thresh = 1)
-X6_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.2,only.pos = T, 
+X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.1,only.pos = FALSE, 
+                                          min.pct = 0.01,return.thresh = 0.05)
+X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.2,only.pos = T, 
                                           min.pct = 0.5,return.thresh = 0.05)
-write.csv(X6_clusters_markers,paste0(path,"X6_clusters_FC0.2_markers.csv"))
+write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.2_markers.csv"))
 
-X6_clusters_markers = read.csv("output/20190609/X6_clusters_FC0.2_markers.csv",row.names = 1)
+X5_clusters_markers = read.csv("output/20190609/X5_clusters_FC0.2_markers.csv",row.names = 1)
 #B_cells_MCL %<>% ScaleData()
 
 markers <- c("BTK","CCND1","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
              "MS4A1","PDCD1","RB1","SOX11")
-(MT_gene <- grep("^MT-",X6_clusters_markers$gene))
-X6_clusters_markers = X6_clusters_markers[-MT_gene,]
-        
-B_cells_MCL %<>% ScaleData(features=rownames(B_cells_MCL))
-DoHeatmap.1(B_cells_MCL, marker_df = X6_clusters_markers,add.genes = NULL, Top_n = 15, do.print=T, angle = 0,
+(MT_gene <- grep("^MT-",X5_clusters_markers$gene))
+X5_clusters_markers = X5_clusters_markers[-MT_gene,]
+
+top = X5_clusters_markers %>% group_by(cluster) %>% top_n(25, avg_logFC)
+B_cells_MCL %<>% ScaleData(features=top$gene)
+DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers,add.genes = NULL, Top_n = 25, do.print=T, angle = 0,
             group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
             label=T, cex.row=5, legend.size = 8,width=10, height=7,
-            title = "Top 15 differentially expressed genes in B and MCL clusters")
+            title = "Top 25 differentially expressed genes in B and MCL clusters")
 
-MakeCorlorBar(B_cells_MCL,  marker_df = X6_clusters_markers,add.genes = markers, Top_n = 15,do.return =F,do.print = T,
+MakeCorlorBar(B_cells_MCL,  marker_df = X5_clusters_markers,add.genes = markers, Top_n = 15,do.return =F,do.print = T,
               legend.size = 8, width=10, height=7)
 
 # remove cluster with less than 3 cells======
@@ -157,21 +213,21 @@ MakeCorlorBar(B_cells_MCL,  marker_df = X6_clusters_markers,add.genes = markers,
 B_cells_MCL@assays$RNA@scale.data = matrix(0,0,0);GC()
 B_cells_MCL@meta.data$old.ident = B_cells_MCL@meta.data$orig.ident
 B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
-B_cells_MCL@meta.data$X6_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
-                                            B_cells_MCL@meta.data$X6_clusters, sep = "_")
-B_cells_MCL@meta.data$X6_orig.ident = gsub('^Normal_.*', 'Normal', B_cells_MCL@meta.data$X6_orig.ident)
+B_cells_MCL@meta.data$X5_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
+                                            B_cells_MCL@meta.data$X5_clusters, sep = "_")
+B_cells_MCL@meta.data$X5_orig.ident = gsub('^Normal_.*', 'Normal', B_cells_MCL@meta.data$X5_orig.ident)
 
-table(B_cells_MCL@meta.data$X6_orig.ident)
-Idents(B_cells_MCL) <- "X6_orig.ident"
+table(B_cells_MCL@meta.data$X5_orig.ident)
+Idents(B_cells_MCL) <- "X5_orig.ident"
 
 # add color to cluster
-B_cells_MCL <- AddMetaColor(object = B_cells_MCL, label= "X6_clusters", 
-                            colors = scales::hue_pal()(length(unique(B_cells_MCL$X6_clusters))))
+B_cells_MCL <- AddMetaColor(object = B_cells_MCL, label= "X5_clusters", 
+                            colors = scales::hue_pal()(length(unique(B_cells_MCL$X5_clusters))))
 
 Idents(B_cells_MCL)  = "orig.ident"
 df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-keep = df_samples$sample %in% unique(B_cells_MCL$orig.ident)
+(keep = df_samples$sample %in% unique(B_cells_MCL$orig.ident))
 df_samples = df_samples[keep,]
 
 tests <- paste0("test",c(2:12))
@@ -186,7 +242,8 @@ for(test in tests){
         
         subset.MCL <- subset(B_cells_MCL,idents = samples)
         subset.MCL$orig.ident = factor(subset.MCL$orig.ident, levels = samples)
-        Idents(subset.MCL) = "X6_clusters"
+        Idents(subset.MCL) = "X5_clusters"
+        subset.MCL %<>% sortIdent()
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,
                    cols = ExtractMetaColor(subset.MCL),do.print = T, unique.name = T)
 }
@@ -208,7 +265,7 @@ for(test in tests){
                    cols = ExtractMetaColor(subset.MCL),do.print = T, unique.name = T)
 }
 
-table_B_cells_MCL <- table(B_cells_MCL@meta.data$X6_orig.ident) %>% as.data.frame
+table_B_cells_MCL <- table(B_cells_MCL@meta.data$X5_orig.ident) %>% as.data.frame
 (remove <- table_B_cells_MCL[table_B_cells_MCL$Freq < 2,"Var1"] %>% as.character())
 B_cells_MCL <- subset(B_cells_MCL, idents = remove, invert = TRUE)
 B_cells_MCL_exp <- AverageExpression(B_cells_MCL)
@@ -227,20 +284,20 @@ for(sample in list_samples$MCL){
         subset.MCL <- subset(B_cells_MCL, idents = c("Normal",sample))
 
         # SplitTSNEPlot======
-        Idents(subset.MCL) = "X6_orig.ident"
+        Idents(subset.MCL) = "X5_orig.ident"
         subset.MCL %<>% sortIdent()
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,
                    do.print = T, unique.name = T)
         
         # remove cluster with less than 3 cells======
-        table_subset.MCL <- table(subset.MCL$X6_orig.ident) %>% as.data.frame
+        table_subset.MCL <- table(subset.MCL$X5_orig.ident) %>% as.data.frame
         keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character()
         
-        (X6_cluster <- keep.MCL %>% unique %>% 
+        (X5_cluster <- keep.MCL %>% unique %>% 
                 gsub('.*\\_',"",.) %>% as.numeric %>% sort )
         
-        print(ident.1 <- paste(samples1,X6_cluster,sep="_"))
-        print(ident.2 <- paste(samples2,X6_cluster,sep="_"))
+        print(ident.1 <- paste(samples1,X5_cluster,sep="_"))
+        print(ident.2 <- paste(samples2,X5_cluster,sep="_"))
         
         # FindAllMarkers.UMI======
         subfolder <- paste0(path,"Normal_vs_",sample,"/")
@@ -270,7 +327,7 @@ print(list_samples %>% unlist %>% as.vector %>% unique %in%
               B_cells_MCL@meta.data$orig.ident)
 
 Idents(B_cells_MCL) = "orig.ident"
-for(i in 1:length(list_samples$MCL.1)){#){
+for(i in 1:length(list_samples$MCL.1)){
         
         (samples1 = list_samples$MCL.1[i])
         (samples2 = list_samples$MCL.2[i])
@@ -279,19 +336,19 @@ for(i in 1:length(list_samples$MCL.1)){#){
         subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident, 
                                                  levels = c(samples1,samples2))
         #---SplitTSNEPlot----
-        Idents(subset.MCL) = "X6_orig.ident"
+        Idents(subset.MCL) = "X5_orig.ident"
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = F,
                    do.print = T, unique.name = T)
          # remove cluster with less than 3 cells======
 
-        table_subset.MCL <- table(subset.MCL@meta.data$X6_orig.ident) %>% as.data.frame
+        table_subset.MCL <- table(subset.MCL@meta.data$X5_orig.ident) %>% as.data.frame
         (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character())
         
-        (X6_cluster <- keep.MCL %>% unique %>% 
+        (X5_cluster <- keep.MCL %>% unique %>% 
                         gsub('.*\\_',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)])
         
-        print(ident.1 <- paste(samples1,X6_cluster,sep="_"))
-        print(ident.2 <- paste(samples2,X6_cluster,sep="_"))
+        print(ident.1 <- paste(samples1,X5_cluster,sep="_"))
+        print(ident.2 <- paste(samples2,X5_cluster,sep="_"))
         
         subset.MCL <- subset(subset.MCL, idents = c(ident.1,ident.2))
 
@@ -314,11 +371,58 @@ for(i in 1:length(list_samples$MCL.1)){#){
         remove(subset.MCL);GC()
 }
 
+# Doheatmap for MCL longitudinal by different clusters ================
+
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
+colnames(df_samples) =  tolower(colnames(df_samples))
+df_samples[df_samples$sample %in% "MD","tsne"] = 0
+df_samples[df_samples$sample %in% "MD","sample"] = "Normal"
+
+Idents(B_cells_MCL) = "groups"
+groups = c("Untreated","Pt-11","Pt-17","AFT-03","AFT-04","Pt-AA13","Pt-25","Pt-27")
+clusters = list(c(1,2))#,3,c(4,6))
+groups = c("Untreated","Pt-17","Pt-25")
+for(i in 1:length(groups)){
+        
+        subset_MCL <- subset(B_cells_MCL, idents = c("Normal",groups[i]))
+        Idents(subset_MCL) = "X5_clusters"
+        for(k in 1:length(clusters)){
+                subset.MCL <- subset(subset_MCL,idents = clusters[[k]])
+                
+                (samples = unique(subset.MCL$orig.ident))
+                df = df_samples[df_samples$sample %in% samples,]
+                subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident, 
+                                                         levels = df$sample[order(df$tsne)])
+                Idents(subset.MCL) = "orig.ident"
+                gde.markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.3, only.pos = T,
+                                                  test.use = "MAST")
+                write.csv(gde.markers,paste0(path,"B/B_MCL_DE/B_",groups[i],"_",
+                                             paste(clusters[[k]],collapse = "_"),".csv"))
+                (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
+                if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
+                GC()
+                #DoHeatmap.1======
+                subset.MCL %<>% ScaleData(features= unique(gde.markers$gene))
+                Top_n = 20
+                DoHeatmap.1(subset.MCL, marker_df = gde.markers, Top_n = Top_n, do.print=T, angle = 0,
+                            group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                            label=F, cex.row=4, legend.size = NULL,width=10, height=7,unique.name = T,
+                            title = paste("Top",Top_n,"DE genes in longitudinal",groups[i],
+                                          "B/MCL cells cluster",paste(clusters[[k]],collapse = " and ")))
+                # rename file
+                v <- paste(unique(subset.MCL$orig.ident),collapse = "_")
+                v = paste0(v,"_",FindIdentLabel(subset.MCL))
+                old.name = paste0(path,"Doheatmap_top",Top_n,"_",v,".jpeg")
+                file.rename(old.name, paste0(path,"Doheatmap_top",Top_n,"_",v,"cluster",
+                                             paste(clusters[[k]],collapse = "_"),".jpeg"))
+                remove(subset.MCL);GC()
+        }
+        remove(subset_MCL);GC()
+}
+
 #######################
 # heatmap.2
 #######################
-library(fastcluster)
-library(HiClimR)
 (load(file = "data/B_cells_MCL_43_20190615.Rda"))
 
 markers <- c("BTK","CCND1","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
@@ -339,40 +443,110 @@ print(plot1+  ggtitle("Variable genes in B and MCL cells")+
 dev.off()
 
 ## Column clustering (adjust here distance/linkage methods to what you need!)
-B_cells_MCL %<>% ScaleData(features = unique(c(VariableFeatures(B_cells_MCL),markers)))
-select.markers = unique(c(head(x = VariableFeatures(object = B_cells_MCL), 1000),markers))
-y = B_cells_MCL@assays$RNA@scale.data[select.markers,]
-y = y[1:1000,1:1000]
+B_cells_MCL %<>% ScaleData(features = VariableFeatures(B_cells_MCL))
+y = B_cells_MCL@assays$RNA@scale.data[VariableFeatures(B_cells_MCL),]
+#write.csv(exp,paste0(path,"exp1.csv"))
+exp = read.csv(paste0(path,"exp.csv"),row.names = 1)
+remove(B_cells_MCL);GC()
+system.time(cor.mtr <- HiClimR::fastCor(y,nSplit = 3, optBLAS = TRUE))
+system.time(distance <- as.dist(1-cor.mtr))
+system.time(hc <- hclust(distance,method="ward.D2"))
+save(hc, file = paste0("output/hc.Rda"))
+load(file = paste0("output/hc.Rda"))
 
-system.time(cor.mtr <- fastCor(y,optBLAS = TRUE))
-system.time(cor.mtr <- cor(y))
+clusters = B_cells_MCL@meta.data[hc$labels,"orig.ident"]
 
-distance <- as.dist(1-cor.mtr)
-hc <- hclust(), method="ward.D2")
-cc = gsub("_.*","",hc$labels)
-cc = gsub(control,"#B3DE69",cc)
-cc = gsub(sample,"#195016",cc)
-
-jpeg(paste0(path,"/Heatmap2_",control,"_",sample,".jpeg"), units="in", width=10, height=7,res=600)
+cc <- plyr::mapvalues(x = clusters,
+                      from = unique(clusters),
+                      to = scales::hue_pal()(length(unique(clusters))))
+clusters =factor(clusters, levels = sort(unique(clusters)))
+clusters =factor(clusters, levels = 1:length(unique(clusters)))
+jpeg(paste0(path,"Heatmap2_MCL.jpeg"), units="in", width=10, height=7,res=600)
 heatmap.2(as.matrix(y),
-          Colv = as.dendrogram(hc), Rowv= FALSE,
-          ColSideColors = cc, trace ="none",labCol = FALSE,dendrogram = "column",#scale="row",
+          Colv = as.dendrogram(hc), 
+          Rowv= FALSE,
+          ColSideColors = cc, 
+          trace ="none",labCol = FALSE,dendrogram = "column",
           key.xlab = "scale log nUMI",
           cexRow = 0.5,
           margins = c(2,5),
           #scale = "row",
           breaks = seq(-3,3,length.out = 101),
           col = bluered,
-          main = paste(control, "vs.",sample, "in B cells and MCL cells"))
+          main = "All B and MCL cells")
 par(lend = 1)           # square line ends for the color legend
-legend(0, 0.8,       # location of the legend on the heatmap plot
-       legend = c(control, sample), # category labels
-       col = c("#B3DE69", "#195016"),  # color key
+legend(-0.1, 0.8,       # location of the legend on the heatmap plot
+       legend = unique(clusters), # category labels
+       col = scales::hue_pal()(length(unique(clusters))),  # color key
        lty= 1,             # line style
        lwd = 10            # line width
 )
 dev.off()
 
+
+# heatmap.2 for MCL longitudinal ================
+df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
+colnames(df_samples) =  tolower(colnames(df_samples))
+
+Idents(B_cells_MCL) = "groups"
+groups = c("Pt-11","Pt-17","AFT-03","AFT-04","Pt-AA13","Pt-25","Pt-27")
+for(i in 2:length(groups)){
+        
+        subset.MCL <- subset(B_cells_MCL, idents = groups[i])
+
+        (samples = unique(subset.MCL$orig.ident))
+        df = df_samples[df_samples$sample %in% samples,]
+        
+        subset.MCL <- FindVariableFeatures(object = subset.MCL, selection.method = "vst", 
+                                            nfeatures = 2000)
+        top20 <- head(x = VariableFeatures(object = subset.MCL), 20)
+        
+        # plot variable features with labels
+        plot1 <- VariableFeaturePlot(object = subset.MCL)
+        plot1 <- LabelPoints(plot = plot1, points = top20, repel = TRUE)
+        jpeg(paste0(path,"VariableFeaturePlot_B_MCL",groups[i],".jpeg"), units="in", width=10, height=7,res=600)
+        print(plot1+  ggtitle(paste("Variable genes in",groups[i],"B and MCL cells"))+
+                      theme(text = element_text(size=15),
+                            plot.title = element_text(hjust = 0.5)))
+        dev.off()
+        ## Column clustering (adjust here distance/linkage methods to what you need!)
+        subset.MCL %<>% ScaleData(features = VariableFeatures(subset.MCL))
+        y = subset.MCL@assays$RNA@scale.data[VariableFeatures(subset.MCL),]
+        system.time(cor.mtr <- HiClimR::fastCor(y,nSplit = 2, optBLAS = TRUE))
+        distance <- as.dist(1-cor.mtr)
+        hc <- hclust(distance,method="ward.D2")
+        clusters = subset.MCL@meta.data[hc$labels,c("orig.ident","X5_clusters.colors")]
+        #clusters = subset.MCL@meta.data[hc$labels,c("orig.ident")]
+        
+        cc <- as.character(clusters$X5_clusters.colors)
+        
+        #cc <- plyr::mapvalues(x = clusters,
+        #                      from = unique(clusters),
+        #                      to = scales::hue_pal()(length(unique(clusters))))
+        jpeg(paste0(path,"Heatmap2_MCL_",groups[i],".jpeg"), units="in", width=10, height=7,res=600)
+        heatmap.2(as.matrix(y),
+                  Colv = as.dendrogram(hc), 
+                  Rowv= FALSE,
+                  ColSideColors = cc, 
+                  trace ="none",labCol = FALSE,dendrogram = "column",
+                  key.xlab = "scale log nUMI",
+                  cexRow = 0.5,
+                  margins = c(2,5),
+                  #scale = "row",
+                  breaks = seq(-3,3,length.out = 101),
+                  col = bluered,
+                  main = paste("All B and MCL cells in",groups[i]))
+        par(lend = 1)           # square line ends for the color legend
+        legend(-0.01, 0.8,       # location of the legend on the heatmap plot
+               legend = sort(unique(clusters)), # category labels
+               col = scales::hue_pal()(length(unique(cc))),  # color key
+               lty= 1,             # line style
+               lwd = 10            # line width
+        )
+        dev.off()
+}
+
+        
 # heatmap.2 for Normal / MCL ================
 
 control <- "MD"
@@ -435,7 +609,7 @@ for(test in tests){
         cc = gsub(samples[3],"#E31A1C",cc)
         cc = gsub(samples[2],"#195016",cc)
         
-        jpeg(paste0(path,"/Heatmap2_MD_",samples[2],"_",samples[3],".jpeg"), units="in", width=10, height=7,res=600)
+        jpeg(paste0(path,"/Heatmap2_B_MLC.jpeg"), units="in", width=10, height=7,res=600)
         heatmap.2(as.matrix(y),
                   Colv = as.dendrogram(hc), Rowv= FALSE,
                   ColSideColors = cc, trace ="none",labCol = FALSE,dendrogram = "column",
@@ -445,14 +619,14 @@ for(test in tests){
                   #scale = "row",
                   breaks = seq(-3,3,length.out = 101),
                   col = bluered,
-                  main = paste(samples[1],"vs.",samples[2],"vs.",samples[3], "in B cells"))
-        par(lend = 1)           # square line ends for the color legend
-        legend(0, 0.8,       # location of the legend on the heatmap plot
-               legend = c(samples[1], samples[2], samples[3]), # category labels
-               col = c("#B3DE69", "#195016","#E31A1C"),  # color key
-               lty= 1,             # line style
-               lwd = 10            # line width
-        )
+                  main = paste("all samples in B cells"))
+        #par(lend = 1)           # square line ends for the color legend
+        #legend(0, 0.8,       # location of the legend on the heatmap plot
+        #       legend = c(samples[1], samples[2], samples[3]), # category labels
+        #       col = c("#B3DE69", "#195016","#E31A1C"),  # color key
+        #       lty= 1,             # line style
+        #       lwd = 10            # line width
+        #)
         dev.off()
 }
 
@@ -493,7 +667,7 @@ y = MCL_exp[markers,]
 ## Column clustering (adjust here distance/linkage methods to what you need!)
 #hc <- hclust(dist(1-cor(as.matrix(y), method="spearman")), method="complete")
 
-jpeg(paste0(path,"/Heatmap2_MCL_sc_100.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"Heatmap2_MCL_sc_100.jpeg"), units="in", width=10, height=7,res=600)
 heatmap.2(as.matrix(y),
           #Colv = as.dendrogram(hc),
           Colv=FALSE,

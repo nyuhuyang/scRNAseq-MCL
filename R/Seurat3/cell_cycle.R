@@ -25,16 +25,14 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file = "data/MCL_V3_Harmony_43_20190610.Rda"))
-(load(file = "data/T_NK_cells_43_20190611.Rda"))
-(load(file = "data/B_cells_MCL_43_20190619.Rda"))
+(load(file = "data/B_cells_MCL_43_20190627.Rda"))
+(load(file = "data/T_NK_cells_43_20190627.Rda"))
 # A list of cell cycle markers, from Tirosh et al, 2015, is loaded with Seurat.  We can
 # segregate this list into markers of G2/M phase and markers of S phase
 s.genes <- cc.genes$s.genes
 g2m.genes <- cc.genes$g2m.genes
-object %<>% CellCycleScoring(s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
-T_NK_cells %<>% CellCycleScoring(s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 B_cells_MCL %<>% CellCycleScoring(s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
+T_NK_cells %<>% CellCycleScoring(s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 
 meta.data = object@meta.data[c("orig.ident","groups","S.Score","G2M.Score","Phase", "singler1sub")]
 meta.data = cbind.data.frame(meta.data, object@reductions$tsne@cell.embeddings)

@@ -23,7 +23,6 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # 3.1.1 load data
 # Rename ident
 (load(file="data/MCL_V3_Harmony_43_20190610.Rda"))
-Embeddings()
 # T cells only ================
 object <- SetAllIdent(object, id="singler1sub")
 TSNEPlot.1(object,do.label = T,no.legend=T,col.use = ExtractMetaColor(object),do.print = T)

@@ -24,7 +24,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # read sample summary list
 df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:10)))
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples = df_samples[sample_n,]
 attach(df_samples)
 df_samples %>% kable() %>% kable_styling()

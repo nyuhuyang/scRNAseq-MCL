@@ -128,7 +128,7 @@ object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.
 Idents(object) <- "orig.ident"
 df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",2:10)
+tests <- paste0("test",2:12)
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])

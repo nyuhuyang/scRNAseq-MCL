@@ -25,7 +25,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file="data/MCL_V3_Harmony_43_20190610.Rda"))
+(load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
 
 # T cells only ================
 
@@ -84,6 +84,7 @@ g0 <- TSNEPlot.1(T_NK_cells,do.label = F,no.legend=T,do.print = T,do.return =T, 
            cols = ExtractMetaColor(T_NK_cells),
            title="Cell types")
 
+
 ##############################
 # re-scale, PCA, harmony and tsne
 ##############################
@@ -134,7 +135,7 @@ g2 <- TSNEPlot.1(T_NK_cells,label = F,no.legend=F,do.print = T,pt.size = 1,
                  cols = ExtractMetaColor(T_NK_cells),
                  title="unsupervised clustering")
 jpeg(paste0(path,"rename_tsne_T_NK.jpeg"), units="in", width=10, height=7,res=600)
-cowplot::plot_grid(g0,g2) +  ggtitle("Rename the clusters")+
+cowplot::plot_grid(g0,g2+NoLegend()) +  ggtitle("Rename the clusters")+
         theme(text = element_text(size=15),
               plot.title = element_text(hjust = 0.5,size=15))
 dev.off()
@@ -143,8 +144,61 @@ TSNEPlot.1(T_NK_cells,label = F,no.legend=F,do.print = T,pt.size = 1,do.return =
 T_NK_cells_exp <- AverageExpression(T_NK_cells)
 write.csv(T_NK_cells_exp,paste0(path,"T_NK_cells_exp.csv"))
 
-save(T_NK_cells, file = "data/T_NK_cells_43_20190611.Rda")
-(load(file = "data/T_NK_cells_43_20190611.Rda"))
+save(T_NK_cells, file = "data/T_NK_cells_43_20190627.Rda")
+(load(file = "data/T_NK_cells_43_20190627.Rda"))
+
+
+# Doheatmap for MCL longitudinal ================
+
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
+colnames(df_samples) =  tolower(colnames(df_samples))
+df_samples[df_samples$sample %in% "MD","tsne"] = 0
+df_samples[df_samples$sample %in% "MD","sample"] = "Normal"
+
+T_NK_cells@meta.data$old.ident = T_NK_cells@meta.data$orig.ident
+T_NK_cells@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",T_NK_cells@meta.data$orig.ident)
+
+Idents(T_NK_cells) = "groups"
+
+#groups = c("Untreated","Pt-11","Pt-17","AFT-03","AFT-04","Pt-AA13","Pt-25","Pt-27")
+groups = c("Untreated","Pt-17","Pt-25")
+for(i in 1:length(groups)){
+        
+        subset.MCL <- subset(T_NK_cells, idents = c("Normal",groups[i]))
+        
+        (samples = unique(subset.MCL$orig.ident))
+        df = df_samples[df_samples$sample %in% samples,]
+        subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident, 
+                                                 levels = df$sample[order(df$tsne)])
+        Idents(subset.MCL) = "orig.ident"
+        samples = samples[-which(samples %in% "Normal")]
+        gde.markers_list <- list()
+        for(k in 1:length(samples)){
+                gde.markers_list[[k]] <- FindMarkers.UMI(subset.MCL,
+                                                         ident.1 = samples[k],
+                                                         ident.2 = "Normal",
+                                                         logfc.threshold = 0.1, only.pos = F,
+                                                         test.use = "MAST")
+                gde.markers_list[[k]]$cluster <- samples[k]
+                gde.markers_list[[k]]$gene <- rownames(x = gde.markers_list[[k]])
+        }
+        gde.markers <- do.call(rbind, gde.markers_list)
+        write.csv(gde.markers,paste0(path,"/T/T_NK_DE/T_",groups[i],".csv"))
+        
+        gde.markers = read.csv(file = paste0("output/20190622/T/T_NK_DE/T_",groups[i],".csv"))
+        (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
+        if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
+        GC()
+        #DoHeatmap.1======
+        subset.MCL %<>% ScaleData(features= unique(gde.markers$gene))
+        Top_n = 20
+        DoHeatmap.1(subset.MCL, marker_df = gde.markers, Top_n = Top_n, do.print=T, angle = 0,
+                    group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    label=F, cex.row=5, legend.size = NULL,width=10, height=7,unique.name = T,
+                    title = paste("Top",Top_n,"DE genes of",groups[i],
+                                  "Patient's T and NK cells over Normal cells"))
+}
+
 
 ##############
 # DE genes between Clusters 5 cluster top 50

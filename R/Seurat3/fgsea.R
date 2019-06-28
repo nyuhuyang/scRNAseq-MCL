@@ -36,6 +36,7 @@ allpathways <- c(hallmark,biocarta,kegg,c6)
 
 hallmark %>% head() %>% lapply(head)
 biocarta %>% head() %>% lapply(head)
+
 # Now, run the fgsea algorithm with 1000 permutations:
 
 for(i in 1:length(clusters)) FgseaBarplot(pathways=hallmark, stats=res, nperm=1000,
@@ -49,22 +50,33 @@ FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
              order.by = c(4,"NES"),decreasing = F,
              size = "-log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
              pathway.name = "Hallmark",rotate.x.text = F)
+
 FgseaDotPlot(stats=res, pathways=allpathways, nperm=1000,padj = 0.1,pval = 0.02,
              order.by = c(4,"NES"),decreasing = F,
              size = "-log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
              rotate.x.text = F, pathway.name = "Hallmark, biocarta,and KEGG")
 
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
+colnames(df_samples) <- tolower(colnames(df_samples))
 groups = c("Untreated","Pt-17","Pt-25")
 for(i in 1:length(groups)){
         res_B = read.csv(file = paste0("output/20190622/B/B_MCL_DE/B_",groups[i],".csv"))
         res_T = read.csv(file = paste0("output/20190622/T/T_NK_DE/T_",groups[i],".csv"))
         
+        (samples = df_samples$sample[df_samples$sample %in% unique(res_B$cluster)])
+        #res_B$cluster %<>% factor(levels = samples)
+        #res_T$cluster %<>% factor(levels = samples)
+        
         FgseaDotPlot(stats=res_B, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
                      order.by = c(4,"NES"),decreasing = F,
-                     size = "-log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
+                     size = "-log10(pval)", fill = "NES",
+                     sample = paste(groups[i],"B_MCL clusters"), 
                      pathway.name = "Hallmark",rotate.x.text = F)
-        FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
+        (samples = df_samples$sample[df_samples$sample %in% unique(res_T$cluster)])
+        FgseaDotPlot(stats=res_T, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
                      order.by = c(4,"NES"),decreasing = F,
-                     size = "-log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
+                     size = "-log10(pval)", fill = "NES",
+                     sample = paste(groups[i],"T_NK clusters"), 
                      pathway.name = "Hallmark",rotate.x.text = F)
+
 }

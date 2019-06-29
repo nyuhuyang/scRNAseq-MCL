@@ -29,8 +29,10 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 (load(file = "data/T_NK_cells_43_20190627.Rda"))
 # A list of cell cycle markers, from Tirosh et al, 2015, is loaded with Seurat.  We can
 # segregate this list into markers of G2/M phase and markers of S phase
-s.genes <- cc.genes$s.genes
+cc.genes <- readxl::read_excel("data/regev_lab_cell_cycle_genes.xls")
+s.genes <- na.omit(cc.genes$s.genes)
 g2m.genes <- cc.genes$g2m.genes
+
 B_cells_MCL %<>% CellCycleScoring(s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 T_NK_cells %<>% CellCycleScoring(s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 

@@ -42,3 +42,11 @@ object %<>% sortIdent(numeric = T)
 TSNEPlot.1(object)
 save(object, file = "data/MCL_V3_Harmony_43_20190627.Rda")
 
+
+files <- list.files(path)
+for(file in files){
+        sample <- sub("_infercnv", "", file)
+        file.copy(paste0(path, file,"/infercnv.png"), path)
+        file.rename(paste0(path, "infercnv.png"), 
+                    paste0(path,sample,"_infercnv.png"))
+}

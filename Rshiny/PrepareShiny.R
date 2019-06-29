@@ -3,7 +3,7 @@ library(Seurat)
 library(dplyr)  
 library(magrittr)
 library(Matrix)
-
+library(qlcMatrix)
 #' prepare exp and tsne file
 PrepareShiny <- function(object, samples, path, verbose = F){
         
@@ -14,9 +14,9 @@ PrepareShiny <- function(object, samples, path, verbose = F){
         exp <- lapply(samples, function(sample) {
                 single_object <- SubsetData(subset.object, ident.use = sample)
                 data <- single_object@data
-                bad <- apply(data,1,max) == 0
+                bad <- rowMax(data) == 0
                 data = data[!bad,]
-                range <- apply(data,1,max) - apply(data,1,min)
+                range <- rowMax(data) - rowMin(data) # range <- apply(data,1,max) - apply(data,1,min)
                 scale_data = sweep(data, 1, range,"/")*2.5
                 
                 if(verbose) {

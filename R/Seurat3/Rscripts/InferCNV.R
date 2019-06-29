@@ -21,10 +21,11 @@ df_samples = df_samples[sample_n,]
 
 meta.data = B_cells_MCL@meta.data
 meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",meta.data$orig.ident)
-samples = unique(meta.data$orig.ident)
-(samples = samples[!(samples %in% "Normal")])
+groups = unique(meta.data$group)
+(groups = groups[!(groups %in% c("Normal","Untreated"))])
 
-cell.use <- rownames(meta.data)[meta.data$orig.ident %in% c("Normal",samples[args])]
+cell.use <- rownames(meta.data)[meta.data$groups %in% c("Normal","Untreated",
+                                                        groups[args])]
 
 # subset
 counts <- B_cells_MCL@assays$RNA@counts[,cell.use]
@@ -46,5 +47,7 @@ if(!dir.exists(path_infercnv)) dir.create(path_infercnv, recursive = T)
 infercnv_obj = infercnv::run(infercnv_obj,
                      cutoff=0.1,
                      out_dir=path_infercnv, 
-                     cluster_by_groups=TRUE)
+                     cluster_by_groups=TRUE,
+                     denoise=T,
+                     HMM=T)
 

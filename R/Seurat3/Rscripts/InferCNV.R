@@ -33,15 +33,15 @@ meta.data <- meta.data[cell.use,c("Barcode","orig.ident")]
 
 meta.data$Barcode = rownames(meta.data)
 colnames(meta.data) =NULL
-write.table(meta.data, file = paste0(path,samples[args],"_annotations_file.txt"), 
+write.table(meta.data, file = paste0(path,groups[args],"_untreated_annotations_file.txt"), 
     row.names=FALSE,sep="\t", quote = FALSE)
 
 infercnv_obj = CreateInfercnvObject(raw_counts_matrix = counts,
-                            annotations_file=paste0(path,samples[args],"_annotations_file.txt"),
+                            annotations_file=paste0(path,groups[args],"_untreated_annotations_file.txt"),
                             delim="\t",
                             gene_order_file="data/gencode_v19_gene_pos.txt",
                             ref_group_names="Normal")
-path_infercnv = paste0(path,samples[args],"_infercnv")
+path_infercnv = paste0(path,groups[args],"_untreated_infercnv")
 if(!dir.exists(path_infercnv)) dir.create(path_infercnv, recursive = T)
 
 infercnv_obj = infercnv::run(infercnv_obj,

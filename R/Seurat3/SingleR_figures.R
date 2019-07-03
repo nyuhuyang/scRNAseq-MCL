@@ -5,13 +5,14 @@ library(pheatmap)
 library(kableExtra)
 library(dplyr)
 library(tidyr)
-library(ggplot2)
+library(ggpubr)
 source("../R/Seurat3_functions.R")
 source("../R/SingleR_functions.R")
 source("R/util.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
-
+FindAllMarkers()
+RunPCA
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
@@ -88,36 +89,59 @@ major_type <- table(singlerDF$singler1main, singlerDF$orig.ident) %>%
   t %>% as.data.frame.matrix
 write.csv(major_type,paste0(path,"Major_celltype.csv"))
 
+# 2019/07/02
+# combine cell types
+object@meta.data$manual = gsub("B_cells:.*","B_cells",object@meta.data$singler1sub)
+object@meta.data$manual = gsub("MEP|CLP|HSC|CMP|GMP|MPP","HSC/progenitors",object@meta.data$manual)
+object@meta.data$manual = gsub("T_cells:CD4\\+_.*","T_cells:CD4+",object@meta.data$manual)
+object@meta.data$manual = gsub("T_cells:CD8\\+_.*","T_cells:CD8+",object@meta.data$manual)
+object@meta.data$manual = gsub("DC|Macrophages|Macrophages:M1","Monocytes",object@meta.data$manual)
+object@meta.data$manual = gsub("Eosinophils|Megakaryocytes","Other Myelocytes",object@meta.data$manual)
+object@meta.data$manual = gsub("Adipocytes|Fibroblasts|mv_Endothelial_cells","Nonhematopoietic cells",object@meta.data$manual)
+table(object@meta.data$manual) %>% kable() %>% kable_styling()
 ##############################
 # process color scheme
 ##############################
 singler_colors <- readxl::read_excel("./doc/singler.colors.xlsx")
 singler_colors1 = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
 singler_colors1[duplicated(singler_colors1)]
-length(singler_colors1)
+singler_colors2 = as.vector(singler_colors$singler.color2[!is.na(singler_colors$singler.color2)])
+singler_colors2[duplicated(singler_colors2)]
+length(singler_colors1);length(singler_colors2)
 apply(singlerDF[,c("singler1sub","singler1main")],2,function(x) length(unique(x)))
 singlerDF[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
 object <- AddMetaData(object = object,metadata = singlerDF)
 object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1)
-Idents(object) <- "singler1sub"
+object <- AddMetaColor(object = object, label= "manual", colors = singler_colors2)
+Idents(object) <- "manual"
 
+object %<>% sortIdent
 TSNEPlot.1(object, cols = ExtractMetaColor(object),label = T) + NoLegend()
 ##############################
 # draw tsne plot
 ##############################
-p3 <- TSNEPlot.1(object = object, label = T, group.by = "singler1sub",
-               cols = ExtractMetaColor(object),
-               pt.size = 1,label.size = 3) + NoLegend() +
-    ggtitle("Cell type labeling by Blueprint + Encode + MCL")+
-    theme(text = element_text(size=20),							
-          plot.title = element_text(hjust = 0.5,size = 25)) 
-
-jpeg(paste0(path,"TSNEPlot_sub1.jpeg"), units="in", width=10, height=7,res=600)
-print(p3)
-dev.off()
+TSNEPlot.1(object = object, label = F, group.by = "manual",
+           cols = ExtractMetaColor(object),no.legend = F,
+           pt.size = 1,label.size = 3, do.print = T,
+           title = "Cell type labeling by Blueprint + Encode + MCL")
 
 save(object,file="data/MCL_VST_Harmony_36_20190410.Rda")
 
+cell_Freq <- table(Idents(object)) %>% as.data.frame
+cell_Freq = cell_Freq[order(cell_Freq$Var1),]
+cell_Freq$col =singler_colors2
+cell_Freq = cell_Freq[order(cell_Freq$Freq,decreasing = T),]
+cell_Freq$Var1 %<>% factor(levels = as.character(cell_Freq$Var1))
+colnames(cell_Freq)[1:2] = c("Cell_Type", "Cell_Number")
+
+jpeg(paste0(path,"cell_type_numbers.jpeg"), units="in", width=10, height=7,res=600)
+ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
+          fill = "Cell_Type", color = "Cell_Type",xlab = "",
+          palette = cell_Freq$col,x.text.angle = 90,
+          title = "Cumulative numbers of major cell type in total 43 samples")+NoLegend()+
+  theme(plot.title = element_text(hjust = 0.5,size=15))
+dev.off()
+     
 ##############################
 # subset Seurat
 ###############################

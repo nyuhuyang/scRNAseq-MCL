@@ -225,7 +225,7 @@ B_cells_MCL <- AddMetaColor(object = B_cells_MCL, label= "X5_clusters",
                             colors = scales::hue_pal()(length(unique(B_cells_MCL$X5_clusters))))
 
 Idents(B_cells_MCL)  = "orig.ident"
-df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
 (keep = df_samples$sample %in% unique(B_cells_MCL$orig.ident))
 df_samples = df_samples[keep,]
@@ -274,12 +274,15 @@ write.csv(B_cells_MCL_exp,paste0(path,"B_MCL_exp.csv"))
 ###############################
 # Doheatmap for Normal / MCL
 ###############################
-df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx",sheet = "heatmap")
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx",sheet = "heatmap")
 list_samples <- df2list(df_samples)
 print(list_samples %>% unlist %>% as.vector %>% unique %in% 
               B_cells_MCL@meta.data$orig.ident)
 
 Idents(B_cells_MCL) = "orig.ident"
+markers <- c("BTK","CCND1","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
+             "MS4A1","PDCD1","RB1","SOX11","CD19","CD79A","CD40")
+
 for(sample in list_samples$MCL){
         subset.MCL <- subset(B_cells_MCL, idents = c("Normal",sample))
 
@@ -287,18 +290,19 @@ for(sample in list_samples$MCL){
         Idents(subset.MCL) = "X5_orig.ident"
         subset.MCL %<>% sortIdent()
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,
-                   do.print = T, unique.name = T)
+                   do.print = F, unique.name = T)
         
         # remove cluster with less than 3 cells======
         table_subset.MCL <- table(subset.MCL$X5_orig.ident) %>% as.data.frame
         keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character()
         
         (X5_cluster <- keep.MCL %>% unique %>% 
-                gsub('.*\\_',"",.) %>% as.numeric %>% sort )
+                gsub('.*\\_',"",.) %>% sub("Normal","",.) %>% as.numeric %>% sort )
         
-        print(ident.1 <- paste(samples1,X5_cluster,sep="_"))
-        print(ident.2 <- paste(samples2,X5_cluster,sep="_"))
-        
+        subset.MCL <- subset(subset.MCL, idents = keep.MCL)
+        print(ident.1 <- rep("Normal",length(X5_cluster)))
+        print(ident.2 <- paste(sample,X5_cluster,sep="_"))
+
         # FindAllMarkers.UMI======
         subfolder <- paste0(path,"Normal_vs_",sample,"/")
         
@@ -312,16 +316,18 @@ for(sample in list_samples$MCL){
         GC()
         #DoHeatmap.1======
         subset.MCL %<>% ScaleData(features= rownames(subset.MCL))
-        DoHeatmap.1(subset.MCL, marker_df = gde.markers, Top_n = 20, do.print=T, angle = 0,
-                    group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-                    label=F, cex.row=6, legend.size = NULL,width=10, height=7,unique.name = T,
-                    title = paste("Top 20 DE genes in Normal vs.",sample, "B/MCL cells"))
-        remove(subset.MCL);GC()
+        DoHeatmap.1(subset.MCL, marker_df = gde.markers, add.genes = markers,
+                    Top_n = 20, do.print=T, angle = 90,
+                    group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0,label=T, cex.row=6, legend.size = 0,
+                    width=10, height=6,unique.name = T,
+                    title = paste("Top 20 DE genes in",sample,"/Normal B and MCL cells"))
+        GC()
 }
 
 
 # Doheatmap for MCL.1 / MCL.2 ================
-df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx",sheet = "heatmap")
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx",sheet = "heatmap")
 list_samples <- df2list(df_samples)
 print(list_samples %>% unlist %>% as.vector %>% unique %in% 
               B_cells_MCL@meta.data$orig.ident)
@@ -333,42 +339,45 @@ for(i in 1:length(list_samples$MCL.1)){
         (samples2 = list_samples$MCL.2[i])
         
         subset.MCL <- subset(B_cells_MCL, idents = c(samples1,samples2))
-        subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident, 
-                                                 levels = c(samples1,samples2))
-        #---SplitTSNEPlot----
-        Idents(subset.MCL) = "X5_orig.ident"
-        TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = F,
-                   do.print = T, unique.name = T)
-         # remove cluster with less than 3 cells======
-
+        subset.MCL@meta.data$orig.ident %<>% factor(levels = c(samples1,samples2))
+        # remove cluster with less than 3 cells======
+        
         table_subset.MCL <- table(subset.MCL@meta.data$X5_orig.ident) %>% as.data.frame
         (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character())
-        
         (X5_cluster <- keep.MCL %>% unique %>% 
                         gsub('.*\\_',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)])
         
         print(ident.1 <- paste(samples1,X5_cluster,sep="_"))
         print(ident.2 <- paste(samples2,X5_cluster,sep="_"))
         
-        subset.MCL <- subset(subset.MCL, idents = c(ident.1,ident.2))
+        #---SplitTSNEPlot----
+        Idents(subset.MCL) = "X5_orig.ident"
+        subset.MCL <- subset(subset.MCL, idents = keep.MCL)
+        
+        Idents(subset.MCL) %<>% factor(levels = c(ident.1,ident.2))
+        TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = F,
+                   do.print = T, unique.name = T)
 
         subfolder <- paste0(path,samples1,"_vs_",samples2,"/")
         gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2), 
                                        ident.2 = c(ident.2,ident.1), only.pos = T,
-                                       logfc.threshold = 0.125,min.cells.group =3,
+                                       logfc.threshold = 0.5,min.cells.group =3,
                                        min.pct = 0.01,
                                        return.thresh = 0.5,
                                        save.path = subfolder)
+        print(table(gde.markers$cluster1.vs.cluster2))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
         GC()
         #DoHeatmap.1======
         subset.MCL %<>% ScaleData(features= rownames(subset.MCL))
-        DoHeatmap.1(subset.MCL, marker_df = gde.markers, Top_n = 20, do.print=T, angle = 0,
-                    group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-                    label=F, cex.row=6, legend.size = NULL,width=10, height=7,unique.name = T,
-                    title = paste("Top 20 DE genes in",samples1,"vs.",samples2, "B/MCL cells"))
-        remove(subset.MCL);GC()
+        DoHeatmap.1(subset.MCL, marker_df = gde.markers, add.genes = markers,
+                    Top_n = 20, do.print=T, 
+                    group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0,label=T, cex.row=5, legend.size = 0,
+                    width=10, height=6,unique.name = T,
+                    title = paste0("Top 20 DE genes in ",samples2," /",samples1, " B and MCL cells"))
+        GC()
 }
 
 # Doheatmap for MCL longitudinal by different clusters ================

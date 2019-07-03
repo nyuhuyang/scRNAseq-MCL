@@ -50,3 +50,19 @@ for(file in files){
         file.rename(paste0(path, "infercnv.png"), 
                     paste0(path,sample,"_infercnv.png"))
 }
+
+# on cluster 
+dir.create("output/20190629_png", recursive = T)
+folders <- list.files(path = "output/20190629/", pattern = "_infercnv")
+
+for(folder in folders){
+        files <- list.files(paste0("output/20190629/",folder),pattern= ".png")
+        dir.create(paste0("output/20190629_png/",folder), recursive = T)
+        file.copy(paste0("output/20190629/",folder,"/",files), paste0("output/20190629_png/",folder))
+        file.rename(paste0("output/20190629_png/",folder,"/",files), 
+                    paste0("output/20190629_png/",folder,"/",sub("_.*","_",folder),files))
+}
+
+# for heatmap
+(HeatMap <- list.files(path, patter = ".jpeg"))
+lapply(HeatMap, function(x) file.rename(paste0(path,x), paste0(path,sub("_X5_orig.ident","",x))))

@@ -25,7 +25,7 @@ table(res$cluster)
 head(res)
 res = res[order(res["p_val_adj"]),]
 head(res, 20)
-
+(clusters <- unique(res$cluster))
 hallmark <- gmtPathways("../seurat_resources/msigdb/h.all.v6.2.symbols.gmt")
 biocarta <- gmtPathways("../seurat_resources/msigdb/c2.cp.biocarta.v6.2.symbols.gmt")
 kegg <- gmtPathways("../seurat_resources/msigdb/c2.cp.kegg.v6.2.symbols.gmt")
@@ -41,7 +41,7 @@ biocarta %>% head() %>% lapply(head)
 
 for(i in 1:length(clusters)) FgseaBarplot(pathways=hallmark, stats=res, nperm=1000,
                                           cluster = i,
-                                          sample="B_MCL",pathway.name = "Hallmark", hjust=0.5)
+                                          sample="B_MCL cluster",pathway.name = "Hallmark", hjust=0.5)
 for(i in 1:length(clusters)) FgseaBarplot(pathways=allpathways, stats=res, nperm=1000,show=50,
                                        cluster = clusters[i],sample = cell.line,hjust=0,
                                        pathway.name = "Hallmark, biocarta,and KEGG")

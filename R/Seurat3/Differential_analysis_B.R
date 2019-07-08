@@ -25,7 +25,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Rename ident
 (load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
 # B cells only ================
-Idents(object) <-  "singler1sub"
+Idents(object) <-  "manual"
 object <- sortIdent(object)
 TSNEPlot.1(object,label = F,no.legend=F,cols = ExtractMetaColor(object),repel = T,
            do.print = F)
@@ -37,12 +37,12 @@ table(Idents(B_cells_MCL))
 B_cells_MCL <- subset(B_cells_MCL, idents = c("B_cells","MCL","HSC"))
 #table(B_cells_MCL@meta.data$singler1sub) %>% as.data.frame %>%
 #        .[.[,"Freq"] >0,]
-Idents(B_cells_MCL) <-  "singler1sub"
+Idents(B_cells_MCL) <-  "manual"
 (keep <- grep("B_cells.|MCL|MEP|CLP|HSC|CMP|GMP",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
 B_cells_MCL <- subset(B_cells_MCL, idents =  keep)
 
 B_cells_MCL@meta.data$cell.type = gsub("B_cells.*","B_cells",B_cells_MCL@meta.data$singler1sub)
-B_cells_MCL@meta.data$cell.type = gsub("MEP|CLP|HSC|CMP|GMP","MCL/HSC",B_cells_MCL@meta.data$cell.type)
+B_cells_MCL@meta.data$cell.type = gsub("MEP|CLP|HSC|CMP|GMP","MCL/progenitors",B_cells_MCL@meta.data$cell.type)
 table(B_cells_MCL@meta.data$cell.type)
 
 B_cells_MCL@meta.data$cell.type.colors = gsub("B_cells","#33A02C",B_cells_MCL@meta.data$cell.type)
@@ -56,7 +56,7 @@ object <- sortIdent(object)
 TSNEPlot.1(object = B_cells_MCL, label = F, group.by = "ident",
            do.return = TRUE, no.legend = F, 
            cols = ExtractMetaColor(B_cells_MCL),
-           pt.size = 1,label.size = 3,title = "Tsne plot of all B and MCL cells")
+           pt.size = 0.2,label.size = 3,title = "Tsne plot of all B and MCL cells")
 
 ##############################
 # 
@@ -190,7 +190,7 @@ X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.2,only
                                           min.pct = 0.5,return.thresh = 0.05)
 write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.2_markers.csv"))
 
-X5_clusters_markers = read.csv("output/20190609/X5_clusters_FC0.2_markers.csv",row.names = 1)
+X5_clusters_markers = read.csv("output/20190621/X5_clusters_FC0.1_markers.csv",row.names = 1)
 #B_cells_MCL %<>% ScaleData()
 
 markers <- c("BTK","CCND1","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
@@ -198,15 +198,12 @@ markers <- c("BTK","CCND1","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
 (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
 X5_clusters_markers = X5_clusters_markers[-MT_gene,]
 
-top = X5_clusters_markers %>% group_by(cluster) %>% top_n(25, avg_logFC)
-B_cells_MCL %<>% ScaleData(features=top$gene)
-DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers,add.genes = NULL, Top_n = 25, do.print=T, angle = 0,
-            group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-            label=T, cex.row=5, legend.size = 8,width=10, height=7,
-            title = "Top 25 differentially expressed genes in B and MCL clusters")
-
-MakeCorlorBar(B_cells_MCL,  marker_df = X5_clusters_markers,add.genes = markers, Top_n = 15,do.return =F,do.print = T,
-              legend.size = 8, width=10, height=7)
+top = X5_clusters_markers %>% group_by(cluster) %>% top_n(20, avg_logFC)
+B_cells_MCL %<>% ScaleData(features=unique(c(as.character(top$gene),markers)))
+DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers,add.genes = markers, Top_n = 20, 
+            do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+            group.bar.height = 0, label=F, cex.row=4.5, legend.size = 0,width=10, height=6.5,
+            title = "Top 20 differentially expressed genes in B and MCL clusters")
 
 # remove cluster with less than 3 cells======
 # no scale down, keep the normal cells.

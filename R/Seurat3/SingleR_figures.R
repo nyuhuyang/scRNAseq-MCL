@@ -11,8 +11,6 @@ source("../R/SingleR_functions.R")
 source("R/util.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
-FindAllMarkers()
-RunPCA
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
@@ -80,25 +78,17 @@ table(singlerDF$singler1main, singlerDF$orig.ident) %>% kable %>% kable_styling(
 table(singlerDF$singler1sub, singlerDF$orig.ident)%>% kable %>% kable_styling()
 table(singlerDF$singler1sub %>% sort)%>% kable %>% kable_styling()
 
-#singlerDF$singler1sub = gsub("MCL:.*","MCL",singlerDF$singler1sub)
-sub_type <- table(singlerDF$singler1sub, singlerDF$orig.ident) %>% 
-  t %>% as.data.frame.matrix
-write.csv(sub_type,paste0(path,"Sub_celltype.csv"))
-
-major_type <- table(singlerDF$singler1main, singlerDF$orig.ident) %>% 
-  t %>% as.data.frame.matrix
-write.csv(major_type,paste0(path,"Major_celltype.csv"))
-
-# 2019/07/02
 # combine cell types
-object@meta.data$manual = gsub("B_cells:.*","B_cells",object@meta.data$singler1sub)
-object@meta.data$manual = gsub("MEP|CLP|HSC|CMP|GMP|MPP","HSC/progenitors",object@meta.data$manual)
-object@meta.data$manual = gsub("T_cells:CD4\\+_.*","T_cells:CD4+",object@meta.data$manual)
-object@meta.data$manual = gsub("T_cells:CD8\\+_.*","T_cells:CD8+",object@meta.data$manual)
-object@meta.data$manual = gsub("DC|Macrophages|Macrophages:M1","Monocytes",object@meta.data$manual)
-object@meta.data$manual = gsub("Eosinophils|Megakaryocytes","Other Myelocytes",object@meta.data$manual)
-object@meta.data$manual = gsub("Adipocytes|Fibroblasts|mv_Endothelial_cells","Nonhematopoietic cells",object@meta.data$manual)
-table(object@meta.data$manual) %>% kable() %>% kable_styling()
+singlerDF$singler1sub = gsub("MCL:.*","MCL",singlerDF$singler1sub)
+singlerDF$manual = gsub("B_cells:.*","B_cells",singlerDF$singler1sub)
+singlerDF$manual = gsub("MEP|CLP|HSC|CMP|GMP|MPP","HSC/progenitors",singlerDF$manual)
+singlerDF$manual = gsub("T_cells:CD4\\+_.*","T_cells:CD4+",singlerDF$manual)
+singlerDF$manual = gsub("T_cells:CD8\\+_.*","T_cells:CD8+",singlerDF$manual)
+singlerDF$manual = gsub("DC|Macrophages|Macrophages:M1","Monocytes",singlerDF$manual)
+singlerDF$manual = gsub("Eosinophils|Megakaryocytes","Other Myelocytes",singlerDF$manual)
+singlerDF$manual = gsub("Adipocytes|Fibroblasts|mv_Endothelial_cells","Nonhematopoietic cells",singlerDF$manual)
+table(singlerDF$manual) %>% kable() %>% kable_styling()
+
 ##############################
 # process color scheme
 ##############################
@@ -108,8 +98,8 @@ singler_colors1[duplicated(singler_colors1)]
 singler_colors2 = as.vector(singler_colors$singler.color2[!is.na(singler_colors$singler.color2)])
 singler_colors2[duplicated(singler_colors2)]
 length(singler_colors1);length(singler_colors2)
-apply(singlerDF[,c("singler1sub","singler1main")],2,function(x) length(unique(x)))
-singlerDF[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
+apply(singlerDF[,c("singler1sub","manual")],2,function(x) length(unique(x)))
+#singlerDF[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
 object <- AddMetaData(object = object,metadata = singlerDF)
 object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1)
 object <- AddMetaColor(object = object, label= "manual", colors = singler_colors2)
@@ -122,10 +112,10 @@ TSNEPlot.1(object, cols = ExtractMetaColor(object),label = T) + NoLegend()
 ##############################
 TSNEPlot.1(object = object, label = F, group.by = "manual",
            cols = ExtractMetaColor(object),no.legend = F,
-           pt.size = 1,label.size = 3, do.print = T,
+           pt.size = 0.1,label.size = 3, do.print = T,
            title = "Cell type labeling by Blueprint + Encode + MCL")
 
-save(object,file="data/MCL_VST_Harmony_36_20190410.Rda")
+save(object,file="data/MCL_V3_Harmony_43_20190627.Rda")
 
 cell_Freq <- table(Idents(object)) %>% as.data.frame
 cell_Freq = cell_Freq[order(cell_Freq$Var1),]
@@ -138,7 +128,7 @@ jpeg(paste0(path,"cell_type_numbers.jpeg"), units="in", width=10, height=7,res=6
 ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
           fill = "Cell_Type", color = "Cell_Type",xlab = "",
           palette = cell_Freq$col,x.text.angle = 90,
-          title = "Cumulative numbers of major cell type in total 43 samples")+NoLegend()+
+          title = "Numbers of major cell types in total 43 samples")+NoLegend()+
   theme(plot.title = element_text(hjust = 0.5,size=15))
 dev.off()
      
@@ -150,9 +140,9 @@ table(Idents(object))
 
 object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
 Idents(object) <- "orig.ident"
-df_samples <- readxl::read_excel("doc/190406_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",2:12)
+tests <- paste0("test",2)
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])
@@ -164,7 +154,7 @@ for(test in tests){
         g <- list()
         for(i in 1:length(samples)){
                 subset_object <- subset(object, idents = samples[i])
-                Idents(subset_object) <- "singler1sub"
+                Idents(subset_object) <- "manual"
                 g[[i]] <- TSNEPlot.1(subset_object, pt.size =1,
                                    cols = ExtractMetaColor(subset_object))+
                         NoLegend()+ggtitle(samples[i])+
@@ -177,6 +167,10 @@ for(test in tests){
         print(do.call(cowplot::plot_grid, c(g, nrow = ifelse(length(samples)>2,2,1))))
         dev.off()
 }
+subset_object <- subset(object, idents = c("Pt-U01","Pt-U02","Pt-U03","Pt-U04"))
+Untreated_exp <- AverageExpression(subset_object)
+write.csv(Untreated_exp,file=paste0(path,"Untreated_UMI.csv"))
+table(subset_object$manual, subset_object$orig.ident)%>% kable %>% kable_styling()
 
 ###################################
 # creat seurat object

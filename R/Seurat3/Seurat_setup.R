@@ -161,14 +161,14 @@ p2 <- TSNEPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,
 p3 <- TSNEPlot.1(object, group.by="SCT_snn_res.0.8",pt.size = 1,label = T,
                label.size = 4, repel = T)+ NoLegend()
 
-jpeg(paste0(path,"S1_pca_vs_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p0+ggtitle("Clustering without harmonization")+
                   theme(plot.title = element_text(hjust = 0.5,size = 18)),
           p1+ggtitle("Clustering with harmonization")+
                   theme(plot.title = element_text(hjust = 0.5,size = 18)))
 dev.off()
 
-jpeg(paste0(path,"S1_Harmony_TSNEPlot.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_Harmony_UMAP.jpeg"), units="in", width=10, height=7,res=600)
 plot_grid(p2+ggtitle("group by samples")+
                   theme(plot.title = element_text(hjust = 0.5,size = 18)),
           p3+ggtitle("group by clusters")+

@@ -9,13 +9,13 @@ library(ggpubr)
 source("../R/Seurat3_functions.R")
 source("../R/SingleR_functions.R")
 source("R/util.R")
-path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
+path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 #raw_data <- object@raw.data[,object@cell.names]
 #save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
-(load(file = "data/MCL_V3_Harmony_43_20190610.Rda"))
+(load(file = "data/MCL_V3_Harmony_43_20190627.Rda"))
 (load(file="output/singlerT_MCL_43_20190430.Rda"))
 
 # if singler didn't find all cell labels
@@ -84,15 +84,17 @@ singlerDF$manual = gsub("B_cells:.*","B_cells",singlerDF$singler1sub)
 singlerDF$manual = gsub("MEP|CLP|HSC|CMP|GMP|MPP","HSC/progenitors",singlerDF$manual)
 singlerDF$manual = gsub("T_cells:CD4\\+_.*","T_cells:CD4+",singlerDF$manual)
 singlerDF$manual = gsub("T_cells:CD8\\+_.*","T_cells:CD8+",singlerDF$manual)
-singlerDF$manual = gsub("DC|Macrophages|Macrophages:M1","Monocytes",singlerDF$manual)
-singlerDF$manual = gsub("Eosinophils|Megakaryocytes","Other Myelocytes",singlerDF$manual)
+singlerDF$manual = gsub("T_cells:Tregs","T_cells:CD4+",singlerDF$manual)
+singlerDF$manual = gsub("DC|Macrophages|Macrophages:M1","Myeloid cells",singlerDF$manual)
+singlerDF$manual = gsub("Erythrocytes","Myeloid cells",singlerDF$manual)
+singlerDF$manual = gsub("Eosinophils|Megakaryocytes|Monocytes","Myeloid cells",singlerDF$manual)
 singlerDF$manual = gsub("Adipocytes|Fibroblasts|mv_Endothelial_cells","Nonhematopoietic cells",singlerDF$manual)
 table(singlerDF$manual) %>% kable() %>% kable_styling()
 
 ##############################
 # process color scheme
 ##############################
-singler_colors <- readxl::read_excel("./doc/singler.colors.xlsx")
+singler_colors <- readxl::read_excel("doc/singler.colors.xlsx")
 singler_colors1 = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
 singler_colors1[duplicated(singler_colors1)]
 singler_colors2 = as.vector(singler_colors$singler.color2[!is.na(singler_colors$singler.color2)])
@@ -110,16 +112,20 @@ TSNEPlot.1(object, cols = ExtractMetaColor(object),label = T) + NoLegend()
 ##############################
 # draw tsne plot
 ##############################
+object <- subset(object,idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
+Idents(object) = "manual"
+object %<>% sortIdent()
+table(Idents(object))
 TSNEPlot.1(object = object, label = F, group.by = "manual",
-           cols = ExtractMetaColor(object),no.legend = F,
-           pt.size = 0.1,label.size = 3, do.print = T,
-           title = "Cell type labeling by Blueprint + Encode + MCL")
+       cols = ExtractMetaColor(object),no.legend = F,
+       pt.size = 0.1,label.size = 3, do.print = F,do.return = T,
+       title = "Cell type labeling by Blueprint + Encode + MCL")
 
-save(object,file="data/MCL_V3_Harmony_43_20190627.Rda")
+#save(object,file="data/MCL_V3_Harmony_43_20190627.Rda")
 
 cell_Freq <- table(Idents(object)) %>% as.data.frame
 cell_Freq = cell_Freq[order(cell_Freq$Var1),]
-cell_Freq$col =singler_colors2
+cell_Freq$col = ExtractMetaColor(object)
 cell_Freq = cell_Freq[order(cell_Freq$Freq,decreasing = T),]
 cell_Freq$Var1 %<>% factor(levels = as.character(cell_Freq$Var1))
 colnames(cell_Freq)[1:2] = c("Cell_Type", "Cell_Number")
@@ -142,7 +148,7 @@ object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.
 Idents(object) <- "orig.ident"
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",2)
+tests <- paste0("test",2:12)
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])

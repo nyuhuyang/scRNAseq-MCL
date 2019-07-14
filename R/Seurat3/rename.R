@@ -18,9 +18,9 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # 3.1.1 load data
 # Rename ident
-(load(file="data/MCL_V3_Harmony_43_20190610.Rda"))
+(load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
 
-df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples = df_samples[sample_n,]

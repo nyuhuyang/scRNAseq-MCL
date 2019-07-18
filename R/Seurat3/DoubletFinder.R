@@ -127,10 +127,10 @@ colnames(meta.data)[ncol(meta.data)] = "Doublets"
 object@meta.data = meta.data
 
 TSNEPlot.1(object, group.by = "Doublets",cols = c("red","orange","black"), 
-           title = "Singlets and possible Doublets", do.print = T,pt.size = 0.8)
+           title = "Singlets and possible Doublets", do.print = T,pt.size = 0.1)
 
 UMAPPlot.1(object, group.by = "Doublets",cols = c("red","orange","black"), 
-           title = "Singlets and possible Doublets", do.print = T,pt.size = 0.8)
+           title = "Singlets and possible Doublets", do.print = T,pt.size = 0.1)
 
 table(object$Doublets) %>% prop.table %>% kable %>% kable_styling()
 table(object$Doublets, object$manual) %>% kable %>% kable_styling()

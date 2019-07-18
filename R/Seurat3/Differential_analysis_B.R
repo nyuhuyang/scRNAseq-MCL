@@ -25,26 +25,27 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Rename ident
 (load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
 # B cells only ================
+Idents(object) <-  "Doublets"
+object %<>% subset(idents = "Singlet")
 Idents(object) <-  "manual"
 object <- sortIdent(object)
 TSNEPlot.1(object,label = F,no.legend=F,cols = ExtractMetaColor(object),repel = T,
            do.print = F)
 Idents(object) <-  "res.0.6"
 table(Idents(object))
+TSNEPlot.1(object,label = T,no.legend=F,repel = T, do.print = F)
 B_cells_MCL <- subset(object, idents = c(0,1,5,6,9,13,14,18,19,20))
 Idents(B_cells_MCL) <-  "singler1main"
+B_cells_MCL <- subset(B_cells_MCL, idents = c("B_cells","MCL"))
+table(B_cells_MCL@meta.data$singler1main) %>% as.data.frame %>%
+        .[.[,"Freq"] >0,]
+Idents(B_cells_MCL) <-  "manual"
 table(Idents(B_cells_MCL))
 B_cells_MCL <- subset(B_cells_MCL, idents = c("B_cells","MCL"))
-table(B_cells_MCL@meta.data$singler1sub) %>% as.data.frame %>%
-        .[.[,"Freq"] >0,]
-Idents(B_cells_MCL) <-  "singler1sub"
-(keep <- grep("B_cells.|MCL",B_cells_MCL@meta.data$singler1sub, value = T) %>% unique)
-B_cells_MCL <- subset(B_cells_MCL, idents =  keep)
 
 B_cells_MCL@meta.data$manual = as.character(B_cells_MCL@meta.data$manual)
 B_cells_MCL@meta.data$manual.colors = as.character(B_cells_MCL@meta.data$manual.colors)
 
-Idents(B_cells_MCL) <-  "manual"
 object <- sortIdent(object)
 TSNEPlot.1(object = B_cells_MCL, label = F, group.by = "ident",
            do.return = TRUE, no.legend = F, 
@@ -116,7 +117,7 @@ cowplot::plot_grid(g1+NoLegend(),g2+NoLegend()) +  ggtitle("Rename the clusters"
               plot.title = element_text(hjust = 0.5))
 dev.off()
 
-TSNEPlot.1(B_cells_MCL, pt.size = 1,label = F,do.print = T,no.legend = F,
+TSNEPlot.1(B_cells_MCL, pt.size = 0.2,label = F,do.print = T,no.legend = F,
            label.size = 4, repel = T, title = "5 clusters in B/MCL cells")
 save(B_cells_MCL, file = "data/B_cells_MCL_43_20190713.Rda")
 (load(file = "data/B_cells_MCL_43_20190713.Rda"))
@@ -134,7 +135,7 @@ X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.2,only
                                           min.pct = 0.1,return.thresh = 0.01)
 write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.2_markers.csv"))
 
-X5_clusters_markers = read.csv("output/20190621/X5_clusters_FC0.1_markers.csv",row.names = 1)
+X5_clusters_markers = read.csv("output/20190715/X5_clusters_FC0.2_markers.csv",row.names = 1)
 #B_cells_MCL %<>% ScaleData()
 
 markers <- c("BTK","CCND1","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
@@ -144,9 +145,9 @@ X5_clusters_markers = X5_clusters_markers[-MT_gene,]
 
 top = X5_clusters_markers %>% group_by(cluster) %>% top_n(20, avg_logFC)
 B_cells_MCL %<>% ScaleData(features=unique(c(as.character(top$gene),markers)))
-DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers,add.genes = markers, Top_n = 20, 
+DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers, add.genes = markers, Top_n = 20, 
             do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-            group.bar.height = 0, label=F, cex.row=4.5, legend.size = 0,width=10, height=6.5,
+            group.bar.height = 0, label=F, cex.row= 4.5, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
             title = "Top 20 differentially expressed genes in B and MCL clusters")
 
@@ -248,28 +249,29 @@ for(sample in list_samples$MCL){
 
         # FindAllMarkers.UMI======
 
-        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
-                                       ident.2 = c(ident.2,ident.1), only.pos = T,
-                                       logfc.threshold = 1.005,min.cells.group =3,
-                                       min.pct = 0.01,return.thresh = 0.05,
-                                       save.files = FALSE)
-        write.csv(gde.markers, paste0(path,"Normal_vs_",sample,".csv"))
+        #gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
+        #                               ident.2 = c(ident.2,ident.1), only.pos = T,
+        #                               logfc.threshold = 1.005,min.cells.group =3,
+        #                               min.pct = 0.01,return.thresh = 0.05,
+        #                               save.files = FALSE)
+        #write.csv(gde.markers, paste0(path,"Normal_vs_",sample,".csv"))
+        gde.markers = read.csv(paste0(path,"Normal_vs_",sample,".csv"),row.names = 1)
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
         GC()
         #DoHeatmap.1======
         Top_n = 20
-        top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>% top_n(Top_n, avg_logFC)
-        subset.MCL %<>% ScaleData(features= top$gene)
+        top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>% 
+                top_n(Top_n, avg_logFC) %>% as.data.frame()
+        subset.MCL %<>% ScaleData(features= unique(c(as.character(top$gene),markers)))
         DoHeatmap.1(subset.MCL, marker_df = gde.markers, add.genes = markers,
-                    Top_n = 20, do.print=T, angle = 90,
+                    Top_n = Top_n, do.print=T, angle = 90,
                     group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0,label=T, cex.row=6, legend.size = 0,
-                    width=10, height=6,unique.name = T, pal_gsea = F,
-                    title = paste("Top 20 DE genes in",sample,"/Normal B and MCL cells"))
+                    group.bar.height = 0,label=T, cex.row= 4.5 , legend.size = 0,
+                    width=10, height=6.5,unique.name = T, pal_gsea = F,
+                    title = paste("Top",Top_n,"DE genes in",sample,"/Normal B and MCL cells"))
         GC()
 }
-
 
 # Doheatmap for MCL.1 / MCL.2 ================
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx",sheet = "heatmap")
@@ -303,28 +305,29 @@ for(i in 1:length(list_samples$MCL.1)){
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = F,
                    do.print = F, unique.name = T)
 
-        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2), 
-                                       ident.2 = c(ident.2,ident.1), only.pos = T,
-                                       logfc.threshold = 0.5,min.cells.group =3,
-                                       min.pct = 0.01,
-                                       return.thresh = 0.5,
-                                       save.files = FALSE)
-        write.csv(gde.markers, paste0(path,samples1,"_vs_",samples2,".csv"))
-}
+        #gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2), 
+        #                               ident.2 = c(ident.2,ident.1), only.pos = T,
+        #                              logfc.threshold = 0.5,min.cells.group =3,
+        #                               min.pct = 0.01,
+        #                               return.thresh = 0.5,
+        #                               save.files = FALSE)
+        #write.csv(gde.markers, paste0(path,samples1,"_vs_",samples2,".csv"))
+        gde.markers = read.csv(paste0(path,samples1,"_vs_",samples2,".csv"),row.names = 1)
         print(table(gde.markers$cluster1.vs.cluster2))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
         GC()
         #DoHeatmap.1======
         Top_n = 20
-        top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>% top_n(Top_n, avg_logFC)
-        subset.MCL %<>% ScaleData(features= top$gene)
+        top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>% 
+                top_n(Top_n, avg_logFC) %>% as.data.frame()
+        subset.MCL %<>% ScaleData(features= unique(c(as.character(top$gene),markers)))
         DoHeatmap.1(subset.MCL, marker_df = gde.markers, add.genes = markers,
-                    Top_n = 20, do.print=T, pal_gsea = F,
+                    Top_n = Top_n, do.print=T, pal_gsea = F,
                     group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0,label=T, cex.row=5, legend.size = 0,
-                    width=10, height=6,unique.name = T,
-                    title = paste0("Top 20 DE genes in ",samples2," /",samples1, " B and MCL cells"))
+                    group.bar.height = 0,label=T, cex.row=4.5, legend.size = 0,
+                    width=10, height=6.5,unique.name = T,
+                    title = paste0("Top ",Top_n," DE genes in ",samples2," /",samples1, " B and MCL cells"))
         GC()
 }
 

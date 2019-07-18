@@ -38,7 +38,7 @@ save(singler,file="output/singlerT_MCL_43_20190430.Rda")
 singlerDF = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$labels,
                        "singler1main" = singler$singler[[1]]$SingleR.single.main$labels,
                        "orig.ident"  = object$orig.ident,
-                       row.names = names(singler$singler[[1]]$SingleR.single$labels))
+                       row.names = colnames(object))
 head(singlerDF)
 apply(singlerDF,2,function(x) length(unique(x)))
 
@@ -109,6 +109,8 @@ Idents(object) <- "manual"
 
 object %<>% sortIdent
 TSNEPlot.1(object, cols = ExtractMetaColor(object),label = T) + NoLegend()
+save(object,file="data/MCL_V3_Harmony_43_20190627.Rda")
+
 ##############################
 # draw tsne plot
 ##############################
@@ -121,7 +123,6 @@ TSNEPlot.1(object = object, label = F, group.by = "manual",
        pt.size = 0.1,label.size = 3, do.print = F,do.return = T,
        title = "Cell type labeling by Blueprint + Encode + MCL")
 
-#save(object,file="data/MCL_V3_Harmony_43_20190627.Rda")
 
 cell_Freq <- table(Idents(object)) %>% as.data.frame
 cell_Freq = cell_Freq[order(cell_Freq$Var1),]
@@ -161,7 +162,7 @@ for(test in tests){
         for(i in 1:length(samples)){
                 subset_object <- subset(object, idents = samples[i])
                 Idents(subset_object) <- "manual"
-                g[[i]] <- TSNEPlot.1(subset_object, pt.size =1,
+                g[[i]] <- TSNEPlot.1(subset_object, pt.size =0.2,
                                    cols = ExtractMetaColor(subset_object))+
                         NoLegend()+ggtitle(samples[i])+
                         theme(text = element_text(size=10),

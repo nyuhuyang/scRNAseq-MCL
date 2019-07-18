@@ -108,8 +108,7 @@ plot1 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
 jpeg(paste0(path,"VariableFeaturePlot.jpeg"), units="in", width=10, height=7,res=600)
 print(plot1)
 dev.off()
-all.genes <- rownames(x = object)
-object <- ScaleData(object = object, features = all.genes)
+object <- ScaleData(object = object)
 
 # ===========run sctransform============
 #object <- SCTransform(object = object, vars.to.regress = c("percent.mt", verbose = T)
@@ -175,13 +174,8 @@ plot_grid(p2+ggtitle("group by samples")+
                   theme(plot.title = element_text(hjust = 0.5,size = 18)))
 dev.off()
 
-g_Harmony <- TSNEPlot.1(object = object, label = T, group.by = "ident",
-                        label.size = 6 )+ NoLegend()+
-        ggtitle("TSNE plot of all clusters")+
-        theme(plot.title = element_text(hjust = 0.5,size = 18))
+TSNEPlot.1(object = object, label = F, group.by = "ident",pt.size = 0.1,do.print=T,
+           label.size = 6, title ="TSNE plot of all clusters")
 
-jpeg(paste0(path,"TSNEplot-Harmony.jpeg"), units="in", width=10, height=7,res=600)
-print(g_Harmony)
-dev.off()
 save(object, file = "data/MCL_VST_Harmony_36_20190410.Rda")
 

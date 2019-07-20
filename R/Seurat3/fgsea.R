@@ -40,11 +40,16 @@ biocarta %>% head() %>% lapply(head)
 # Now, run the fgsea algorithm with 1000 permutations:
 
 for(i in 1:length(clusters)) FgseaBarplot(pathways=hallmark, stats=res, nperm=1000,
-                                          cluster = i,
-                                          sample="B_MCL cluster",pathway.name = "Hallmark", hjust=0.5)
+                               cluster = i,no.legend = T,
+                               sample="B_MCL cluster",pathway.name = "Hallmark", hjust=0.5,
+                               width=10, height=7)
+
+
+
 for(i in 1:length(clusters)) FgseaBarplot(pathways=allpathways, stats=res, nperm=1000,show=50,
                                        cluster = clusters[i],sample = cell.line,hjust=0,
                                        pathway.name = "Hallmark, biocarta,and KEGG")
+
 
 FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
              order.by = c(4,"NES"),decreasing = F,

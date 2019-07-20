@@ -60,6 +60,7 @@ df_sample_B$group = factor(df_sample_B$group, levels = groups)
 #===============================
 # cell cycle CD4, CD8, NK
 #===============================
+T_NK_cells %<>% CellCycleScoring(s.features = s.genes, g2m.features = g2m.genes, set.ident = TRUE)
 Idents(T_NK_cells) = "manual"
 (T.NK.cells = as.character(unique(Idents(T_NK_cells))))
 T_NK_list <- lapply(T.NK.cells, function(x) subset(T_NK_cells, idents = x))

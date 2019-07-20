@@ -135,21 +135,21 @@ X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.2,only
                                           min.pct = 0.1,return.thresh = 0.01)
 write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.2_markers.csv"))
 
-X5_clusters_markers = read.csv("output/20190715/X5_clusters_FC0.2_markers.csv",row.names = 1)
+X5_clusters_markers = read.csv("output/20190717/X5_clusters_FC0.2_markers.csv",row.names = 1)
 #B_cells_MCL %<>% ScaleData()
 
-markers <- c("BTK","CCND1","CCND2","CCND3","CD3D","CD5","CD8A","CDK4","IL2RA",
+markers <- c("BTK","CCND1","CD3D","CD5","CD8A","CDK4","IL2RA",
              "MS4A1","PDCD1","RB1","SOX11")
 (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
 X5_clusters_markers = X5_clusters_markers[-MT_gene,]
-
-top = X5_clusters_markers %>% group_by(cluster) %>% top_n(20, avg_logFC)
+Top_n = 40
+top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
 B_cells_MCL %<>% ScaleData(features=unique(c(as.character(top$gene),markers)))
-DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers, add.genes = markers, Top_n = 20, 
+DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers, add.genes = markers, Top_n = Top_n, 
             do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-            group.bar.height = 0, label=F, cex.row= 4.5, legend.size = 0,width=10, height=6.5,
+            group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
-            title = "Top 20 differentially expressed genes in B and MCL clusters")
+            title = paste("Top",Top_n,"differentially expressed genes in B and MCL clusters"))
 
 # remove cluster with less than 3 cells======
 # no scale down, keep the normal cells.

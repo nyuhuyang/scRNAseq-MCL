@@ -142,11 +142,17 @@ dev.off()
 ##############################
 # subset Seurat
 ###############################
-table(object@meta.data$orig.ident)
-table(Idents(object))
+(load(file = "data/MCL_V3_Harmony_43_20190627.Rda"))
 
+Idents(object) <-  "Doublets"
+object %<>% subset(idents = "Singlet")
+Idents(object) = "manual"
+object %<>% subset(idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
+
+table(Idents(object))
 object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
-Idents(object) <- "orig.ident"
+Idents(object) = "orig.ident"
+
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
 tests <- paste0("test",2:12)
@@ -174,6 +180,27 @@ for(test in tests){
         print(do.call(cowplot::plot_grid, c(g, nrow = ifelse(length(samples)>2,2,1))))
         dev.off()
 }
+
+
+for(test in tests){
+        sample_n = which(df_samples$tests %in% test)
+        df <- as.data.frame(df_samples[sample_n,])
+        samples <- unique(df$sample)
+        rownames(df) = samples
+  
+        samples <- c(ifelse(length(samples)>5,NA,"Normal"),df$sample[order(df$tsne)])
+        print(samples <- samples[!is.na(samples)])
+        
+        subset_object <- subset(object, idents = samples)
+        subset_object$orig.ident %<>% factor(levels = samples)
+        Idents(subset_object) = "manual"
+        subset_object %<>% sortIdent()
+        g1 <- TSNEPlot.1(subset_object, pt.size =0.3,group.by = "manual",split.by = "orig.ident",
+                   cols = ExtractMetaColor(subset_object), ncol = length(samples),
+                   unique.name = T, do.print = F,do.return = T,
+                   width=length(samples)*2+2, height=3)
+}
+
 subset_object <- subset(object, idents = c("Pt-U01","Pt-U02","Pt-U03","Pt-U04"))
 Untreated_exp <- AverageExpression(subset_object)
 write.csv(Untreated_exp,file=paste0(path,"Untreated_UMI.csv"))

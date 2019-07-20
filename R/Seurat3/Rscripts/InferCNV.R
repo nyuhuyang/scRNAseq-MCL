@@ -13,7 +13,7 @@ args <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",args))
 
 # load data and prepare annotation files
-(load(file = "data/B_cells_MCL_43_20190627.Rda"))
+(load(file = "data/B_cells_MCL_43_20190713.Rda"))
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
@@ -48,5 +48,7 @@ infercnv_obj = infercnv::run(infercnv_obj,
                      cutoff=0.1,
                      out_dir=path_infercnv, 
                      cluster_by_groups=TRUE,
+                     plot_steps = TRUE,
                      denoise=T,
-                     HMM=T)
+                     HMM=T,
+                     png_res=600)

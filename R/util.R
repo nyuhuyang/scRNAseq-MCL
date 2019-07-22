@@ -19,12 +19,13 @@ CleanUp <- function(df){
 
 #' modify FeaturePlot to return TSNEplot like ggplot results
 FeaturePlot.1 <- function (object, features, dims = c(1, 2), cells = NULL, 
-                           cols = ifelse(test = c(blend,blend), yes = c("#ff0000", "#00ff00"), no = c("lightgrey", "blue")),
+                           cols = ifelse(test = c(blend,blend), yes = c("#ff0000", "#00ff00"), no = c("lightgrey", "red")),
                            pt.size = NULL, order = FALSE, min.cutoff = NA, 
                            max.cutoff = NA, reduction = NULL, split.by = "orig.ident", shape.by = NULL, 
                            slot = "data", blend = FALSE, blend.threshold = 0.5, label = FALSE, 
                            label.size = 4, repel = FALSE, ncol = NULL, combine = TRUE, 
                            coord.fixed = FALSE, by.col = TRUE) {
+    require(qlcMatrix)
     no.right <- theme(axis.line.y.right = element_blank(), axis.ticks.y.right = element_blank(), 
                       axis.text.y.right = element_blank(), axis.title.y.right = element_text(face = "bold",size = 14, margin = margin(r = 7)))
     if (is.null(reduction)) {
@@ -55,6 +56,8 @@ FeaturePlot.1 <- function (object, features, dims = c(1, 2), cells = NULL,
     cells <- cells %||% colnames(x = object)
     data <- FetchData(object = object, vars = c(dims, "ident", features), 
                       cells = cells, slot = slot)
+    range <- colMax(as.matrix(data[,features])) - colMin(as.matrix(data[,features]))
+    data[,features] = sweep(data[,features], 2, range,"/")*2.5
     if (ncol(x = data) < 4) {
         stop("None of the requested features were found: ", 
              paste(features, collapse = ", "), " in slot ", slot, 
@@ -110,6 +113,9 @@ FeaturePlot.1 <- function (object, features, dims = c(1, 2), cells = NULL,
     if (!is.null(x = shape.by)) {
         data[, shape.by] <- object[[shape.by, drop = TRUE]]
     }
+    data <- reshape2::melt(data, id.vars = c(dims,"ident","split.by"),
+                           variable.name = "features", 
+                           value.name = "feature_values")
     xlims <- c(floor(x = min(data[, dims[1]])), ceiling(x = max(data[, dims[1]])))
     ylims <- c(floor(min(data[, dims[2]])), ceiling(x = max(data[, dims[2]])))
     if (blend) {
@@ -118,94 +124,57 @@ FeaturePlot.1 <- function (object, features, dims = c(1, 2), cells = NULL,
         colors <- list(color.matrix[, 1], color.matrix[1, ], 
                        as.vector(x = color.matrix))
     }
-    plots <- vector(mode = "list", length = ifelse(test = blend, 
-                                                   yes = 4, 
-                                                   no = length(x = features) ))
-    for (j in 1:length(x = features)) {
-            feature <- features[j]
-            if (blend) {
-                cols.use <- as.numeric(x = as.character(x = data.plot[, 
-                                                                      feature])) + 1
-                cols.use <- colors[[j]][sort(x = unique(x = cols.use))]
-            } else {
-                cols.use <- NULL
-            }
-            
-            plot <- SingleDimPlot(data = data[, c(dims,"ident", feature, "split.by", shape.by)], 
-                                   dims = dims, col.by = feature, 
-                                  order = order, pt.size = pt.size, cols = cols.use, 
-                                  shape.by = shape.by, label = FALSE) + scale_x_continuous(limits = xlims) + 
-                scale_y_continuous(limits = ylims) +  cowplot::theme_cowplot()
-        
-            if (label) {
-                plot <- LabelClusters(plot = plot, id = "ident", 
-                                       repel = repel, size = label.size)
-            }
-            if (!is.null(x = split.by)) {
-                plot <- plot + Seurat:::FacetTheme() + facet_wrap(facets = vars(!!sym(x = "split.by")),
-                                                                  ncol = if (length(x = group.by) > 1 || is.null(x = ncol)) {
-                                                                      length(x = unique(x = data[, "split.by"]))
-                                                                  } else {
-                                                                      ncol
-                                                                  })
-            }
-            if (!blend) {
-                plot <- plot + guides(color = NULL)
-                cols.grad <- cols
-                if (length(x = cols) == 1) {
-                    plot <- plot + scale_color_brewer(palette = cols)
-                } else if (length(x = cols) > 1) {
-                    if (all(data[, feature] == data[,feature][1])) {
-                        warning("All cells have the same value (", 
-                                data[1, feature], ") of ", feature, 
-                                ".")
-                        if (data[1, feature][1] == 0) {
-                            cols.grad <- cols[1]
-                        }
-                        else {
-                            cols.grad <- cols
-                        }
-                    }
-                    plot <- suppressMessages(expr = plot + scale_color_gradientn(colors = cols.grad, 
-                                                                                 guide = "colorbar"))
+
+    if (blend) {
+        cols.use <- as.numeric(x = as.character(x = data.plot[, 
+                                                              feature])) + 1
+        cols.use <- colors[[1]][sort(x = unique(x = cols.use))]
+    } else {
+        cols.use <- NULL
+    }
+    
+    plot <- Seurat:::SingleDimPlot(data = data, 
+                          dims = dims, col.by = "feature_values", 
+                          order = order, pt.size = pt.size, cols = cols.use, 
+                          shape.by = shape.by, label = FALSE) + scale_x_continuous(limits = xlims) + 
+        scale_y_continuous(limits = ylims) +  cowplot::theme_cowplot()
+
+    if (label) {
+        plot <- LabelClusters(plot = plot, id = "ident", 
+                               repel = repel, size = label.size)
+    }
+    if (!is.null(x = split.by) & length(features) > 1) {
+        plot <- plot + Seurat:::FacetTheme() + facet_grid(facets = features ~ split.by)
+    }
+    if (!is.null(x = split.by) & length(features) == 1) {
+        plot <- plot + Seurat:::FacetTheme() + facet_grid(facets = . ~ split.by)
+    }
+    if (!blend) {
+        plot <- plot + guides(color = NULL)
+        cols.grad <- cols
+        if (length(x = cols) == 1) {
+            plot <- plot + scale_color_brewer(palette = cols)
+        } else if (length(x = cols) > 1) {
+            if (all(data$feature_values == data$feature_values[1])) {
+                warning("All cells have the same value (", 
+                        data[1, feature], ") of ", feature, 
+                        ".")
+                if (data$feature_values[1] == 0) {
+                    cols.grad <- cols[1]
+                }
+                else {
+                    cols.grad <- cols
                 }
             }
-            if (coord.fixed) {
-                plot <- plot + coord_fixed()
-            }
-            plot <- plot + ylab(feature)
-            plots[[j]] <- plot
-        }
-    if (blend) {
-        blend.legend <- BlendMap(color.matrix = color.matrix)
-        for (ii in 1:length(x = levels(x = data$split))) {
-            suppressMessages(
-                expr = plots <- append(x = plots, 
-                           values = list(blend.legend + 
-                              scale_y_continuous(sec.axis = dup_axis(name = ifelse(test = length(x = levels(x = data$split)) > 1, 
-                                                yes = levels(x = data$split)[ii], no = "")), 
-                                                expand = c(0, 0)) + labs(x = features[1], 
-                                                 y = features[2], title = if (ii == 1) {
-                                                     paste("Color threshold:", blend.threshold)
-                                                 } else {
-                                                     NULL
-                                                 }) + no.right), after = 4 * ii - 1))
+            plot <- suppressMessages(expr = plot + scale_color_gradientn(colors = cols.grad, 
+                                                                         guide = "colorbar"))
         }
     }
-    plots <- Filter(f = Negate(f = is.null), x = plots)
-    if (combine) {
-        legend <- if (blend) {
-            "none"
-        } else {
-            split.by %iff% "none"
-        }
-            plots <- CombinePlots(plots = plots, ncol = 1, 
-                                  legend = legend, nrow = length(features))
+    if (coord.fixed) {
+        plot <- plot + coord_fixed()
     }
-    return(plots)
+    return(plot)
 }
-
-FeaturePlot.1(object,features = c("CCND1","CCND2"),split.by = "orig.ident")
 
 # re-calculate the cdr3 frequency in data.frame
 Frequency <- function(df, key = "cdr3",top=NULL,remove.na =T,
@@ -394,66 +363,4 @@ do.return = TRUE, do.print = FALSE,top=20){
         dev.off()
     }
     if(do.return) return(g1)
-}
-
-
-#' Combine TSNEPlot and Feature Plot into one figure.
-#' @param features Vector of features to plot, parameter pass to FeaturePlot
-#' @param no.legend remove legend
-#' @param title add ggplot title
-#' @param do.print save jpeg file
-#' @param unique.name save jpeg file with unique name
-#' @param do.return return plot
-TSNEPlot_FeaturePlot <- function(object,dims = c(1, 2),cells = NULL,cols = NULL,pt.size = NULL,
-                       reduction = NULL,group.by = NULL,split.by = NULL,shape.by = NULL,
-                       features = NULL,
-                       order = NULL,label = FALSE,label.size = 4,repel = FALSE,
-                       cells.highlight = NULL,cols.highlight = 'red',sizes.highlight = 1,
-                       na.value = 'grey50',ncol = NULL,title = NULL,
-                       no.legend = F,do.print = F,do.return = T,unique.name=F,
-                       width=10, height=7,...) {
-    if(unique.name) {
-        VarName <- unique(object$orig.ident)
-        VarName <- paste(VarName[1:min(5,length(VarName))],collapse = "_")
-    } else VarName <- deparse(substitute(object))
-    VarName = paste0(VarName,"_",group.by %||% FindIdentLabel(object))
-    plots <- TSNEPlot(object = object,dims = dims, cells = cells, cols = cols, 
-                      pt.size = pt.size, reduction = 'tsne', group.by = group.by, split.by = split.by, 
-                      shape.by = shape.by, order = order, label = label, label.size = label.size, 
-                      repel = repel, cells.highlight = cells.highlight, cols.highlight = cols.highlight, 
-                      sizes.highlight = sizes.highlight, na.value = na.value, combine = combine, 
-                      ncol = ncol, ...)
-    if(no.legend) {
-        plots = plots + NoLegend()
-        L = ""
-    } else L = "_Legend"
-    featureplot <- FeaturePlot(subset_object, features = features, split.by = split.by)
-    if (combine) {
-        plots <- CombinePlots(
-        plots = plots,align= align,
-        ncol = if (!is.null(x = split.by) && length(x = group.by) > 1) {
-            1
-        } else {
-            ncol
-        },
-        ...
-        )
-    }
-    if(!is.null(title)){
-        plots = plots + ggtitle(title)+
-        theme(plot.title = element_text(hjust = 0.5,size=15,face = "plain"))
-    }
-    if(no.legend) {
-        plots = plots + NoLegend()
-        L = ""
-    } else L = "_Legend"
-    if(do.print) {
-        path <- paste0("output/",gsub("-","",Sys.Date()),"/")
-        if(!dir.exists(path)) dir.create(path, recursive = T)
-        jpeg(paste0(path,"TSNEPlot_",VarName,L,".jpeg"),
-        units="in", width=width, height=height,res=600)
-        print(plots)
-        dev.off()
-    }
-    if(do.return) return(plots)
 }

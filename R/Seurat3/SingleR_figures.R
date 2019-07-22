@@ -174,26 +174,7 @@ for(test in tests){
         TSNEPlot.1(subset_object, pt.size =0.3, group.by = "manual",split.by = "orig.ident",
              cols = ExtractMetaColor(subset_object), ncol = ifelse(length(samples)>3,3,2),
              unique.name = T, do.print = F,do.return = T,
-             width=10, height=7)
-}
-
-for(test in tests){
-        sample_n = which(df_samples$tests %in% test)
-        df <- as.data.frame(df_samples[sample_n,])
-        samples <- unique(df$sample)
-        rownames(df) = samples
-  
-        samples <- c(ifelse(length(samples)>5,NA,"Normal"),df$sample[order(df$tsne)])
-        print(samples <- samples[!is.na(samples)])
-        
-        subset_object <- subset(object, idents = samples)
-        subset_object$orig.ident %<>% factor(levels = samples)
-        Idents(subset_object) = "manual"
-        subset_object %<>% sortIdent()
-        TSNEPlot.1(subset_object, pt.size =0.3,group.by = "manual",split.by = "orig.ident",
-                   cols = ExtractMetaColor(subset_object), ncol = length(samples),
-                   unique.name = T, do.print = F,do.return = T,
-                   width=length(samples)*2+2, height=3)
+             width=10, height=7)# width=length(samples)*2+2, height=3)
 }
 
 subset_object <- subset(object, idents = c("Pt-U01","Pt-U02","Pt-U03","Pt-U04"))
@@ -233,4 +214,3 @@ for(sample in df_samples$sample){
         if(length(idx)>0) meta.data[idx,"orig.ident"] = sample
 }
 object@meta.data = meta.data
-object %<>% SetAllIdent(id = "orig.ident")

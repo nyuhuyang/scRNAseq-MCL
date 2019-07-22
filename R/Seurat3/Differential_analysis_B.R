@@ -138,8 +138,7 @@ write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.2_markers.csv"))
 X5_clusters_markers = read.csv("output/20190717/X5_clusters_FC0.2_markers.csv",row.names = 1)
 #B_cells_MCL %<>% ScaleData()
 
-markers <- c("BTK","CCND1","CD3D","CD5","CD8A","CDK4","IL2RA",
-             "MS4A1","PDCD1","RB1","SOX11")
+markers <- FilterGenes(B_cells_MCL,c("CCND1","CDK4","RB1","CD19","SOX11","CD5","CD3D","CD8A"))
 (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
 X5_clusters_markers = X5_clusters_markers[-MT_gene,]
 Top_n = 40

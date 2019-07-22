@@ -41,10 +41,9 @@ biocarta %>% head() %>% lapply(head)
 
 for(i in 1:length(clusters)) FgseaBarplot(pathways=hallmark, stats=res, nperm=1000,
                                cluster = i,no.legend = T,
+                               cut.off = "padj",cut.off.value = 0.25,
                                sample="B_MCL cluster",pathway.name = "Hallmark", hjust=0.5,
                                width=10, height=7)
-
-
 
 for(i in 1:length(clusters)) FgseaBarplot(pathways=allpathways, stats=res, nperm=1000,show=50,
                                        cluster = clusters[i],sample = cell.line,hjust=0,

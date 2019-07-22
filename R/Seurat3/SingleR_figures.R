@@ -155,32 +155,27 @@ Idents(object) = "orig.ident"
 
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",2:12)
+tests <- paste0("test",2)
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])
         samples <- unique(df$sample)
         rownames(df) = samples
-        
+  
         samples <- c(ifelse(length(samples)>5,NA,"Normal"),df$sample[order(df$tsne)])
         print(samples <- samples[!is.na(samples)])
-        g <- list()
-        for(i in 1:length(samples)){
-                subset_object <- subset(object, idents = samples[i])
-                Idents(subset_object) <- "manual"
-                g[[i]] <- TSNEPlot.1(subset_object, pt.size =0.2,
-                                   cols = ExtractMetaColor(subset_object))+
-                        NoLegend()+ggtitle(samples[i])+
-                        theme(text = element_text(size=10),
-                              plot.title = element_text(hjust = 0.5))
-                
-        }
-        jpeg(paste0(path,test,"_Plots.jpeg"), units="in", width=10, height=7,
-             res=600)
-        print(do.call(cowplot::plot_grid, c(g, nrow = ifelse(length(samples)>2,2,1))))
-        dev.off()
+  
+        subset_object <- subset(object, idents = samples)
+        subset_object$orig.ident %<>% factor(levels = samples)
+  
+        Idents(subset_object) = "manual"
+  
+        subset_object %<>% sortIdent()
+        TSNEPlot.1(subset_object, pt.size =0.3, group.by = "manual",split.by = "orig.ident",
+             cols = ExtractMetaColor(subset_object), ncol = ifelse(length(samples)>3,3,2),
+             unique.name = T, do.print = F,do.return = T,
+             width=10, height=7)
 }
-
 
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
@@ -195,7 +190,7 @@ for(test in tests){
         subset_object$orig.ident %<>% factor(levels = samples)
         Idents(subset_object) = "manual"
         subset_object %<>% sortIdent()
-        g1 <- TSNEPlot.1(subset_object, pt.size =0.3,group.by = "manual",split.by = "orig.ident",
+        TSNEPlot.1(subset_object, pt.size =0.3,group.by = "manual",split.by = "orig.ident",
                    cols = ExtractMetaColor(subset_object), ncol = length(samples),
                    unique.name = T, do.print = F,do.return = T,
                    width=length(samples)*2+2, height=3)

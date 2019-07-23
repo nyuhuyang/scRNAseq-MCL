@@ -19,6 +19,7 @@ path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 # 3.1.1 load data
 # Load some results from Seurat
+#============ B cells  =====================
 res = read.csv(file="output/20190621/X5_clusters_FC0.1_markers.csv",
                         row.names = 1, stringsAsFactors=F)
 table(res$cluster)
@@ -84,3 +85,34 @@ for(i in 1:length(groups)){
                      pathway.name = "Hallmark",rotate.x.text = F)
 
 }
+
+#============ T cells  =====================
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
+colnames(df_samples) <- tolower(colnames(df_samples))
+tests <- paste0("test",4)
+sample_n = which(df_samples$tests %in% tests)
+df <- as.data.frame(df_samples[sample_n,])
+(samples <- c("Normal",unique(df$sample)))
+cell.type <- c("T_cells:CD4+","T_cells:CD8+","NK_cells")
+
+res_T_list <- list()
+for(i in 2:length(samples)){
+        res_T_list[[i-1]] = read.csv(file = paste0(path,samples[i],"_vs_Normal",".csv"))
+}
+res_T <- do.call("rbind.data.frame", res_T_list)
+res_T = res_T[grep("CD8+",res_T$cluster1.vs.cluster2),]
+res_T$cluster1.vs.cluster2 %<>% as.character %>% gsub('\\..*',"",.)
+
+res_T$cluster1.vs.cluster2 %<>% factor(levels = samples[2:5])
+        
+for(i in 2:length(samples)) FgseaBarplot(pathways=hallmark, stats=res_T, nperm=1000,
+                                          cluster = samples[i],no.legend = F,
+                                          cut.off = "padj",cut.off.value = 0.25,
+                                          sample="CD8+ T cells of",pathway.name = "Hallmark", hjust=0.5,
+                                          width=10, height=7)
+
+FgseaDotPlot(stats=res_T, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
+                     order.by = c(4,"NES"),decreasing = F,
+                     size = "-log10(pval)", fill = "NES",
+                     sample = paste("Pt-17's CD8+ T cells"), 
+                     pathway.name = "Hallmark",rotate.x.text = F)

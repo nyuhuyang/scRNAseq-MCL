@@ -33,14 +33,14 @@ object %<>% subset(idents = "Singlet")
 Idents(object) <-  "manual"
 object <- sortIdent(object)
 table(Idents(object))
-TSNEPlot.1(object,label = F, repel = T, no.legend = T,pt.size = 1,
+TSNEPlot.1(object,label = F, repel = T, no.legend = T,pt.size = 0.1,
            cols = ExtractMetaColor(object),do.return = T,do.print = F,
            title = "Cell type labeling by Blueprint + Encode + MCL")
 
 Idents(object) <-  "res.0.6"
 object <- sortIdent(object,numeric=T)
 table(Idents(object))
-TSNEPlot.1(object,label = T, repel = T, no.legend = F,pt.size = 1,
+TSNEPlot.1(object,label = T, repel = T, no.legend = F,pt.size = 0.1,
            do.return = T,do.print = F,
            title = "Unsupervised clustering")
 
@@ -52,19 +52,21 @@ table(T_NK_cells@meta.data$manual) %>% as.data.frame %>%
         .[.[,"Freq"] >0,]
 Idents(T_NK_cells) = "manual"
 T_NK_cells <- subset(T_NK_cells, idents = c("T_cells:CD4+","T_cells:CD8+","NK_cells"))
+T_NK_cells$manual %<>% factor(levels = c("T_cells:CD4+","T_cells:CD8+","NK_cells"))
+T_NK_cells$manual.colors %<>% factor(levels = c("#B3DE69","#F0027F","#A65628"))
 
-T_NK_cells[['tSNE_1']] <- T_NK_cells@reductions$tsne@cell.embeddings[colnames(T_NK_cells),'tSNE_1']
+
+T_NK_cells[['tSNE_1']] <- T_NK_cells@reductions$tsne@cell.embeddings[,"tsne_1"]
 
 T_NK_cells <- subset(T_NK_cells, subset = tSNE_1 >5)
 
-g0 <- TSNEPlot.1(T_NK_cells,do.label = F,no.legend=T,do.print = T,do.return =T, pt.size = 1,
+g0 <- TSNEPlot.1(T_NK_cells,do.label = F,no.legend=T,do.print = T,do.return =T, pt.size = 0.1,
            cols = ExtractMetaColor(T_NK_cells),
            title="T cells and NK cells")
-
-
 ##############################
 # re-scale, PCA, harmony and tsne
 ##############################
+
 #T_NK_cells <- NormalizeData(T_NK_cells)
 #T_NK_cells <- FindVariableGenes(object = T_NK_cells, mean.function = ExpMean, 
 #                            dispersion.function = LogVMR, 
@@ -89,26 +91,22 @@ system.time(T_NK_cells %<>% FindNeighbors(reduction = "harmony",dims = 1:75,forc
 system.time(T_NK_cells %<>% FindClusters(resolution = 0.3))
 Idents(T_NK_cells) <- 'RNA_snn_res.0.3'
 table(Idents(T_NK_cells))
-g1 <- TSNEPlot.1(T_NK_cells,label = T,no.legend=T,do.print = F,pt.size = 1,
+g1 <- TSNEPlot.1(T_NK_cells,label = T,no.legend=T,do.print = T,pt.size = 0.2,
            title="unsupervised clustering of T and NK cells")
-
 T_NK_cells@meta.data$X3_clusters <- plyr::mapvalues(x = T_NK_cells@meta.data$RNA_snn_res.0.3,
                                                      from = c(0,1,2,3,4,5,6,7,8),
-                                                     to =   c(1,3,2,2,2,2,1,1,3)) %>% as.character()
-T_NK_cells@meta.data$X3_clusters <- plyr::mapvalues(x = T_NK_cells@meta.data$X3_clusters,
-                                               from = 1:3,
-                                               to = c("T_cells:CD4","T_cells:CD8",
-                                                      "NK_cells"))  %>% as.character()
+                                                     to =   c(1,3,2,2,3,2,1,1,1))
+T_NK_cells@meta.data$X3_clusters %<>% factor(levels = 1:3)
+
 T_NK_cells@meta.data$X3_clusters.colors <- mapvalues(x = T_NK_cells@meta.data$X3_clusters,
-                                                   from = c("T_cells:CD4","T_cells:CD8",
-                                                            "NK_cells"),
+                                                   from = 1:3,
                                                    to =   c("#B3DE69","#F0027F",
-                                                            "#A65628")) %>% as.character()
+                                                            "#A65628"))
 Idents(T_NK_cells) <- 'X3_clusters'
 T_NK_cells <- sortIdent(T_NK_cells)
 table(Idents(T_NK_cells))
 # tsne plot
-g2 <- TSNEPlot.1(T_NK_cells,label = F,no.legend=F,do.print = T,pt.size = 1,
+g2 <- TSNEPlot.1(T_NK_cells,label = F,no.legend=F,do.print = T,pt.size = 0.2,
                  cols = ExtractMetaColor(T_NK_cells),
                  title="unsupervised clustering")
 jpeg(paste0(path,"rename_tsne_T_NK.jpeg"), units="in", width=10, height=7,res=600)
@@ -202,7 +200,7 @@ table(X3_clusters_markers$cluster)
 T_NK_cells <- subset(T_NK_cells, idents = c("T_cells:CD4","T_cells:CD8","NK_cells"))
 T_NK_cells %<>% ScaleData(features=rownames(T_NK_cells))
 
-Idents(T_NK_cells) %<>% factor(levels = c("T_cells:CD4","T_cells:CD8","NK_cells"))
+T_NK_cells$manual %<>% factor(levels = c("T_cells:CD4","T_cells:CD8","NK_cells"))
 
 (MT_gene <- grep("^MT-",X3_clusters_markers$gene))
 X3_clusters_markers = X3_clusters_markers[-MT_gene,]
@@ -247,7 +245,7 @@ for(test in tests){
         subset.MCL$orig.ident = factor(subset.MCL$orig.ident, levels = samples)
         Idents(subset.MCL) = "X3_clusters"
         Idents(subset.MCL) %<>% factor(levels = c("T_cells:CD4","T_cells:CD8",
-                                                  "NK_cells","HSC/progenitors"))
+                                                  "NK_cells"))
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = F,
                    cols = ExtractMetaColor(subset.MCL),do.print = T, unique.name = T)
 }
@@ -367,3 +365,55 @@ for(i in 1:length(groups)){
         }
         remove(subset_MCL);GC()
 }
+
+#============ Pt-17 =================
+df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
+colnames(df_samples) <- tolower(colnames(df_samples))
+tests <- paste0("test",4)
+sample_n = which(df_samples$tests %in% tests)
+df <- as.data.frame(df_samples[sample_n,])
+(samples <- c("Normal",unique(df$sample)))
+cell.type <- c("T_cells:CD4+","T_cells:CD8+","NK_cells")
+
+T_NK_cells@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",T_NK_cells@meta.data$orig.ident)
+T_NK_cells@meta.data$orig.ident_cell.type = paste0(T_NK_cells@meta.data$orig.ident,".",
+                                                   T_NK_cells@meta.data$manual)
+
+Idents(T_NK_cells) = "groups"
+Pt_17 <- subset(T_NK_cells, idents = c("Normal", "Pt-17"))
+Pt_17@meta.data$orig.ident %<>% factor(levels = samples)
+
+TSNEPlot.1(Pt_17,do.label = F,no.legend=T,do.print = T,do.return =T, pt.size = 0.1,
+           group.by = "manual",cols =  ExtractMetaColor(Pt_17),
+           split.by = 'orig.ident',ncol = length(samples), 
+           title="T cells and NK cells in Patient 17",
+           width=length(samples)*2+2, height=3)
+
+Idents(Pt_17) = "orig.ident"
+for (i in 2:length(samples)) {
+        print(paste(samples[i],"vs. Normal"))
+        subset.MCL <- subset(Pt_17, idents = c("Normal",samples[i]))
+        
+        Idents(subset.MCL) = "manual"
+        TSNEPlot.1(subset.MCL, group.by = "manual",split.by = "orig.ident",pt.size = 0.3,
+                   cols = ExtractMetaColor(subset.MCL),
+                   label = F, do.print = F,do.return = T, unique.name = T)
+        
+        # remove cluster with less than 3 cells======
+        table_subset.MCL <- table(subset.MCL$orig.ident_cell.type) %>% as.data.frame
+        keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character()
+        
+        (cell.type1 <- keep.MCL %>% .[grep("Normal",.,invert = T)] %>%
+                        gsub('.*\\.',"",.) %>% unique)
+
+        print(ident.1 <- paste0(samples[i],".",cell.type1))
+        print(ident.2 <- paste0("Normal.",cell.type1))
+        
+        Idents(subset.MCL) = "orig.ident_cell.type"
+        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = ident.1,
+                                       ident.2 = ident.2, only.pos = F,
+                                       logfc.threshold = 0.1,min.cells.group =3,
+                                       min.pct = 0.1,return.thresh = 0.05,
+                                       save.files = FALSE)
+        write.csv(gde.markers, paste0(path,samples[i],"_vs_Normal",".csv"))
+        }

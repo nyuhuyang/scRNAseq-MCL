@@ -16,9 +16,10 @@ print(paste0("slurm_arrayid=",args))
 (load(file = "data/B_cells_MCL_43_20190713.Rda"))
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$cnv %in% c(0,args))
+(groups = grep("Pt-",df_samples$group,value = T) %>% unique)
+sample_n = which(df_samples$group %in% groups[args])
 df_samples = df_samples[sample_n,]
-
+df_samples
 meta.data = B_cells_MCL@meta.data
 meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",meta.data$orig.ident)
 (samples = df_samples$sample[df_samples$sample %in% meta.data$orig.ident])
@@ -48,5 +49,5 @@ infercnv_obj = infercnv::run(infercnv_obj,
                      cluster_by_groups=TRUE,
                      plot_steps = FALSE,
                      denoise=T,
-                     HMM=T,
+                     HMM=F,
                      png_res=300)

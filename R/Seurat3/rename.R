@@ -52,15 +52,16 @@ for(file in files){
 }
 
 # on cluster 
-dir.create("output/20190720_png", recursive = T)
-folders <- list.files(path = "output/20190720/", pattern = "_infercnv")
+(png_path <- paste0("output/",gsub("-","",Sys.Date()),"_png/"))
+if(!dir.exists(png_path)) dir.create(png_path, recursive = T)
+folders <- list.files(path = path, pattern = "_infercnv")
 
 for(folder in folders){
-        files <- list.files(paste0("output/20190720/",folder),pattern= ".png")
-        dir.create(paste0("output/20190720_png/",folder), recursive = T)
-        file.copy(paste0("output/20190720/",folder,"/",files), paste0("output/20190720_png/",folder))
-        file.rename(paste0("output/20190720_png/",folder,"/",files), 
-                    paste0("output/20190720_png/",folder,"/",sub("_.*","_",folder),files))
+        files <- list.files(paste0(path,folder),pattern= ".png")
+        dir.create(paste0(png_path,folder), recursive = T)
+        file.copy(paste0(path,folder,"/",files), paste0(png_path,folder))
+        file.rename(paste0(png_path,folder,"/",files), 
+                    paste0(png_path,folder,"/",sub("_.*","_",folder),files))
 }
 
 # for heatmap

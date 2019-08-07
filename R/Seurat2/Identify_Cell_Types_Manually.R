@@ -11,8 +11,6 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 2.1 identify phenotype for each cluster  ==========================================
 (load(file="data/MCL_Harmony_43_20190430.Rda"))
 
-#blueprint_encode_main = read.csv("../SingleR/output/blueprint_encode_main.csv",row.names =1,header = T,
-#                                 stringsAsFactors = F)
 df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx")
 #df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx",sheet = "Human.sub")
 colnames(df_markers) = gsub(" ","_",colnames(df_markers))

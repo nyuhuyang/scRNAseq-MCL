@@ -140,7 +140,7 @@ X5_clusters_markers = X5_clusters_markers[-MT_gene,]
 Top_n = 40
 top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
 B_cells_MCL %<>% ScaleData(features=unique(c(as.character(top$gene),markers)))
-DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers, add.genes = markers, Top_n = Top_n, 
+DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers, features = markers, Top_n = Top_n,
             do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
@@ -259,7 +259,7 @@ for(sample in list_samples$MCL){
                 top_n(Top_n, avg_logFC) %>% as.data.frame()
         add.genes = unique(c(as.character(top$gene),block,markers))
         subset.MCL %<>% ScaleData(features= add.genes)
-        DoHeatmap.1(subset.MCL, add.genes = add.genes,
+        DoHeatmap.1(subset.MCL, features = add.genes,
                     Top_n = Top_n, do.print=T, angle = 90,
                     group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
                     group.bar.height = 0,label=T, cex.row= 500/length(add.genes), legend.size = 0,
@@ -298,27 +298,27 @@ for(i in 1:length(list_samples$MCL.1)){
         subset.MCL <- subset(subset.MCL, idents = keep.MCL)
         
         Idents(subset.MCL) %<>% factor(levels = c(ident.1,ident.2))
-        TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = F,
+        TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = T,
                    do.print = F, unique.name = T)
 
-        #gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2), 
-        #                               ident.2 = c(ident.2,ident.1), only.pos = T,
-        #                              logfc.threshold = 0.1,min.cells.group =3,
-        #                               min.pct = 0.1,return.thresh = 0.05,
-        #                               save.files = FALSE)
-        #write.csv(gde.markers, paste0(path,samples1,"_vs_",samples2,".csv"))
+        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2), 
+                                       ident.2 = c(ident.2,ident.1), only.pos = T,
+                                      logfc.threshold = 0.1,min.cells.group =3,
+                                       min.pct = 0.1,return.thresh = 0.05,
+                                       save.files = FALSE)
+        write.csv(gde.markers, paste0(path,samples1,"_vs_",samples2,".csv"))
         gde.markers = read.csv(paste0(path,samples1,"_vs_",samples2,".csv"),row.names = 1)
         print(table(gde.markers$cluster1.vs.cluster2))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
         GC()
         #DoHeatmap.1======
-        Top_n = 40
+        Top_n = 20
         top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>% 
                 top_n(Top_n, avg_logFC) %>% as.data.frame()
         add.genes = unique(c(as.character(top$gene),block,markers))
         subset.MCL %<>% ScaleData(features= add.genes)
-        DoHeatmap.1(subset.MCL, add.genes = add.genes,
+        DoHeatmap.1(subset.MCL, features = add.genes,
                     Top_n = Top_n, do.print=T, pal_gsea = F,
                     group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
                     group.bar.height = 0,label=T, cex.row=500/length(add.genes), legend.size = 0,

@@ -48,15 +48,12 @@ for(i in 1:length(marker.list)){
 
 #==================
 Idents(object) = "orig.ident"
-object <- subset(object, idents = c("DJ","BH","MD","NZ","Pt-19-BM-C2D1",
-                                    "Pt-25-C1","Pt-25-C1D8","Pt-25-C24","Pt-20-C1D1"),invert = TRUE)
 features <- FilterGenes(object,c("CD19","CCND1","SOX11",
                                  "CD3D","CD4","CD8A",
                                  "KLRC1","NCAM1","FCGR3A",
                                  "CD14","FCGR1A","HBB"))
 FeaturePlot.1(object,features = features, pt.size = 0.5, cols = c("gray90", "red"), alpha = 1,
-              threshold = 0.001, border = T,do.print = T, do.return = F,ncol = 3, width=9, height=12)
-#==================
-load("Rshiny/MCL/data/MCL.Rda")
-source("Rshiny/MCL/util.R")
-input <- list(Dataset1 ="All")
+              threshold = 1, strip.text.size = 30, border = T,do.print = T, do.return = F,ncol = 3, 
+              width=8.5, height=12)
+
+

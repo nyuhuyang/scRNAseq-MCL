@@ -13,8 +13,6 @@ path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
-#raw_data <- object@raw.data[,object@cell.names]
-#save(raw_data, file = "data/MCL.raw.data_Harmony_30_20190320.Rda")
 (load(file = "data/MCL_V3_Harmony_43_20190627.Rda"))
 (load(file="output/singlerT_MCL_43_20190430.Rda"))
 
@@ -62,22 +60,6 @@ table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>%
 ##############################
 # adjust cell label
 ##############################
-# reduce false positive results (B cells are labeled as MCL in normal samples)
-# and false negative results (MCL cells are labeled as B cells in MCL samples)
-# singler1main false positive results  ========
-table(singlerDF$singler1main, object@meta.data$orig.ident) %>% kable %>% kable_styling()
-normal_cells <- singlerDF$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
-singlerDF[normal_cells,"singler1main"] = gsub("MCL","B_cells",
-                                              singlerDF[normal_cells,"singler1main"])
-# singler1sub false positive results  =========
-table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>% kable_styling()
-singlerDF[normal_cells,"singler1sub"] = gsub("MCL:.*$","B_cells:Memory",
-                                              singlerDF[normal_cells,"singler1sub"])
-
-table(singlerDF$singler1main, singlerDF$orig.ident) %>% kable %>% kable_styling()
-table(singlerDF$singler1sub, singlerDF$orig.ident)%>% kable %>% kable_styling()
-table(singlerDF$singler1sub %>% sort)%>% kable %>% kable_styling()
-
 # combine cell types
 singlerDF$singler1sub = gsub("MCL:.*","MCL",singlerDF$singler1sub)
 singlerDF$manual = gsub("B_cells:.*","B_cells",singlerDF$singler1sub)
@@ -91,6 +73,25 @@ singlerDF$manual = gsub("Eosinophils|Megakaryocytes|Monocytes","Myeloid cells",s
 singlerDF$manual = gsub("Adipocytes|Fibroblasts|mv_Endothelial_cells","Nonhematopoietic cells",singlerDF$manual)
 table(singlerDF$manual) %>% kable() %>% kable_styling()
 
+# reduce false positive results (B cells are labeled as MCL in normal samples)
+# and false negative results (MCL cells are labeled as B cells in MCL samples)
+# singler1sub false negative results  =========
+singlerDF$CCND1 = FetchData(object,"CCND1")
+singlerDF[(singlerDF$CCND1 >0 & singlerDF$manual %in% "B_cells"),"manual"] = "MCL"
+# singler1main false positive results  ========
+table(singlerDF$manual, object@meta.data$orig.ident) %>% kable %>% kable_styling()
+normal_cells <- singlerDF$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
+singlerDF[normal_cells,"manual"] = gsub("MCL","B_cells",
+                                              singlerDF[normal_cells,"manual"])
+# singler1sub false positive results  =========
+table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>% kable_styling()
+singlerDF[normal_cells,"singler1sub"] = gsub("MCL:.*$","B_cells:Memory",
+                                              singlerDF[normal_cells,"singler1sub"])
+table(singlerDF$manual, singlerDF$orig.ident) %>% kable %>% kable_styling()
+table(singlerDF$singler1sub, singlerDF$orig.ident)%>% kable %>% kable_styling()
+table(singlerDF$manual %>% sort)%>% kable %>% kable_styling()
+table(singlerDF$manual) %>% kable() %>% kable_styling()
+singlerDF = singlerDF[, -5]
 ##############################
 # process color scheme
 ##############################
@@ -108,7 +109,7 @@ object <- AddMetaColor(object = object, label= "manual", colors = singler_colors
 Idents(object) <- "manual"
 
 object %<>% sortIdent
-TSNEPlot.1(object, cols = ExtractMetaColor(object),label = T) + NoLegend()
+TSNEPlot.1(object, cols = ExtractMetaColor(object),label = F) + NoLegend()
 save(object,file="data/MCL_V3_Harmony_43_20190627.Rda")
 
 ##############################
@@ -120,7 +121,7 @@ object %<>% sortIdent()
 table(Idents(object))
 TSNEPlot.1(object = object, label = F, group.by = "manual",
        cols = ExtractMetaColor(object),no.legend = F,
-       pt.size = 0.1,label.size = 3, do.print = F,do.return = T,
+       pt.size = 0.1,label.size = 3, do.print = T,do.return = F,
        title = "Cell type labeling by Blueprint + Encode + MCL")
 
 
@@ -155,7 +156,7 @@ Idents(object) = "orig.ident"
 
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",2)
+tests <- paste0("test",c(2:12))
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])
@@ -171,10 +172,12 @@ for(test in tests){
         Idents(subset_object) = "manual"
   
         subset_object %<>% sortIdent()
-        TSNEPlot.1(subset_object, pt.size =0.3, group.by = "manual",split.by = "orig.ident",
-             cols = ExtractMetaColor(subset_object), ncol = ifelse(length(samples)>3,3,2),
-             unique.name = T, do.print = F,do.return = T,
-             width=10, height=7)# width=length(samples)*2+2, height=3)
+        TSNEPlot.1(subset_object, pt.size =0.3, 
+                   strip.text.size = min(240/max(stringr::str_length(samples)),30),
+                   group.by = "manual",split.by = "orig.ident",
+                   cols = ExtractMetaColor(subset_object), ncol = length(samples),
+                   unique.name = T, do.print = T,do.return = F,border = T,
+                   width=length(samples)*2+2, height=3)
 }
 
 subset_object <- subset(object, idents = c("Pt-U01","Pt-U02","Pt-U03","Pt-U04"))

@@ -14,7 +14,7 @@ if(!dir.exists(marker_path))dir.create(marker_path, recursive = T)
 DefaultAssay(object) <- "RNA"
 #df_markers <- readxl::read_excel("doc/Lynch mouse model scRNAseq genes of interest 073119.xlsx")
 
-df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx")
+df_markers <- readxl::read_excel("../seurat_resources/bio-rad-markers.xlsx",sheet = "Human.sub")
 colnames(df_markers) = gsub(" ","_",colnames(df_markers))
 colnames(df_markers) = gsub(":|\\/","_",colnames(df_markers))
 colnames(df_markers) = gsub("\\+","",colnames(df_markers))
@@ -56,4 +56,14 @@ FeaturePlot.1(object,features = features, pt.size = 0.5, cols = c("gray90", "red
               threshold = 1, strip.text.size = 30, border = T,do.print = T, do.return = F,ncol = 3, 
               width=8.5, height=12)
 
-
+FeaturePlot.2(object,features = c("CRBN","POLR2M"),overlay = T)
+FeaturePlot.2(object,features = c("CRBN","POLR2M"),overlay = T,
+              cols.use = c("grey","orange","yellow","red"))
+Idents(object) = "orig.ident"
+U02 <- subset(object,idents = c("Pt-U01","Pt-U02","Pt-U03","Pt-U04")
+FeaturePlot.2(U02,features = c("CRBN","POLR2M"),overlay = T,
+              cols.use = c("gray90","orange","blue","red"))
+FeaturePlot.2(object,features = c("CRBN","POLR2M"),overlay = T,pt.size = 0.3,
+              cols.use = c("gray90","green","blue","red"),do.   )
+FeaturePlot(object,features = c("CRBN","POLR2M"),blend = T,pt.size = 0.3,
+             )

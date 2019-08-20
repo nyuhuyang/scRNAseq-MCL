@@ -16,7 +16,7 @@ print(paste0("slurm_arrayid=",args))
 (load(file = "data/B_cells_MCL_43_20190713.Rda"))
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-(groups = grep("Pt-",df_samples$group,value = T) %>% unique)
+(groups = grep("Normal",df_samples$group,value = T, invert = TRUE) %>% unique)
 sample_n = which(df_samples$group %in% groups[args])
 df_samples = df_samples[sample_n,]
 df_samples
@@ -39,15 +39,19 @@ infercnv_obj = CreateInfercnvObject(raw_counts_matrix = counts,
                             annotations_file=paste0(path,paste(samples,collapse = "_"),"_annotations_file.txt"),
                             delim="\t",
                             gene_order_file="data/gencode_v19_gene_pos.txt",
-                            ref_group_names="Normal")
+                            ref_group_names="Normal",
+                            chr_exclude = "chrM")
 path_infercnv = paste0(path,paste(samples,collapse = "_"),"_infercnv")
 if(!dir.exists(path_infercnv)) dir.create(path_infercnv, recursive = T)
 
 infercnv_obj = infercnv::run(infercnv_obj,
                      cutoff=0.1,
                      out_dir=path_infercnv, 
-                     cluster_by_groups=TRUE,
+                     cluster_by_groups=TRUE, 
                      plot_steps = FALSE,
-                     denoise=T,
-                     HMM=F,
+                     denoise= T,
+                     HMM = T,
+                     tumor_subcluster_partition_method = "random_trees",
+                     num_threads = 8,
+                     tumor_subcluster_pval=0.05,
                      png_res=300)

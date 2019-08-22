@@ -22,7 +22,6 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 #It will also be interesting to check if there is some subtype enriched in young compared to aged or viceversa. 
 
 # 3.1.1 load data
-# Rename ident
 (load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
 # B cells only ================
 Idents(object) <-  "Doublets"
@@ -113,8 +112,9 @@ cowplot::plot_grid(g1+NoLegend(),g2+NoLegend()) +  ggtitle("Rename the clusters"
               plot.title = element_text(hjust = 0.5))
 dev.off()
 
-TSNEPlot.1(B_cells_MCL, pt.size = 0.2,label = F,do.print = T,no.legend = F,
-           label.size = 4, repel = T, title = "5 clusters in B/MCL cells")
+TSNEPlot.1(B_cells_MCL, pt.size = 0.2,label = T, label.repel = T,
+           do.print = F,no.legend = F,border = T,alpha = 1,
+           label.size = 5, repel = T, title = "5 clusters in B/MCL cells")
 save(B_cells_MCL, file = "data/B_cells_MCL_43_20190713.Rda")
 (load(file = "data/B_cells_MCL_43_20190713.Rda"))
 

@@ -54,7 +54,9 @@ for(i in 1:length(clusters)) FgseaBarplot(pathways=allpathways, stats=res, nperm
 FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
              order.by = c(4,"NES"),decreasing = F,
              size = "-log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
-             pathway.name = "Hallmark",rotate.x.text = F)
+             pathway.name = "Hallmark",rotate.x.text = F,
+             font.xtickslab=25, font.main=16,
+             font.legend = list(size = 20),font.label = list(size = 25))
 
 FgseaDotPlot(stats=res, pathways=allpathways, nperm=1000,padj = 0.1,pval = 0.02,
              order.by = c(4,"NES"),decreasing = F,

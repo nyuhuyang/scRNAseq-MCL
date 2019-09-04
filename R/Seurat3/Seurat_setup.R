@@ -132,8 +132,8 @@ dev.off()
 #dev.off()
 
 dim = 75
-object <- FindNeighbors(object, reduction = "pca", dims = 1:dim)
-object <- FindClusters(object, reduction = "pca", resolution = 0.8)
+B_cells_MCL %<>% FindNeighbors(dims = 1:dim)
+B_cells_MCL %<>% FindClusters(resolution = 0.6)
 
 #======1.7 RunHarmony=======================
 object <- RunTSNE(object, reduction = "pca",dims = 1:dim)

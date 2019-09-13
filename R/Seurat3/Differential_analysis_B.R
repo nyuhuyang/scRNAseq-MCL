@@ -313,9 +313,11 @@ df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx",sheet = "heatma
 list_samples <- df2list(df_samples)
 print(list_samples %>% unlist %>% as.vector %>% unique %in% 
               B_cells_MCL@meta.data$orig.ident)
+(block <- VariableFeatures(B_cells_MCL) %>% tail(1))
+markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 
 Idents(B_cells_MCL) = "orig.ident"
-for(i in 1:length(list_samples$MCL.1)){
+for(i in seq_along(list_samples$MCL.1)){
         
         (samples1 = list_samples$MCL.1[i])
         (samples2 = list_samples$MCL.2[i])
@@ -352,7 +354,7 @@ for(i in 1:length(list_samples$MCL.1)){
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
         GC()
         #DoHeatmap.1======
-        Top_n = 20
+        Top_n = 40
         top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>% 
                 top_n(Top_n, avg_logFC) %>% as.data.frame()
         add.genes = unique(c(as.character(top$gene),block,markers))

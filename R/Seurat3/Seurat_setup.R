@@ -31,7 +31,7 @@ df_samples %>% kable() %>% kable_styling()
 samples = sample
 
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "data/sce_36_20190410.Rda"))
+(load(file = "data/sce_43_20190429.Rda"))
 names(sce_list)
 object_list <- lapply(sce_list, as.Seurat)
 
@@ -46,6 +46,7 @@ for(i in 1:length(samples)){
 }
 #========1.3 merge ===================================
 object <- Reduce(function(x, y) merge(x, y, do.normalize = F), object_list)
+object <- CreateSeuratObject(object@assays$RNA@counts)
 remove(sce_list,object_list);GC()
 save(object, file = "data/MCL_36_20190412.Rda")
 #======1.4 mito, QC, filteration =========================

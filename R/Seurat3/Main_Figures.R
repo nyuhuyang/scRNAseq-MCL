@@ -118,14 +118,14 @@ Idents(object) = "orig.ident"
 
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",c(2))
+tests <- paste0("test",c(9))
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])
         samples <- unique(df$sample)
         rownames(df) = samples
         
-        samples <- c(ifelse(length(samples)>5,NA,"Normal"),df$sample[order(df$tsne)])
+        samples <- c("Normal",df$sample[order(df$tsne)])
         print(samples <- samples[!is.na(samples)])
         
         subset_object <- subset(object, idents = samples)
@@ -135,12 +135,13 @@ for(test in tests){
         
         subset_object %<>% sortIdent()
         TSNEPlot.1(subset_object, pt.size =0.3, 
-                   strip.text.size = min(240/max(stringr::str_length(samples)),0),
-                   group.by = "manual",split.by = "orig.ident",legend.size = 15,
+                   strip.text.size = 24,
+                   group.by = "manual",split.by = "orig.ident",legend.size = 22,
                    cols = ExtractMetaColor(subset_object), ncol = length(samples),
-                   unique.name = T, do.print = T,do.return = F,border = T,
-                   width=length(samples)*2.5+2, height=2.5)
+                   unique.name = "groups", do.print = T,do.return = F,border = T,
+                   width=length(samples)*2.5+2, height=3)
 }
+
 
 #==== Figure 3-C ===========
 (load("data/B_cells_MCL_43_20190904.Rda"))

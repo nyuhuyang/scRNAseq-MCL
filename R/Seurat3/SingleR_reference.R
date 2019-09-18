@@ -64,21 +64,28 @@ save(Blueprint_encode,file='../SingleR/data/Blueprint_encode.RData')
 #label <- c("MCL_complete_response", "MCL_partial_response","MCL_progressive")
 #(keep <- bulk_MCL$Sample[bulk_MCL$Label %in% label])
 #MCL_bulk <- X181120_MCL_WTS[,keep]
-MCL_bulk <- read.csv(file="data/RNAseq/MCL_bulk.csv",row.names = 1,
-                     check.names=F) #remove X
+MCL_bulk <- read.csv(file="data/RNAseq/MCL_bulk.csv") #remove X
 
 head(MCL_bulk)
 dim(MCL_bulk)
+table(dup <- duplicated(t(MCL_bulk[1:200,])))
+MCL_bulk <- MCL_bulk[,!dup]
+MCL_bulk <- RemoveDup(MCL_bulk)
 testMMM(MCL_bulk)
 
+B_bulk <- read.csv(file="data/RNAseq/B_bluk.csv") #remove X
+B_bulk <- RemoveDup(B_bulk)
+
+B_MCL_bulk <- merge(log1p(B_bulk),log1p(MCL_bulk),
+                         by="row.names",all=FALSE)
+B_MCL_bulk <- RemoveDup(B_MCL_bulk)
 # merge MCL and Blueprint_encode
 
 (load(file='../SingleR/data/Blueprint_encode.RData'))
 dim(Blueprint_encode$data)
-MCL_blue_encode <- merge(log1p(MCL_bulk),Blueprint_encode$data,
+MCL_blue_encode <- merge(B_MCL_bulk, Blueprint_encode$data,
                          by="row.names",all=FALSE)
-rownames(MCL_blue_encode) = MCL_blue_encode$Row.names
-MCL_blue_encode <- MCL_blue_encode[-which(colnames(MCL_blue_encode)=="Row.names")]
+MCL_blue_encode <- RemoveDup(MCL_blue_encode)
 testMMM(MCL_blue_encode)
 
 colsum <- colSums(MCL_blue_encode)
@@ -95,9 +102,11 @@ dev.off()
 # Create Singler Reference
 ref = CreateSinglerReference(name = 'MCL_blue_encode',
                              expr = as.matrix(MCL_blue_encode), # the expression matrix
-                             types = c(paste0("MCL:",bulk@meta.data[colnames(MCL_bulk),"stage"]),
+                             types = c(rep("B_cells:PB",ncol(B_bulk)),
+                                       rep("MCL",ncol(MCL_bulk)),
                                        Blueprint_encode$types), 
-                             main_types = c(rep("MCL",ncol(MCL_bulk)),
+                             main_types = c(rep("B_cells",ncol(B_bulk)),
+                                            rep("MCL",ncol(MCL_bulk)),
                                             Blueprint_encode$main_types))
 
-save(ref,file='data/ref_MCL_blue_encode_20190315.RData') # it is best to name the object and the file with the same name.
+save(ref,file='data/ref_MCL_blue_encode_20190916.RData') # it is best to name the object and the file with the same name.

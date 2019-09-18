@@ -14,7 +14,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 (load(file = "data/MCL_V3_Harmony_43_20190627.Rda"))
-(load(file="output/singlerT_MCL_43_20190430.Rda"))
+(load(file="output/singlerT_MCL_43_20190916.Rda"))
 
 # if singler didn't find all cell labels
 length(singler$singler[[1]]$SingleR.single$labels) == ncol(object)
@@ -24,20 +24,22 @@ if(length(singler$singler[[1]]$SingleR.single$labels) < ncol(object)){
         object = subset(object, cells = know.cell)
 }
 
-table(names(singler$singler[[1]]$SingleR.single$labels) %in% colnames(object))
+table(rownames(singler$singler[[1]]$SingleR.single$labels) == colnames(object))
 singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
-singler$meta.data$xy = object@reductions$umap@cell.embeddings # the tSNE coordinates
+singler$meta.data$xy = object@reductions$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = Idents(object) # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="output/singlerT_MCL_43_20190430.Rda")
+save(singler,file="output/singlerT_MCL_43_20190916.Rda")
 ##############################
 # add singleR label to Seurat
 ###############################
 
 singlerDF = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$labels,
                        "singler1main" = singler$singler[[1]]$SingleR.single.main$labels,
-                       "orig.ident"  = object$orig.ident,
-                       row.names = colnames(object))
+                       "orig.ident" = gsub("\\_.*","",rownames(singler$singler[[1]]$SingleR.single$labels)),
+                       row.names = rownames(singler$singler[[1]]$SingleR.single$labels))
 head(singlerDF)
+singlerDF = singlerDF[colnames(object),]
+table(rownames(singlerDF) == colnames(object))
 apply(singlerDF,2,function(x) length(unique(x)))
 
 ##############################
@@ -62,6 +64,7 @@ table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>%
 ##############################
 # combine cell types
 singlerDF$singler1sub = gsub("MCL:.*","MCL",singlerDF$singler1sub)
+singlerDF$singler1sub = gsub("B_cells:PB","B_cells:Plasma_cells",singlerDF$singler1sub)
 singlerDF$manual = gsub("B_cells:.*","B_cells",singlerDF$singler1sub)
 singlerDF$manual = gsub("MEP|CLP|HSC|CMP|GMP|MPP","HSC/progenitors",singlerDF$manual)
 singlerDF$manual = gsub("T_cells:CD4\\+_.*","T_cells:CD4+",singlerDF$manual)
@@ -71,24 +74,25 @@ singlerDF$manual = gsub("DC|Macrophages|Macrophages:M1","Myeloid cells",singlerD
 singlerDF$manual = gsub("Erythrocytes","Myeloid cells",singlerDF$manual)
 singlerDF$manual = gsub("Eosinophils|Megakaryocytes|Monocytes","Myeloid cells",singlerDF$manual)
 singlerDF$manual = gsub("Adipocytes|Fibroblasts|mv_Endothelial_cells","Nonhematopoietic cells",singlerDF$manual)
-table(singlerDF$manual) %>% kable() %>% kable_styling()
+table(singlerDF$manual, singlerDF$orig.ident) %>% kable() %>% kable_styling()
 
 # reduce false positive results (B cells are labeled as MCL in normal samples)
 # and false negative results (MCL cells are labeled as B cells in MCL samples)
 # singler1sub false negative results  =========
-singlerDF$CCND1 = FetchData(object,"CCND1")
+CCND1 = FetchData(object,"CCND1")
+singlerDF$CCND1 = CCND1$CCND1
 singlerDF[(singlerDF$CCND1 >0 & singlerDF$manual %in% "B_cells"),"manual"] = "MCL"
-# singler1main false positive results  ========
+# manual false positive results  ========
 table(singlerDF$manual, object@meta.data$orig.ident) %>% kable %>% kable_styling()
-normal_cells <- singlerDF$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
+normal_cells <- object$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
 singlerDF[normal_cells,"manual"] = gsub("MCL","B_cells",
                                               singlerDF[normal_cells,"manual"])
 # singler1sub false positive results  =========
-table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>% kable_styling()
+table(singlerDF$singler1sub, object$orig.ident) %>% kable %>% kable_styling()
 singlerDF[normal_cells,"singler1sub"] = gsub("MCL:.*$","B_cells:Memory",
                                               singlerDF[normal_cells,"singler1sub"])
-table(singlerDF$manual, singlerDF$orig.ident) %>% kable %>% kable_styling()
-table(singlerDF$singler1sub, singlerDF$orig.ident)%>% kable %>% kable_styling()
+table(singlerDF$manual, object$orig.ident) %>% kable %>% kable_styling()
+table(singlerDF$singler1sub, object$orig.ident)%>% kable %>% kable_styling()
 table(singlerDF$manual %>% sort)%>% kable %>% kable_styling()
 table(singlerDF$manual) %>% kable() %>% kable_styling()
 singlerDF = singlerDF[, -5]
@@ -102,14 +106,16 @@ singler_colors2 = as.vector(singler_colors$singler.color2[!is.na(singler_colors$
 singler_colors2[duplicated(singler_colors2)]
 length(singler_colors1);length(singler_colors2)
 apply(singlerDF[,c("singler1sub","manual")],2,function(x) length(unique(x)))
-#singlerDF[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
+singlerDF[,c("singler1sub")] %>% table() %>% kable() %>% kable_styling()
+(remove = c(grep("singler1sub",colnames(object@meta.data))[1], ncol(object@meta.data)))
+object@meta.data = object@meta.data[,-c(remove[1]:remove[2])]
 object <- AddMetaData(object = object,metadata = singlerDF)
 object <- AddMetaColor(object = object, label= "singler1sub", colors = singler_colors1)
 object <- AddMetaColor(object = object, label= "manual", colors = singler_colors2)
 Idents(object) <- "manual"
 
 object %<>% sortIdent
-TSNEPlot.1(object, cols = ExtractMetaColor(object),label = F) + NoLegend()
+TSNEPlot.1(object,cols = ExtractMetaColor(object), label = T, label.repel = T) + NoLegend()
 save(object,file="data/MCL_V3_Harmony_43_20190627.Rda")
 
 ##############################

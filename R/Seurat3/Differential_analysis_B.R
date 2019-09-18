@@ -87,13 +87,11 @@ Idents(B_cells_MCL) <- "res.0.6"
 B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
 TSNEPlot.1(B_cells_MCL, pt.size = 1,label = T,do.print = F,
            label.size = 4, repel = T,title = "all clusters")
-save(B_cells_MCL, file = "data/B_cells_MCL_43_20190904.Rda")
+save(B_cells_MCL, file = "data/B_cells_MCL_43_20190917.Rda")
 
-(load("data/B_cells_MCL_43_20190904.Rda"))
+(load("data/B_cells_MCL_43_20190917.Rda"))
 B_cells_MCL@reductions$tsne@cell.embeddings %<>% .[colnames(B_cells_MCL),]
 meta.data = cbind.data.frame(B_cells_MCL@meta.data, B_cells_MCL@reductions$tsne@cell.embeddings)
-meta.data[(meta.data$tsne_1 > -10) & (meta.data$res.0.6 == 9),"res.0.6"]=21
-meta.data[(meta.data$tsne_1 < -17.5) & (meta.data$res.0.6 == 9),"res.0.6"]=21
 B_cells_MCL@meta.data = meta.data
 Idents(B_cells_MCL) <- "res.0.6"
 #B_cells_MCL %<>% subset(idents = 21, invert = TRUE)
@@ -120,12 +118,12 @@ dev.off()
 TSNEPlot.1(B_cells_MCL, pt.size = 0.2,label = T, label.repel = T,
            do.print = F,no.legend = F,border = T,alpha = 1,
            label.size = 5, repel = T, title = "5 clusters in B/MCL cells")
-save(B_cells_MCL, file = "data/B_cells_MCL_43_20190904.Rda")
-(load(file = "data/B_cells_MCL_43_20190904.Rda"))
+save(B_cells_MCL, file = "data/B_cells_MCL_43_20190917.Rda")
+(load(file = "data/B_cells_MCL_43_20190917.Rda"))
 
 
 ##############
-# DE genes between Clusters 5 cluster top 50
+# DE genes between Clusters 5 cluster top 40
 ###############
 Idents(B_cells_MCL) <- "X5_clusters"
 B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
@@ -150,7 +148,7 @@ DoHeatmap.1(B_cells_MCL, marker_df = X5_clusters_markers, features = markers, To
             title = paste("Top",Top_n,"differentially expressed genes in B and MCL clusters"))
 
 ##############
-# DE genes between Clusters 5 cluster top 50
+# DE genes between Clusters normal and 5 cluster top 40
 ###############
 B_cells_MCL@meta.data$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
 normal <- B_cells_MCL$orig.ident %in% c("BH","DJ","MD","NZ")
@@ -172,17 +170,59 @@ markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SO
 X5_clusters_markers = X5_clusters_normal_markers[-MT_gene,]
 Top_n = 40
 top = X5_clusters_markers %>% group_by(cluster1.vs.cluster2) %>% top_n(Top_n, avg_logFC)
+features = c(as.character(top$gene),
+             tail(VariableFeatures(object = object), 2),
+             markers)
+B_cells_MCL %<>% ScaleData(features=features)
+featuresNum <- make.unique(features, sep = ".")
+
+B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
+
+Idents(B_cells_MCL) = "X5_clusters_normal"
+Idents(B_cells_MCL) %<>% factor(levels = c("Normal",1:5))
+DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
+            do.print=T, angle = 0, group.bar = F, title.size = 0, no.legend = F,size=5,hjust = 0.5,
+            group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
+            pal_gsea = FALSE,
+            title = NULL)
+
+``##############
+# DE genes between Clusters normal B, patient B and 5 MCL clusters top 40
+###############
+B_cells_MCL@meta.data$X5_clusters_normal_B = as.numeric(B_cells_MCL@meta.data$X5_clusters)
+B_patients <- grepl("B_cells",B_cells_MCL$manual)
+B_cells_MCL@meta.data[B_patients,"X5_clusters_normal_B"] = "Patients' B cells"
+normal <- B_cells_MCL$orig.ident %in% c("BH","DJ","MD","NZ")
+B_cells_MCL@meta.data[normal,"X5_clusters_normal_B"] = "Normal"
+Idents(B_cells_MCL) = "X5_clusters_normal_B"
+Idents(B_cells_MCL) %<>% factor(levels = c("Normal","Patients' B cells",1:5))
+table(Idents(B_cells_MCL))
+X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
+                                              logfc.threshold = 0.1,only.pos = T, 
+                                              min.pct = 0.1,return.thresh = 0.05,save.path = path)
+
+write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0.1_markers.csv"))
+
+X5_clusters_normal_markers = read.csv("output/20190904/X5_clusters_normal_FC0.1_markers.csv",row.names = 1)
+#B_cells_MCL %<>% ScaleData()
+
+markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
+(MT_gene <- grep("^MT-",X5_clusters_normal_markers$gene))
+X5_clusters_markers = X5_clusters_normal_markers[-MT_gene,]
+Top_n = 40
+top = X5_clusters_markers %>% group_by(cluster1.vs.cluster2) %>% top_n(Top_n, avg_logFC)
 B_cells_MCL %<>% ScaleData(features=unique(c(as.character(top$gene),markers)))
 featuresNum <- make.unique(c(as.character(top$gene),markers), sep = ".")
 
 B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, top = top, features = markers)
 
-Idents(B_cells_MCL) = "X5_clusters"
 DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-            do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+            do.print=T, angle = 0, group.bar = F, title.size = 0, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
-            title = paste("Top",Top_n,"differentially expressed genes in MCL vs Normal in each cluster"))
+            title = NULL)
+
+
 
 
 # remove cluster with less than 3 cells======

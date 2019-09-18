@@ -42,16 +42,16 @@ Idents(object) = "manual"
 object %<>% sortIdent()
 TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "manual",
            cols = ExtractMetaColor(object),no.legend = F,border = T,
-           pt.size = 0.01,label.size = 5, legend.size = 20, do.print = T,do.return = F,
-           title = "All cell types",title.size = 20,legend.title = "Cell types",
-           units= "cm",width=18, height=10,hjust =0)
+           pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
+           title.size = 20,legend.title = "Cell types",
+           units= "in",width=10, height=7,hjust =0.5)
 
 #==== Figure 2-B ===========
 features <- FilterGenes(object,c("CD19","CCND1","SOX11",
                                  "CD3D","CD4","CD8A",
                                  "MS4A7","CD14","FCGR1A",
                                  "GNLY","KLRC1","NCAM1"))
-FeaturePlot.1(object,features = features, pt.size = 0.03, cols = c("gray90", "red"), alpha = 1,
+FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"), alpha = 1,
               threshold = 1, strip.text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
               units = "in",width=9, height=12, no.legend = T)
 
@@ -82,13 +82,13 @@ featuresNum <- make.unique(c(as.character(top$gene),markers), sep = ".")
 
 B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, top = top, features = markers)
 
-Idents(B_cells_MCL) = "X5_clusters"
+Idents(B_cells_MCL) = "X5_clusters_normal"
+Idents(B_cells_MCL) %<>% factor(levels = c("Normal",1:5))
 DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-            do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-            group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
+            do.print=T, angle = 0, group.bar = F, title.size = 0, no.legend = T,size=5,hjust = 0.5,
+            group.bar.height = 0, label=F, cex.row= 0.5, legend.size = 0,width=2.7, height=1.665,
             pal_gsea = FALSE,
-            title = paste("Top",Top_n,"differentially expressed genes in MCL vs Normal in each cluster"))
-
+            title = NULL)
 #==== Figure 2-E ===========
 res = read.csv(file="output/20190621/X5_clusters_FC0.1_markers.csv",
                row.names = 1, stringsAsFactors=F)
@@ -118,7 +118,7 @@ Idents(object) = "orig.ident"
 
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",c(9))
+tests <- paste0("test",c(2))
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])
@@ -135,11 +135,11 @@ for(test in tests){
         
         subset_object %<>% sortIdent()
         TSNEPlot.1(subset_object, pt.size =0.3, 
-                   strip.text.size = 24,
-                   group.by = "manual",split.by = "orig.ident",legend.size = 22,
+                   strip.text.size = 0,no.legend = T,
+                   group.by = "manual",split.by = "orig.ident",legend.size = 0,
                    cols = ExtractMetaColor(subset_object), ncol = length(samples),
                    unique.name = "groups", do.print = T,do.return = F,border = T,
-                   width=length(samples)*2.5+2, height=3)
+                   width=8.5, height=2)
 }
 
 

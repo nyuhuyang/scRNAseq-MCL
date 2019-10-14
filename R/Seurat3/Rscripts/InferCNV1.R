@@ -36,23 +36,23 @@ write.table(meta.data, file = paste0(path,paste(samples,collapse = "_"),"_annota
     row.names=FALSE,sep="\t", quote = FALSE)
 
 infercnv_obj = CreateInfercnvObject(raw_counts_matrix = counts,
-                            annotations_file=paste0(path,paste(samples,collapse = "_"),"_annotations_file.txt"),
-                            delim="\t",
-                            gene_order_file="data/gencode_v19_gene_pos.txt",
-                            ref_group_names="Normal",
-                            chr_exclude = "chrM")
+                                    annotations_file=paste0(path,paste(samples,collapse = "_"),"_annotations_file.txt"),
+                                    delim="\t",
+                                    gene_order_file="data/gencode_v19_gene_pos.txt",
+                                    ref_group_names="Normal",
+                                    chr_exclude = "chrM")
 path_infercnv = paste0(path,paste(samples,collapse = "_"),"_infercnv")
 if(!dir.exists(path_infercnv)) dir.create(path_infercnv, recursive = T)
 
 infercnv_obj = infercnv::run(infercnv_obj,
-                     cutoff=0.1,
-                     out_dir=path_infercnv, 
-                     cluster_by_groups=TRUE, 
-                     plot_steps = FALSE,
-                     denoise= T,
-                     HMM = T,
-                     analysis_mode = "subclusters",
-                     tumor_subcluster_partition_method = "random_trees",
-                     num_threads = 8,
-                     tumor_subcluster_pval=0.05,
-                     png_res=600)
+                             cutoff=0.1,
+                             out_dir=path_infercnv, 
+                             cluster_by_groups=TRUE, 
+                             plot_steps = FALSE,
+                             denoise= T,
+                             HMM = T,
+                             analysis_mode = "subclusters",
+                             tumor_subcluster_partition_method = "random_trees",
+                             num_threads = 8,
+                             tumor_subcluster_pval=0.05,
+                             png_res=600)

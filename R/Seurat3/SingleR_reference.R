@@ -1,6 +1,10 @@
 ############################################
 # combine hpca and blueprint_encode
 ############################################
+if (!requireNamespace("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
+
+BiocManager::install("SingleR")
 library(SingleR)
 library(genefilter)
 library(dplyr)
@@ -11,8 +15,26 @@ source("R/util.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 ####functions===========
+#remove duplicate rownames with lower rowsumns
+#' @param mat input as data.frame with gene name
+#' @export mat matrix with gene as rownames, no duplicated genes
+RemoveDup <- function(mat){
+    gene_id <- as.matrix(mat[,1])
+    mat <- mat[,-1]
+    if(!is.matrix(mat)) mat <- sapply(mat,as.numeric)
+    rownames(mat) <- 1:nrow(mat)
+    mat[is.na(mat)] = 0
+    mat <- cbind(mat, "rowSums" = rowSums(mat))
+    mat <- mat[order(mat[,"rowSums"],decreasing = T),]
+    gene_id <- gene_id[as.numeric(rownames(mat))]
+    remove_index <- duplicated(gene_id)
+    mat <- mat[!remove_index,]
+    rownames(mat) <- gene_id[!remove_index]
+    return(mat[,-ncol(mat)])
+}
 
-# check blueprint_encode data==============================
+
+# 1. check and filter blueprint_encode data==============================
 data("blueprint_encode")
 names(blueprint_encode)
 dim(blueprint_encode$data)
@@ -25,7 +47,7 @@ head(blueprint_encode$data[,1:5])
 table(is.na(blueprint_encode$data))
 blueprint_encode$data[is.na(blueprint_encode$data)] = 0
 head(colSums(blueprint_encode$data))
-testMMM(blueprint_encode$data)
+#testMMM(blueprint_encode$data)
 #boxplot(blueprint_encode$data, main="blueprint_encode")#slow!
 #boxplot(blueprint_encode$data[,1:100])#slow!
 # remove low quanlity blueprint_encode data
@@ -56,14 +78,7 @@ Blueprint_encode = CreateSinglerReference(name = 'Blueprint_encode',
                                           main_types = main_types)
 save(Blueprint_encode,file='../SingleR/data/Blueprint_encode.RData')
 
-# check MCL data==============================
-#X181120_MCL_WTS <- readxl::read_excel("data/RNAseq/181120 MCL WTS.xlsx", col_names = FALSE)
-#bulk_MCL <- readxl::read_excel("doc/190126_scRNAseq_info.xlsx",sheet = "bulk_MCL") %>% as.data.frame
-#X181120_MCL_WTS <- CleanUp(X181120_MCL_WTS)
-    
-#label <- c("MCL_complete_response", "MCL_partial_response","MCL_progressive")
-#(keep <- bulk_MCL$Sample[bulk_MCL$Label %in% label])
-#MCL_bulk <- X181120_MCL_WTS[,keep]
+# 2. check and prepare MCL data==============================
 MCL_bulk <- read.csv(file="data/RNAseq/MCL_bulk.csv") #remove X
 
 head(MCL_bulk)
@@ -71,7 +86,7 @@ dim(MCL_bulk)
 table(dup <- duplicated(t(MCL_bulk[1:200,])))
 MCL_bulk <- MCL_bulk[,!dup]
 MCL_bulk <- RemoveDup(MCL_bulk)
-testMMM(MCL_bulk)
+#testMMM(MCL_bulk)
 
 B_bulk <- read.csv(file="data/RNAseq/B_bluk.csv") #remove X
 B_bulk <- RemoveDup(B_bulk)
@@ -79,19 +94,20 @@ B_bulk <- RemoveDup(B_bulk)
 B_MCL_bulk <- merge(log1p(B_bulk),log1p(MCL_bulk),
                          by="row.names",all=FALSE)
 B_MCL_bulk <- RemoveDup(B_MCL_bulk)
-# merge MCL and Blueprint_encode
 
+
+# 3. merge MCL and Blueprint_encode =====================
 (load(file='../SingleR/data/Blueprint_encode.RData'))
 dim(Blueprint_encode$data)
 MCL_blue_encode <- merge(B_MCL_bulk, Blueprint_encode$data,
                          by="row.names",all=FALSE)
 MCL_blue_encode <- RemoveDup(MCL_blue_encode)
-testMMM(MCL_blue_encode)
+#testMMM(MCL_blue_encode)
 
 colsum <- colSums(MCL_blue_encode)
 scale_factor = median(colsum)
 MCL_blue_encode = MCL_blue_encode/colsum * scale_factor
-testMMM(MCL_blue_encode)
+#testMMM(MCL_blue_encode)
 
 jpeg(paste0(path,"boxplot_MCL_blue_encode.jpeg"), units="in", width=10, height=7,res=600)
 par(mfrow=c(1,1))

@@ -187,25 +187,6 @@ DoHeatmap.1(Pt_10, features = featuresNum, Top_n = Top_n,
             pal_gsea = FALSE,
             title = paste("Top",Top_n,"differentially expressed genes in MCL vs Normal in each cluster"))
 
-# Extend Data
-Idents(object) = "manual"
-object %<>% sortIdent()
-
-cell_Freq <- table(Idents(object)) %>% as.data.frame
-cell_Freq = cell_Freq[order(cell_Freq$Var1),]
-cell_Freq$col = ExtractMetaColor(object)
-cell_Freq = cell_Freq[order(cell_Freq$Freq,decreasing = T),]
-cell_Freq$Var1 %<>% factor(levels = as.character(cell_Freq$Var1))
-colnames(cell_Freq)[1:2] = c("Cell_Type", "Cell_Number")
-
-jpeg(paste0(path,"cell_type_numbers.jpeg"), units="in", width=10, height=7,res=600)
-ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
-          fill = "Cell_Type", color = "Cell_Type",xlab = "",
-          palette = cell_Freq$col,x.text.angle = 90,
-          title = "Numbers of major cell types in total 43 samples")+NoLegend()+
-        theme(plot.title = element_text(hjust = 0.5,size=15))
-dev.off()
-
 
 #==== Figure 2-C ===========
 (load(file = "data/B_cells_MCL_43_20190713.Rda"))

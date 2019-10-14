@@ -54,4 +54,4 @@ infercnv_obj = infercnv::run(infercnv_obj,
                      tumor_subcluster_partition_method = "random_trees",
                      num_threads = 8,
                      tumor_subcluster_pval=0.05,
-                     png_res=300)
+                     png_res=600)

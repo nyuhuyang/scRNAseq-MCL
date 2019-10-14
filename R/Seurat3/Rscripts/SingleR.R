@@ -1,12 +1,12 @@
 library(SingleR)
 source("../R/SingleR_functions.R")
 source("../R/Seurat3_functions.R")
-path <- paste0("output/",gsub("-","",Sys.Date()),"/")
+path <- paste0("outputw/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.1 Create Singler Object  ==========================================
 (load(file = "data/MCL_V3_Harmony_43_20190627.Rda"))
 object_data <- object@assays$RNA@data
-remove(object); GC()
+remove(object); GC()                                                             
 (load(file = 'data/ref_MCL_blue_encode_20190916.RData'))
 singler <- CreateBigSingleRObject.1(object_data, annot = NULL, project.name="EC-MDL",
                                     N = 5000, min.genes = 200, technology = "10X",

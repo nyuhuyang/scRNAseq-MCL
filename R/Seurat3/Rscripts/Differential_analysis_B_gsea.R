@@ -3,6 +3,8 @@
 #  0 setup environment, install libraries if necessary, load libraries
 # 
 # ######################################################################
+#SBATCH --mem=128G  # memory requested, units available: K,M,G,T
+
 library(Seurat)
 library(dplyr)
 library(MAST)

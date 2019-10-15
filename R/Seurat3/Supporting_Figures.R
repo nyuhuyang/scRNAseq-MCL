@@ -14,7 +14,7 @@ library(tibble)
 library(ggsci)
 library(ggpubr)
 source("../R/Seurat3_functions.R")
-path <- paste0("output/",gsub("-","",Sys.Date()),"/")
+path <- "Yang/Figure 2/Supplementary Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # load data
@@ -33,10 +33,11 @@ cell_Freq$Var1 %<>% factor(levels = as.character(cell_Freq$Var1))
 colnames(cell_Freq)[1:2] = c("Cell_Type", "Cell_Number")
 cell_Freq$Cell_Type %<>% gsub("_"," ",.)
 
-jpeg("Yang/Figure 2/Supplementary/cell_type_numbers.jpeg", units="in", width=6, height=6,res=600)
+jpeg("Yang/Figure 2/Supplementary Figure Sources/cell_type_numbers.jpeg", units="in", width=6, height=6,res=600)
 ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
           fill = "Cell_Type", color = "black",xlab = "",
           palette = cell_Freq$col,x.text.angle = 45,
+          ylab = "Cell Number",
           label = "Percent",
           sort.val = "desc",
           width = 1, size = 0.5,
@@ -45,11 +46,11 @@ ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
 dev.off()
 
 #=======
-QC_list <- read.csv("Yang/Figure 2/Supplementary/QC_list.csv", stringsAsFactors = F)
+QC_list <- read.csv("Yang/Figure 2/Supplementary Figure Sources/QC_list.csv", stringsAsFactors = F)
 jpeg("Yang/Figure 2/Supplementary/mean.Reads.per.Cell.jpeg", units="in", width=5, height=5,res=600)
 ggviolin(QC_list, x = "submitter", y= "mean.Reads.per.Cell",
          title = "Mean reads per cell in each scRNA-seq",
-         xlab = "",ylab = "mean Reads per Cell",
+         xlab = "",ylab = "Mean Reads per Cell",
          add = c("jitter","mean_sd"),
          draw_quantiles = 0.5,
          yscale = "log10")+
@@ -59,7 +60,7 @@ ggviolin(QC_list, x = "submitter", y= "mean.Reads.per.Cell",
 dev.off()
 
 
-jpeg("Yang/Figure 2/Supplementary/UMI.per.Cell.jpeg", units="in", width=5, height=5,res=600)
+jpeg("Yang/Figure 2/Supplementary Figure Sources/UMI.per.Cell.jpeg", units="in", width=5, height=5,res=600)
 ggviolin(QC_list, x = "submitter", y= "median.Transcripts.per.Cell",
          title = "Median transcripts per cell in each scRNA-seq",
          xlab = "",ylab = "Median UMI per Cell",
@@ -71,13 +72,45 @@ ggviolin(QC_list, x = "submitter", y= "median.Transcripts.per.Cell",
               axis.text.x=element_blank())
 dev.off()
 
-jpeg("Yang/Figure 2/Supplementary/cell.number.jpeg", units="in", width=5, height=5,res=600)
+jpeg("Yang/Figure 2/Supplementary Figure Sources/cell.number.jpeg", units="in", width=5, height=5,res=600)
 ggviolin(QC_list, x = "submitter", y= "cell.number",
          title = "Cell number in each scRNA-seq",
-         xlab = "",ylab = "cell number",
+         xlab = "",ylab = "Cell Number",
          add = c("jitter","mean_sd"),
          draw_quantiles = 0.5)+
         theme(plot.title = element_text(hjust = 0.5,size=15),
               axis.title.x=element_blank(),
               axis.text.x=element_blank())
+dev.off()
+
+# ================
+Idents(object) = "orig.ident"
+(mito.features <- grep(pattern = "^MT-", x = rownames(object), value = TRUE))
+object[["percent.mt"]] <- PercentageFeatureSet(object = object, pattern = "^MT-")
+g2 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
+        VlnPlot(object = object, features = features, ncol = 3, pt.size = 0.01)+
+                theme(axis.text.x = element_text(size=8),legend.position="none")
+})
+
+jpeg(paste0(path,"S2_nGene.jpeg"), units="in", width=7, height=5,res=600)
+g2[[1]]+ggtitle("Distribution of Gene Number per Cells")+
+        xlab("scRNA-seq samples")+
+        ylab("Gene Number")+
+        ylim(0,max(object$nGene)+100)+
+        theme(plot.title = element_text(face = 'plain'))
+dev.off()
+
+jpeg(paste0(path,"S2_nUMI.jpeg"), units="in", width=7, height=5,res=600)
+g2[[2]]+ggtitle("Distribution of mRNA Counts per Cells")+
+        xlab("scRNA-seq samples")+
+        ylab("mRNA Counts")+
+        ylim(0,max(object$nUMI)+1000)+
+        theme(plot.title = element_text(face = 'plain'))
+dev.off()
+
+jpeg(paste0(path,"S2_mito.jpeg"), units="in", width=7, height=5,res=600)
+g2[[3]]+ggtitle("Distribution of mitochondrial gene percentage per Cells")+
+        xlab("scRNA-seq samples")+
+        ylab("Mitochondrial gene percentage %")+
+        theme(plot.title = element_text(face = 'plain'))
 dev.off()

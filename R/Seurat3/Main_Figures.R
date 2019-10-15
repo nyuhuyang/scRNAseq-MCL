@@ -13,7 +13,7 @@ library(fgsea)
 library(tibble)
 library(ggsci)
 source("../R/Seurat3_functions.R")
-path <- paste0("output/",gsub("-","",Sys.Date()),"/")
+path <- "Yang/Figure 2/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # load data
@@ -56,46 +56,75 @@ FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "r
               units = "in",width=9, height=12, no.legend = T)
 
 
+#==== Figure 2-C ===========
+(load(file = "data/B_cells_MCL_43_20190917.Rda"))
+chose <- c("Normal","X5_clusters")[1]
+if(chose == "Normal"){
+        B_cells_MCL@meta.data$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
+        normal <- B_cells_MCL$orig.ident %in% c("BH","DJ","MD","NZ")
+        B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"
+        B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
+        Idents(B_cells_MCL) = "X5_clusters_normal"
+        table(Idents(B_cells_MCL))
+        #X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
+        #                                              logfc.threshold = 0.01,only.pos = F, 
+        #                                              min.pct = 0.01,return.thresh = 1,save.path = path)
+        
+        #write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0.01_markers.csv"))
+        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_normal_FC0.01_markers.csv"),
+                                              row.names = 1, stringsAsFactors=F)
+        colnames(X5_clusters_markers)[grep("cluster",colnames(X5_clusters_markers))] = "cluster"
+}
+
+if(chose == "X5_clusters"){
+        Idents(B_cells_MCL) = "X5_clusters"
+        B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
+        #X5_clusters_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
+        #                                              logfc.threshold = 0.01,only.pos = F, 
+        #                                              min.pct = 0.01,return.thresh = 1,save.path = path)
+        
+        #write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.01_markers.csv"))
+        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_FC0.01_markers.csv"),
+                                       row.names = 1, stringsAsFactors=F)
+}
+
+        markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
+        (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
+        X5_clusters_markers = X5_clusters_markers[-MT_gene,]
+        Top_n = 40
+        top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
+        features = c(as.character(top$gene),
+                     tail(VariableFeatures(object = B_cells_MCL), 2),
+                     markers)
+        B_cells_MCL %<>% ScaleData(features=features)
+        featuresNum <- make.unique(features, sep = ".")
+        B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
+        
+        Idents(B_cells_MCL) = ifelse(chose == "Normal","X5_clusters_normal","X5_clusters")
+        Idents(B_cells_MCL) %<>% factor(levels = c(ifelse(chose == "Normal","Normal",""),
+                                                   1:5))
+        DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
+                    do.print=T, angle = 0, group.bar = F, title.size = 0, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
+                    pal_gsea = FALSE,
+                    title = NULL)
+}
+
+
 #==== Figure 2-D ===========
-(load(file = "data/B_cells_MCL_43_20190904.Rda"))
-B_cells_MCL@meta.data$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
-normal <- B_cells_MCL$orig.ident %in% c("BH","DJ","MD","NZ")
-B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"
-B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
-Idents(B_cells_MCL) = "X5_clusters_normal"
-table(Idents(B_cells_MCL))
-X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
-                                              logfc.threshold = 0.1,only.pos = T, 
-                                              min.pct = 0.1,return.thresh = 0.05,save.path = path)
+chose <- c("Normal","X5_clusters")[2]
+if(chose == "Normal"){
+        res = read.csv(file=paste0(path,"X5_clusters_normal_FC0.01_markers.csv"),
+                       row.names = 1, stringsAsFactors=F)
+        table(res$cluster1.vs.cluster2)
+        res$cluster1.vs.cluster2 = gsub(" vs.Normal","",res$cluster1.vs.cluster2)
+}
+if(chose == "X5_clusters"){
+        res = read.csv(file=paste0(path,"X5_clusters_FC0.01_markers.csv"),
+                       row.names = 1, stringsAsFactors=F)
+        table(res$cluster)
+}
 
-write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0.1_markers.csv"))
-
-X5_clusters_normal_markers = read.csv("output/20190904/X5_clusters_normal_FC0.1_markers.csv",
-                                      row.names = 1,, stringsAsFactors=F)
-markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
-(MT_gene <- grep("^MT-",X5_clusters_normal_markers$gene))
-X5_clusters_markers = X5_clusters_normal_markers[-MT_gene,]
-Top_n = 40
-top = X5_clusters_markers %>% group_by(cluster1.vs.cluster2) %>% top_n(Top_n, avg_logFC)
-B_cells_MCL %<>% ScaleData(features=unique(c(as.character(top$gene),markers)))
-featuresNum <- make.unique(c(as.character(top$gene),markers), sep = ".")
-
-B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, top = top, features = markers)
-
-Idents(B_cells_MCL) = "X5_clusters_normal"
-Idents(B_cells_MCL) %<>% factor(levels = c("Normal",1:5))
-DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-            do.print=T, angle = 0, group.bar = F, title.size = 0, no.legend = T,size=5,hjust = 0.5,
-            group.bar.height = 0, label=F, cex.row= 0.5, legend.size = 0,width=2.7, height=1.665,
-            pal_gsea = FALSE,
-            title = NULL)
-#==== Figure 2-E ===========
-res = read.csv(file="output/20190621/X5_clusters_FC0.1_markers.csv",
-               row.names = 1, stringsAsFactors=F)
-res = read.csv("output/20190904/X5_clusters_normal_FC0.1_markers.csv",row.names = 1, stringsAsFactors=F)
-
-table(res$cluster1.vs.cluster2)
-res$cluster1.vs.cluster2 = gsub(" vs.Normal","",res$cluster1.vs.cluster2)
 head(res)
 res = res[order(res["p_val_adj"]),]
 head(res, 20)
@@ -106,8 +135,10 @@ names(hallmark) = gsub("\\_"," ",names(hallmark))
 
 FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
              order.by = c(4,"NES"),decreasing = F,
-             size = "-log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
-             pathway.name = "Hallmark",rotate.x.text = F)
+             size = "-log10(pval)", fill = "NES",sample = "B_MCL clusters", 
+             pathway.name = "Hallmark",rotate.x.text = F,
+             font.ytickslab = 13,font.xtickslab = 15,hjust = 1,
+             width=6.5, height=7)
 
 
 #==== Figure 2-G ===========

@@ -1,3 +1,145 @@
+add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10, 
+                             bp_tolerance = 2e+06) 
+{
+    lfiles <- list.files(infercnv_output_path, full.names = FALSE)
+    if (!file.exists(paste(infercnv_output_path, "run.final.infercnv_obj", 
+                           sep = .Platform$file.sep))) {
+        flog.warn(sprintf("::Could not find \"run.final.infercnv_obj\" file at: %s", 
+                          paste(infercnv_output_path, "run.final.infercnv_obj", 
+                                sep = .Platform$file.sep)))
+        stop()
+    }
+    infercnv_obj = readRDS(paste(infercnv_output_path, "run.final.infercnv_obj", 
+                                 sep = .Platform$file.sep))
+    if (is.null(seurat_obj)) {
+        flog.info("No Seurat object provided, will only write metadata matrix.")
+    } else if (!(setequal(row.names(seurat_obj@meta.data), colnames(infercnv_obj@expr.data)) || 
+               setequal(colnames(seurat_obj@assays$RNA), colnames(infercnv_obj@expr.data)))) {
+        flog.warn("::Cell names in Seurat object and infercnv results do not match")
+        stop()
+    }
+    analysis_mode_pattern = "rand_trees.hmm_mode-subclusters"
+    if (!is.null(infercnv_obj@options$analysis_mode)) {
+        analysis_mode_pattern = gsub("[\"]", "", infercnv_obj@options$analysis_mode)
+    }
+    if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMM.*", 
+                                          analysis_mode_pattern, ".Pnorm_0.[0-9]+")))) {
+        scaling_factor = 1
+        if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMMi6.*", 
+                                              analysis_mode_pattern, ".Pnorm_0.[0-9]+")))) {
+            center_state = 1
+        }
+        else if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMMi3.*", 
+                                                   analysis_mode_pattern, ".Pnorm_0.[0-9]+")))) {
+            center_state = 1
+        }
+        else {
+            flog.warn("::Found filtered HMM predictions output, but they do not match any known model type.")
+            stop()
+        }
+        regions = read.table(paste(infercnv_output_path, sort(lfiles[grep(lfiles, 
+                                                                          pattern = paste0("HMM_CNV_predictions.HMMi[36].*", 
+                                                                                           analysis_mode_pattern, ".Pnorm_0.[0-9]+.pred_cnv_regions.dat"))])[1], 
+                                   sep = .Platform$file.sep), sep = "\t", header = TRUE, 
+                             check.names = FALSE)
+        hmm_genes = read.table(paste(infercnv_output_path, sort(lfiles[grep(lfiles, 
+                                                                            pattern = paste0("HMM_CNV_predictions.HMMi[36].*", 
+                                                                                             analysis_mode_pattern, ".Pnorm_0.[0-9]+.pred_cnv_genes.dat"))])[1], 
+                                     sep = .Platform$file.sep), sep = "\t", header = TRUE, 
+                               check.names = FALSE)
+    } else if (any(grep(lfiles, pattern = paste0("17_HMM_predHMM.*", 
+                                               analysis_mode_pattern)))) {
+        scaling_factor = 2
+        if (any(grep(lfiles, pattern = paste0("17_HMM_predHMMi6.*", 
+                                              analysis_mode_pattern)))) {
+            center_state = 3
+        }
+        else if (any(grep(lfiles, pattern = paste0("17_HMM_predHMMi3.*", 
+                                                   analysis_mode_pattern)))) {
+            center_state = 2
+        }
+        else {
+            flog.warn("::Found HMM predictions output, but they do not match any known model type")
+            stop()
+        }
+        regions = read.table(paste(infercnv_output_path, lfiles[grep(lfiles, 
+                                                                     pattern = paste0("17_HMM_predHMMi[36].*", analysis_mode_pattern, 
+                                                                                      ".pred_cnv_regions.dat"))][1], sep = .Platform$file.sep), 
+                             sep = "\t", header = TRUE, check.names = FALSE)
+        hmm_genes = read.table(paste(infercnv_output_path, lfiles[grep(lfiles, 
+                                                                       pattern = paste0("17_HMM_predHMMi[36].*", analysis_mode_pattern, 
+                                                                                        ".pred_cnv_genes.dat"))][1], sep = .Platform$file.sep), 
+                               sep = "\t", header = TRUE, check.names = FALSE)
+    } else {
+        flog.warn(sprintf("::Could not find any HMM predictions outputs at: %s", 
+                          infercnv_output_path))
+        stop()
+    }
+    features_to_add <- infercnv:::.get_features(infercnv_obj = infercnv_obj, 
+                                     infercnv_output_path = infercnv_output_path, regions = regions, 
+                                     hmm_genes = hmm_genes, center_state = center_state, 
+                                     scaling_factor = scaling_factor, top_n = top_n, bp_tolerance = bp_tolerance)
+    if (!is.null(seurat_obj)) {
+        for (lv in levels(infercnv_obj@gene_order$chr)) {
+            seurat_obj@meta.data[[paste0("has_cnv_", lv)]] = features_to_add$feature_vector_chrs_has_cnv[[lv]]
+            seurat_obj@meta.data[[paste0("has_loss_", lv)]] = features_to_add$feature_vector_chrs_has_loss[[lv]]
+            seurat_obj@meta.data[[paste0("has_dupli_", lv)]] = features_to_add$feature_vector_chrs_has_dupli[[lv]]
+            seurat_obj@meta.data[[paste0("proportion_cnv_", 
+                                         lv)]] = features_to_add$feature_vector_chrs_gene_cnv_proportion[[lv]]
+            seurat_obj@meta.data[[paste0("proportion_loss_", 
+                                         lv)]] = features_to_add$feature_vector_chrs_gene_loss_proportion[[lv]]
+            seurat_obj@meta.data[[paste0("proportion_dupli_", 
+                                         lv)]] = features_to_add$feature_vector_chrs_gene_dupli_proportion[[lv]]
+            seurat_obj@meta.data[[paste0("proportion_scaled_cnv_", 
+                                         lv)]] = features_to_add$feature_vector_chrs_gene_cnv_proportion_scaled[[lv]]
+            seurat_obj@meta.data[[paste0("proportion_scaled_loss_", 
+                                         lv)]] = features_to_add$feature_vector_chrs_gene_loss_proportion_scaled[[lv]]
+            seurat_obj@meta.data[[paste0("proportion_scaled_dupli_", 
+                                         lv)]] = features_to_add$feature_vector_chrs_gene_dupli_proportion_scaled[[lv]]
+        }
+        for (n in names(features_to_add)[grep(names(features_to_add), 
+                                              pattern = "top_")]) {
+            seurat_obj@meta.data[[n]] = features_to_add[[n]]
+        }
+    }
+    out_mat = matrix(NA, ncol = ((9 * length(levels(infercnv_obj@gene_order$chr))) + 
+                                     length(features_to_add) - 9), nrow = ncol(infercnv_obj@expr.data))
+    out_mat_feature_names = vector("character", ((9 * length(levels(infercnv_obj@gene_order$chr))) + 
+                                                     length(features_to_add) - 9))
+    i = 1
+    for (lv in levels(infercnv_obj@gene_order$chr)) {
+        out_mat[, i] = features_to_add$feature_vector_chrs_has_cnv[[lv]]
+        out_mat[, i + 1] = features_to_add$feature_vector_chrs_has_loss[[lv]]
+        out_mat[, i + 2] = features_to_add$feature_vector_chrs_has_dupli[[lv]]
+        out_mat[, i + 3] = features_to_add$feature_vector_chrs_gene_cnv_proportion[[lv]]
+        out_mat[, i + 4] = features_to_add$feature_vector_chrs_gene_loss_proportion[[lv]]
+        out_mat[, i + 5] = features_to_add$feature_vector_chrs_gene_dupli_proportion[[lv]]
+        out_mat[, i + 6] = features_to_add$feature_vector_chrs_gene_cnv_proportion_scaled[[lv]]
+        out_mat[, i + 7] = features_to_add$feature_vector_chrs_gene_loss_proportion_scaled[[lv]]
+        out_mat[, i + 8] = features_to_add$feature_vector_chrs_gene_dupli_proportion_scaled[[lv]]
+        out_mat_feature_names[i:(i + 8)] = c(paste0("has_cnv_", 
+                                                    lv), paste0("has_loss_", lv), paste0("has_dupli_", 
+                                                                                         lv), paste0("proportion_cnv_", lv), paste0("proportion_loss_", 
+                                                                                                                                    lv), paste0("proportion_dupli_", lv), paste0("proportion_scaled_cnv_", 
+                                                                                                                                                                                 lv), paste0("proportion_scaled_loss_", lv), paste0("proportion_scaled_dupli_", 
+                                                                                                                                                                                                                                    lv))
+        i = i + 9
+    }
+    for (n in names(features_to_add)[grep(names(features_to_add), 
+                                          pattern = "top_")]) {
+        out_mat[, i] = features_to_add[[n]]
+        out_mat_feature_names[i] = n
+        i = i + 1
+    }
+    colnames(out_mat) = out_mat_feature_names
+    row.names(out_mat) = colnames(infercnv_obj@expr.data)
+    write.table(out_mat, paste(infercnv_output_path, "map_metadata_from_infercnv.txt", 
+                               sep = .Platform$file.sep), quote = FALSE, sep = "\t")
+    return(seurat_obj)
+}
+
+
+
 
 #remove NA columns and NA rows, remove duplicate Gene_name
 CleanUp <- function(df){

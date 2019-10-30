@@ -18,6 +18,22 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # load data
 (load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
+
+# UMAP
+object %<>% RunUMAP(reduction = "harmony", dims = 1:75, do.fast = TRUE)
+object@reductions$umap@cell.embeddings[,1:2] = object@reductions$umap@cell.embeddings[,2:1]
+
+UMAPPlot.1(object = object, label = F, label.repel = F, group.by = "manual",
+           cols = ExtractMetaColor(object),no.legend = F,
+           pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
+           title.size = 20,title = "Cell types",
+           units= "in",width=10, height=7,hjust =0.5)
+UMAPPlot.1(object = object, label = T, label.repel = T, group.by = "res.0.6",
+           ,no.legend = T,
+           pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
+           title.size = 20,title = "All clusters",
+           units= "in",width=10, height=7,hjust =0.5)
+
 # preprocess
 Idents(object) = "Doublets"
 object %<>% subset(idents = "Singlet")
@@ -66,11 +82,11 @@ if(chose == "Normal"){
         B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
         Idents(B_cells_MCL) = "X5_clusters_normal"
         table(Idents(B_cells_MCL))
-        #X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
-        #                                              logfc.threshold = 0.01,only.pos = F, 
-        #                                              min.pct = 0.01,return.thresh = 1,save.path = path)
+        X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
+                                                      logfc.threshold = 0.01,only.pos = F,
+                                                      min.pct = 0.01,return.thresh = 1,save.path = path)
         
-        #write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0.01_markers.csv"))
+        write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0.01_markers.csv"))
         X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_normal_FC0.01_markers.csv"),
                                               row.names = 1, stringsAsFactors=F)
         colnames(X5_clusters_markers)[grep("cluster",colnames(X5_clusters_markers))] = "cluster"

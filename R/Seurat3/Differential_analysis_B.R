@@ -298,15 +298,26 @@ write.csv(B_cells_MCL_exp,paste0(path,"B_MCL_exp.csv"))
 ###############################
 # Doheatmap for Normal / MCL
 ###############################
-df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx",sheet = "heatmap")
+(load(file = "data/B_cells_MCL_43_20190917.Rda"))
+B_cells_MCL@assays$RNA@scale.data = matrix(0,0,0);GC()
+B_cells_MCL@meta.data$old.ident = B_cells_MCL@meta.data$orig.ident
+B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
+B_cells_MCL@meta.data$X5_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
+                                            B_cells_MCL@meta.data$X5_clusters, sep = "_")
+B_cells_MCL@meta.data$X5_orig.ident = gsub('^Normal_.*', 'Normal', B_cells_MCL@meta.data$X5_orig.ident)
+
+table(B_cells_MCL@meta.data$X5_orig.ident)
+Idents(B_cells_MCL) <- "X5_orig.ident"
+
+df_samples <- readxl::read_excel("doc/191001_scRNAseq_info.xlsx",sheet = "heatmap")
 list_samples <- df2list(df_samples)
 all(list_samples %>% unlist %>% as.vector %>% unique %in% 
               B_cells_MCL@meta.data$orig.ident)
 
 Idents(B_cells_MCL) = "orig.ident"
-markers <- FilterGenes(B_cells_MCL,c("CCND1","CDK4","RB1","CD19","SOX11","CD5","CD3D","CD8A"))
-(block <- VariableFeatures(B_cells_MCL) %>% tail(1))
-for(sample in list_samples$MCL){
+markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
+(block <- VariableFeatures(B_cells_MCL) %>% tail(2))
+for(sample in list_samples$MCL[1:2]){
         subset.MCL <- subset(B_cells_MCL, idents = c("Normal",sample))
 
         # SplitTSNEPlot======
@@ -328,12 +339,14 @@ for(sample in list_samples$MCL){
 
         # FindAllMarkers.UMI======
 
-        #gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
-        #                               ident.2 = c(ident.2,ident.1), only.pos = T,
-        #                               logfc.threshold = 0.1,min.cells.group =3,
-        #                               min.pct = 0.1,return.thresh = 0.05,
-        #                               save.files = FALSE)
-        #write.csv(gde.markers, paste0(path,"Normal_vs_",sample,".csv"))
+        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
+                                       ident.2 = c(ident.2,ident.1), only.pos = T,
+                                       logfc.threshold = 0.1,min.cells.group =3,
+                                       min.pct = 0.1,return.thresh = 0.05,
+                                       save.files = T,
+                                       save.path = paste0(path,"Normal_",sample,"/"))
+        write.csv(gde.markers, paste0(path,"Normal_vs_",sample,".csv"))
+        
         gde.markers = read.csv(paste0(path,"Normal_vs_",sample,".csv"),row.names = 1)
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
@@ -349,8 +362,8 @@ for(sample in list_samples$MCL){
         featuresNum <- make.unique(features, sep = ".")
         subset.MCL %<>% MakeUniqueGenes(features = features)
         DoHeatmap.1(subset.MCL, features = featuresNum,
-                    Top_n = Top_n, do.print=T, angle = 90,
-                    group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    Top_n = Top_n, do.print=T, angle = 0,
+                    group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
                     group.bar.height = 0,label=T, cex.row= 500/length(featuresNum), legend.size = 0,
                     width=10, height=6.5,unique.name = "orig.ident", pal_gsea = F,
                     title = paste("Top",Top_n,"DE genes in",sample,"/Normal B and MCL cells"))
@@ -359,7 +372,7 @@ for(sample in list_samples$MCL){
 
 
 # Doheatmap for MCL.1 / MCL.2 ================
-df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx",sheet = "heatmap")
+df_samples <- readxl::read_excel("doc/191001_scRNAseq_info.xlsx",sheet = "heatmap")
 list_samples <- df2list(df_samples)
 print(list_samples %>% unlist %>% as.vector %>% unique %in% 
               B_cells_MCL@meta.data$orig.ident)
@@ -367,7 +380,7 @@ print(list_samples %>% unlist %>% as.vector %>% unique %in%
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 
 Idents(B_cells_MCL) = "orig.ident"
-for(i in 2){
+for(i in 1:2){
         
         (samples1 = list_samples$MCL.1[i])
         (samples2 = list_samples$MCL.2[i])
@@ -389,15 +402,16 @@ for(i in 2){
         subset.MCL <- subset(subset.MCL, idents = keep.MCL)
         
         Idents(subset.MCL) %<>% factor(levels = c(ident.1,ident.2))
-        TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = T,
-                   do.print = F, unique.name = T)
+        #TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,do.return = T,
+        #           do.print = F, unique.name = T)
 
-        #gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2), 
-        #                               ident.2 = c(ident.2,ident.1), only.pos = T,
-        #                              logfc.threshold = 0.1,min.cells.group =3,
-        #                               min.pct = 0.1,return.thresh = 0.05,
-        #                               save.files = FALSE)
-        #write.csv(gde.markers, paste0(path,samples1,"_vs_",samples2,".csv"))
+        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
+                                       ident.2 = c(ident.2,ident.1), only.pos = T,
+                                       logfc.threshold = 0.1,min.cells.group =3,
+                                       min.pct = 0.1,return.thresh = 0.05,
+                                       save.files = T,
+                                       save.path = paste0(path,samples2,"_",samples1,"/"))
+        write.csv(gde.markers, paste0(path,samples1,"_vs_",samples2,".csv"))
         gde.markers = read.csv(paste0(path,samples1,"_vs_",samples2,".csv"),row.names = 1)
         print(table(gde.markers$cluster1.vs.cluster2))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))

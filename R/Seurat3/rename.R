@@ -20,16 +20,15 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # Rename ident
 (load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
 
-df_samples <- readxl::read_excel("doc/190429_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/191030_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples = df_samples[sample_n,]
 
+table(object@meta.data$orig.ident)
 
 object@meta.data$orig.ident %<>% plyr::mapvalues(from = unique(df_samples$sample),
                                                to = unique(df_samples$publication.id))
-object@meta.data$groups %<>% plyr::mapvalues(from = unique(df_samples$group),
-                                               to = unique(df_samples$group.id))
 NewNames = paste0(object@meta.data$orig.ident,"_",object@meta.data$Barcode)
 object %<>% RenameCells(new.names = NewNames)
 rownames(object@reductions$tsne@cell.embeddings) = colnames(object)
@@ -40,7 +39,7 @@ table(Idents(object))
 object %<>% sortIdent(numeric = T)
 
 TSNEPlot.1(object)
-save(object, file = "data/MCL_V3_Harmony_43_20190627.Rda")
+save(object, file = "data/MCL_V3_Harmony_43_20191030.Rda")
 
 
 files <- list.files(path)

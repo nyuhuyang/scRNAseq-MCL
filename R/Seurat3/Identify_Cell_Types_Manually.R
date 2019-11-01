@@ -67,7 +67,7 @@ for(s in samples){
         # FeaturePlot.2
         g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
                            overlay = T,cols = c("#d8d8d8",cols.use.list[[i]]),
-                           pt.size = c(1,3), alpha = c(0.5, 1))
+                           pt.size = 2, alpha = 0.75)
         jpeg(paste0(s_path,s,"_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
              units="in", width=7, height=7,res=600)
         print(g+theme(plot.title = element_text(hjust = 0.5,size = 20),

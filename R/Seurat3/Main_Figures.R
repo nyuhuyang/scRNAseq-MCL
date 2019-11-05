@@ -19,20 +19,25 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # load data
 (load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
 
-# UMAP
-object %<>% RunUMAP(reduction = "harmony", dims = 1:75, do.fast = TRUE)
-object@reductions$umap@cell.embeddings[,1:2] = object@reductions$umap@cell.embeddings[,2:1]
 
-UMAPPlot.1(object = object, label = F, label.repel = F, group.by = "manual",
-           cols = ExtractMetaColor(object),no.legend = F,
-           pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
-           title.size = 20,title = "Cell types",
-           units= "in",width=10, height=7,hjust =0.5)
-UMAPPlot.1(object = object, label = T, label.repel = T, group.by = "res.0.6",
-           ,no.legend = T,
-           pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
-           title.size = 20,title = "All clusters",
-           units= "in",width=10, height=7,hjust =0.5)
+df_samples <- readxl::read_excel("doc/191030_scRNAseq_info.xlsx")
+colnames(df_samples) <- colnames(df_samples) %>% tolower
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
+df_samples = df_samples[sample_n,]
+
+object@meta.data$orig.ident %<>% plyr::mapvalues(from = unique(df_samples$sample),
+                                                      to = unique(df_samples$publication.id))
+table(object@meta.data$orig.ident)
+NewNames = paste0(object@meta.data$orig.ident,"_",object@meta.data$Barcode)
+object %<>% RenameCells(new.names = NewNames)
+rownames(object@reductions$tsne@cell.embeddings) = colnames(object)
+
+Idents(object) = "groups"
+object %<>% subset(idents = c("AFT-03","AFT-04"),invert = T)
+Idents(object) = "orig.ident"
+(samples = df_samples$publication.id[df_samples$publication.id %in% object$orig.ident])
+Idents(object) %<>% factor(levels = samples)
+table(Idents(object))
 
 # preprocess
 Idents(object) = "Doublets"
@@ -74,11 +79,22 @@ FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "r
 
 #==== Figure 2-C ===========
 (load(file = "data/B_cells_MCL_43_20190917.Rda"))
-chose <- c("Normal","X5_clusters")[1]
+
+B_cells_MCL@meta.data$orig.ident %<>% plyr::mapvalues(from = unique(df_samples$sample),
+                                                 to = unique(df_samples$publication.id))
+table(B_cells_MCL@meta.data$orig.ident)
+NewNames = paste0(B_cells_MCL@meta.data$orig.ident,"_",B_cells_MCL@meta.data$Barcode)
+B_cells_MCL %<>% RenameCells(new.names = NewNames)
+rownames(B_cells_MCL@reductions$tsne@cell.embeddings) = colnames(B_cells_MCL)
+
+Idents(B_cells_MCL) = "orig.ident"
+(samples = df_samples$publication.id[df_samples$publication.id %in% B_cells_MCL$orig.ident])
+B_cells_MCL %<>% subset(idents = samples)
+chose <- c("Normal","X5_clusters")[2]
 if(chose == "Normal"){
         B_cells_MCL@meta.data$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
-        normal <- B_cells_MCL$orig.ident %in% c("BH","DJ","MD","NZ")
-        B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"
+        B_cells_MCL@meta.data$orig.ident = gsub("N02|N01|N03|N04","Normal",B_cells_MCL@meta.data$orig.ident)
+        Idents(B_cells_MCL) = "X5_clusters"
         B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
         Idents(B_cells_MCL) = "X5_clusters_normal"
         table(Idents(B_cells_MCL))
@@ -95,11 +111,11 @@ if(chose == "Normal"){
 if(chose == "X5_clusters"){
         Idents(B_cells_MCL) = "X5_clusters"
         B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
-        #X5_clusters_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
-        #                                              logfc.threshold = 0.01,only.pos = F, 
-        #                                              min.pct = 0.01,return.thresh = 1,save.path = path)
+        X5_clusters_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
+                                                      logfc.threshold = 0.01,only.pos = F, 
+                                                      min.pct = 0.01,return.thresh = 1,save.path = path)
         
-        #write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.01_markers.csv"))
+        write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.01_markers.csv"))
         X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_FC0.01_markers.csv"),
                                        row.names = 1, stringsAsFactors=F)
 }
@@ -159,20 +175,20 @@ FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
 
 #==== Figure 2-G ===========
 table(Idents(object))
-object@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",object@meta.data$orig.ident)
+object@meta.data$orig.ident = gsub("N02|N01|N03|N04","Normal",object@meta.data$orig.ident)
 Idents(object) = "orig.ident"
 
 
-df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/191030_scRNAseq_info.xlsx")
 colnames(df_samples) <- tolower(colnames(df_samples))
-tests <- paste0("test",c(2))
+tests <- paste0("test",c(9))
 for(test in tests){
         sample_n = which(df_samples$tests %in% test)
         df <- as.data.frame(df_samples[sample_n,])
-        samples <- unique(df$sample)
+        (samples <- unique(df$publication.id))
         rownames(df) = samples
         
-        samples <- c("Normal",df$sample[order(df$tsne)])
+        samples <- c(df$publication.id[order(df$tsne)])
         print(samples <- samples[!is.na(samples)])
         
         subset_object <- subset(object, idents = samples)
@@ -182,7 +198,7 @@ for(test in tests){
         
         subset_object %<>% sortIdent()
         TSNEPlot.1(subset_object, pt.size =0.3, 
-                   strip.text.size = 0,no.legend = T,
+                   strip.text.size = 14,no.legend = T,
                    group.by = "manual",split.by = "orig.ident",legend.size = 0,
                    cols = ExtractMetaColor(subset_object), ncol = length(samples),
                    unique.name = "groups", do.print = T,do.return = F,border = T,
@@ -191,8 +207,8 @@ for(test in tests){
 
 
 #==== Figure 3-C ===========
-(load("data/B_cells_MCL_43_20190904.Rda"))
-B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
+#(load("data/B_cells_MCL_43_20190904.Rda"))
+#B_cells_MCL@meta.data$orig.ident = gsub("N02|N01|N03|N04","Normal",B_cells_MCL@meta.data$orig.ident)
 B_cells_MCL@meta.data$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
 normal <- B_cells_MCL$orig.ident %in% "Normal"
 B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"

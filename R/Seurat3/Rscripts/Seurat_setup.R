@@ -20,7 +20,7 @@ if(!dir.exists("doc")) dir.create("doc")
 # ######################################################################
 #======1.1 Setup the Seurat objects =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/191001_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/191030_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 df_samples = df_samples[sample_n,]
@@ -36,10 +36,9 @@ for(i in 1:length(samples)){
         object_list[[i]]@meta.data$tests <- df_samples$tests[i]
         object_list[[i]]@meta.data$conditions <- df_samples$conditions[i]
         object_list[[i]]@meta.data$projects <- df_samples$project[i]
-        object_list[[i]]@meta.data$groups <- df_samples$group[i]
+        object_list[[i]]@meta.data$groups <- df_samples$groups[i]
         object_list[[i]]@meta.data$tissues <- df_samples$tissue[i]
         object_list[[i]]@meta.data$tsne <- df_samples$tsne[i]
-        
 }
 #========1.3 merge ===================================
 object <- Reduce(function(x, y) merge(x, y, do.normalize = F), object_list)
@@ -85,9 +84,9 @@ object@assays$RNA@scale.data = matrix(0,0,0)
 object@meta.data$orig.ident %<>% as.factor()
 object@meta.data$orig.ident %<>% factor(levels = df_samples$sample)
 p0 <- TSNEPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,legend.size = 15,
-                 do.return = T,no.legend = F,label.size = 4, repel = T, title = "Original")
+                 do.return = T,no.legend = T,label.size = 4, repel = T, title = "Original")
 p1 <- UMAPPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,legend.size = 15,
-                 no.legend = F,label.size = 4, repel = T, title = "Original")
+                 no.legend = T,label.size = 4, repel = T, title = "Original")
 
 
 #======1.6 Performing SCTransform and integration =========================
@@ -156,8 +155,6 @@ UMAPPlot.1(object = object, label = T,label.repel = T, group.by = "integrated_sn
 
 object@assays$RNA@scale.data = matrix(0,0,0)
 object@assays$integrated@scale.data = matrix(0,0,0)
-save(object, file = "data/MCL_48_20191022.Rda")
+save(object, file = "data/MCL_48_20191104.Rda")
 
-object_data = object@assays$SCT@data
-save(object_data, file = "data/MCL_data_48_20191022.Rda")
-
+format(object.size(object),unit = "GB")

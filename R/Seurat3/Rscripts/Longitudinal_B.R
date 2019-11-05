@@ -41,20 +41,27 @@ B_cells_MCL %<>% subset(idents = "Pt-25")
 ###############
 Idents(B_cells_MCL) <- "X5_clusters"
 B_cells_MCL %<>% subset(idents = args)
-
-B_cells_MCL@meta.data$orig.ident %<>% factor(levels = c("Pt25_SB1", "Pt25_1","Pt25_1_8",
-                                                        "Pt25_24","Pt25_25","Pt25_AMB25"))
+(category = rev(c("Pt25_SB1", "Pt25_1","Pt25_1_8","Pt25_24","Pt25_25","Pt25_AMB25")))
+B_cells_MCL@meta.data$orig.ident %<>% factor(levels = category)
 Idents(B_cells_MCL) = "orig.ident"
 table(Idents(B_cells_MCL))
 X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.01,only.pos = FALSE, 
                                           min.pct = 0.1,return.thresh = 1)
 write.csv(X5_clusters_markers,paste0(path,"Pt-25_Clusters_",args,"_FC0.01_markers.csv"))
 
+X5_clusters_markers = read.csv(paste0("Yang/B_longitudinal_heatmap/DE_analysis_files/Pt-25_Clusters_",
+                                      args,"_FC0.01_markers.csv"),
+                               row.names = 1, stringsAsFactors = F)
 
+DT = data.frame(category = category,
+                int = 1:length(category),
+                stringsAsFactors = F)
+X5_clusters_markers = left_join(X5_clusters_markers, DT, by = c("cluster" = "category"))
+X5_clusters_markers = X5_clusters_markers[order(X5_clusters_markers$int),]
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
 X5_clusters_markers = X5_clusters_markers[-MT_gene,]
-Top_n = 30
+Top_n = 40
 top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
 features = c(as.character(top$gene),
              tail(VariableFeatures(object = B_cells_MCL), 2),
@@ -66,4 +73,4 @@ DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
             do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
-            title = paste("Top",Top_n,"DE genes in Longtitudinal Pt25 cluster",args))
+            title = paste("Top",Top_n,"DE genes in Longtitudinal Pt25 in cluster",args))

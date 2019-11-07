@@ -1,6 +1,6 @@
 ########################################################################
 #
-#  0 setup environment, install libraries if necessary, load libraries
+#  07 setup environment, install libraries if necessary, load libraries
 # 
 # ######################################################################
 library(Seurat)
@@ -33,11 +33,11 @@ object %<>% RenameCells(new.names = NewNames)
 rownames(object@reductions$tsne@cell.embeddings) = colnames(object)
 
 Idents(object) = "groups"
-object %<>% subset(idents = c("AFT-03","AFT-04"),invert = T)
+object %<>% subset(idents = c("Pt-203","Pt-204"),invert = T)
 Idents(object) = "orig.ident"
+(df_samples = df_samples[df_samples$publication.id %in% object$orig.ident,])
 (samples = df_samples$publication.id[df_samples$publication.id %in% object$orig.ident])
 Idents(object) %<>% factor(levels = samples)
-table(Idents(object))
 
 # Extend Data
 Idents(object) = "manual"
@@ -66,9 +66,25 @@ ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
 dev.off()
 
 #=======
+#Seurat_list <- SplitObject(object, split.by = "orig.ident")
+
+args <- 1
+if(is.na(args[1])){
+        message("QC")
+        QC_list <- as.data.frame(df_samples)
+        QC_list["cell.number"] <- sapply(Seurat_list, function(x) length(colnames(x)))
+        QC_list["mean.nUMI"] <- sapply(Seurat_list, function(x) mean((x$nCount_RNA)))
+        QC_list["mean.nGene"] <- sapply(Seurat_list, function(x) mean((x$nFeature_RNA)))
+        QC_list["mean.percent.mt"] <- sapply(Seurat_list, function(x) mean((x$percent.mt)))
+        
+        write.csv(QC_list,paste0(path,"QC_list.csv"))
+        #QC.list %>% kable() %>% kable_styling()
+}
+remove(Seurat_list);GC()
+
 QC_list <- read.csv(paste0(path,"QC_list.csv"), stringsAsFactors = F)
 jpeg(paste0(path,"mean.Reads.per.Cell.jpeg"), units="in", width=5, height=5,res=600)
-ggviolin(QC_list, x = "submitter", y= "mean.Reads.per.Cell",
+ggviolin(QC_list, x = "submitter", y= "reads.per.cell",
          title = "Mean reads per cell in each scRNA-seq",
          xlab = "",ylab = "Mean Reads per Cell",
          add = c("jitter","mean_sd"),
@@ -77,19 +93,6 @@ ggviolin(QC_list, x = "submitter", y= "mean.Reads.per.Cell",
                  theme(plot.title = element_text(hjust = 0.5,size=15),
                        axis.title.x=element_blank(),
                        axis.text.x=element_blank())
-dev.off()
-
-
-jpeg(paste0(path,"UMI.per.Cell.jpeg"), units="in", width=5, height=5,res=600)
-ggviolin(QC_list, x = "submitter", y= "median.Transcripts.per.Cell",
-         title = "Median transcripts per cell in each scRNA-seq",
-         xlab = "",ylab = "Median UMI per Cell",
-         add = c("jitter","mean_sd"),
-         draw_quantiles = 0.5,
-         yscale = "log10")+
-        theme(plot.title = element_text(hjust = 0.5,size=13),
-              axis.title.x=element_blank(),
-              axis.text.x=element_blank())
 dev.off()
 
 jpeg(paste0(path,"cell.number.jpeg"), units="in", width=5, height=5,res=600)
@@ -103,8 +106,45 @@ ggviolin(QC_list, x = "submitter", y= "cell.number",
               axis.text.x=element_blank())
 dev.off()
 
+jpeg(paste0(path,"UMI.per.Cell.jpeg"), units="in", width=5, height=5,res=600)
+ggviolin(QC_list, x = "submitter", y= "mean.nUMI",
+         title = "Mean transcripts per cell in each scRNA-seq",
+         xlab = "",ylab = "Mean UMI per Cell",
+         add = c("jitter","mean_sd"),
+         draw_quantiles = 0.5,
+         yscale = "log10")+
+        theme(plot.title = element_text(hjust = 0.5,size=13),
+              axis.title.x=element_blank(),
+              axis.text.x=element_blank())
+dev.off()
+
+jpeg(paste0(path,"nGene.per.Cell.jpeg"), units="in", width=5, height=5,res=600)
+ggviolin(QC_list, x = "submitter", y= "mean.nGene",
+         title = "Mean genes per cell in each scRNA-seq",
+         xlab = "",ylab = "Mean genes per Cell",
+         add = c("jitter","mean_sd"),
+         draw_quantiles = 0.5,
+         yscale = "log10")+
+        theme(plot.title = element_text(hjust = 0.5,size=13),
+              axis.title.x=element_blank(),
+              axis.text.x=element_blank())
+dev.off()
+
+jpeg(paste0(path,"percent.mt.jpeg"), units="in", width=5, height=5,res=600)
+ggviolin(QC_list, x = "submitter", y= "mean.percent.mt",
+         title = "Mean mitochondrial gene % in each scRNA-seq",
+         xlab = "",ylab = "Mean mitochondrial gene percentages",
+         add = c("jitter","mean_sd"),
+         draw_quantiles = 0.5,
+         yscale = "log10")+
+        theme(plot.title = element_text(hjust = 0.5,size=13),
+              axis.title.x=element_blank(),
+              axis.text.x=element_blank())
+dev.off()
 # ================
 Idents(object) = "orig.ident"
+Idents(object) %<>% factor(levels = samples)
+
 (mito.features <- grep(pattern = "^MT-", x = rownames(object), value = TRUE))
 object[["percent.mt"]] <- PercentageFeatureSet(object = object, pattern = "^MT-")
 g2 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
@@ -121,9 +161,9 @@ g2[[1]]+ggtitle("Distribution of Gene Number per Cells")+
 dev.off()
 
 jpeg(paste0(path,"S2_nUMI.jpeg"), units="in", width=7, height=5,res=600)
-g2[[2]]+ggtitle("Distribution of mRNA Counts per Cells")+
+g2[[2]]+ggtitle("Distribution of transcripts per Cells")+
         xlab("scRNA-seq samples")+
-        ylab("mRNA Counts")+
+        ylab("UMI per Cell")+
         ylim(0,max(object$nUMI)+1000)+
         theme(plot.title = element_text(face = 'plain'))
 dev.off()

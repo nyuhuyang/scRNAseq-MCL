@@ -33,15 +33,19 @@ object %<>% RenameCells(new.names = NewNames)
 rownames(object@reductions$tsne@cell.embeddings) = colnames(object)
 
 Idents(object) = "groups"
-object %<>% subset(idents = c("AFT-03","AFT-04"),invert = T)
+object@meta.data$groups %<>% plyr::mapvalues(from = c("AFT-03","AFT-04"),
+                                                 to = c("Pt-203","Pt-204"))
+
+object %<>% subset(idents = c("Pt-203","Pt-204"),invert = T)
 Idents(object) = "orig.ident"
+(df_samples = df_samples[df_samples$publication.id %in% object$orig.ident,])
 (samples = df_samples$publication.id[df_samples$publication.id %in% object$orig.ident])
 Idents(object) %<>% factor(levels = samples)
 table(Idents(object))
 
 # preprocess
-Idents(object) = "Doublets"
-object %<>% subset(idents = "Singlet")
+#Idents(object) = "Doublets"
+#object %<>% subset(idents = "Singlet")
 Idents(object) = "manual"
 object <- subset(object,idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
 Idents(object) = "res.0.6"

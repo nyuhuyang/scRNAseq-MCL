@@ -156,7 +156,6 @@ print(plot_grid(g1[[3]]+ggtitle("mito % before filteration")+
 dev.off()
 
 #====
-
 Seurat_list <- SplitObject(object, split.by = "orig.ident")
 remove(object);GC()
 #======1.1.2 record data quality before removing low quanlity cells =========================
@@ -165,17 +164,17 @@ if(is.na(args[2])){
         message("QC")
         cell.number <- sapply(Seurat_list, function(x) length(colnames(x)))
         QC_list <- lapply(Seurat_list, function(x) as.matrix(GetAssayData(x, slot = "counts")))
-        median.nUMI <- sapply(QC_list, function(x) median(colSums(x)))
-        median.nGene <- sapply(QC_list, function(x) median(apply(x,2,function(y) sum(length(y[y>0])))))
+        mean.nUMI <- sapply(QC_list, function(x) mean(colSums(x)))
+        mean.nGene <- sapply(QC_list, function(x) mean(apply(x,2,function(y) sum(length(y[y>0])))))
         
         min.nUMI <- sapply(QC_list, function(x) min(colSums(x)))
         min.nGene <- sapply(QC_list, function(x) min(apply(x,2,function(y) sum(length(y[y>0])))))
         
-        QC.list <- cbind(df_samples,cell.number, median.nUMI, median.nGene,
+        QC.list <- cbind(df_samples,cell.number, mean.nUMI, mean.nGene,
                          min.nUMI,min.nGene, row.names = df_samples$sample)
         write.csv(QC.list,paste0(path,"QC_list.csv"))
         #QC.list %>% kable() %>% kable_styling()
-        remove(QC_list,median.nUMI,median.nGene,min.nUMI,min.nGene,QC.list);GC()
+        remove(QC_list,mean.nUMI,mean.nGene,min.nUMI,min.nGene,QC.list);GC()
 }
 #========1.4 scran ===============================
 

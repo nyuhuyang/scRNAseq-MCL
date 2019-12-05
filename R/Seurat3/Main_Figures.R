@@ -33,8 +33,6 @@ object %<>% RenameCells(new.names = NewNames)
 rownames(object@reductions$tsne@cell.embeddings) = colnames(object)
 
 Idents(object) = "groups"
-object@meta.data$groups %<>% plyr::mapvalues(from = c("AFT-03","AFT-04"),
-                                                 to = c("Pt-203","Pt-204"))
 
 object %<>% subset(idents = c("Pt-203","Pt-204"),invert = T)
 Idents(object) = "orig.ident"
@@ -51,7 +49,7 @@ object <- subset(object,idents = c("HSC/progenitors","Nonhematopoietic cells"), 
 Idents(object) = "res.0.6"
 object %<>% subset(idents = 11,invert = T)
 object %<>% sortIdent()
-remove <- object$orig.ident %in% "Pt-2-C30" & object$res.0.6 %in% 9
+remove <- object$orig.ident %in% "Pt2_30Pd" & object$res.0.6 %in% 9
 object <- object[,!remove]
 
 #==== Figure 2-A ===========
@@ -63,23 +61,34 @@ object@meta.data$manual %<>% plyr::mapvalues(from = c("B_cells","MCL",
                                                     "Monocytes",
                                                     "NK","CD4 T",
                                                     "CD8 T"))
+object@meta.data$manual %<>% as.character()
 Idents(object) = "manual"
 object %<>% sortIdent()
 TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "manual",
            cols = ExtractMetaColor(object),no.legend = F,border = T,
            pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
-           title.size = 20,legend.title = "Cell types",
+           title.size = 20,legend.title = "tSNE plots for cell types of 36 samples",
            units= "in",width=10, height=7,hjust =0.5)
-
+npcs =50
+object %<>% RunUMAP(reduction = "harmony", dims = 1:npcs)
+UMAPPlot.1(object = object, label = F, label.repel = F, group.by = "manual",
+           cols = ExtractMetaColor(object),no.legend = F,border = T,
+           pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
+           title.size = 20,legend.title = "UMAP plots for cell types of 36 samples",
+           units= "in",width=10, height=7,hjust =0.5)
 #==== Figure 2-B ===========
 features <- FilterGenes(object,c("CD19","CCND1","SOX11",
                                  "CD3D","CD4","CD8A",
                                  "MS4A7","CD14","FCGR1A",
                                  "GNLY","KLRC1","NCAM1"))
-FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"), alpha = 1,
+FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
+              alpha = 1,reduction = "tsne",
               threshold = 1, strip.text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
               units = "in",width=9, height=12, no.legend = T)
-
+FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
+              alpha = 1,reduction = "umap",
+              threshold = 1, strip.text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
+              units = "in",width=9, height=12, no.legend = T)
 
 #==== Figure 2-C ===========
 (load(file = "data/B_cells_MCL_43_20190917.Rda"))
@@ -87,6 +96,7 @@ FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "r
 B_cells_MCL@meta.data$orig.ident %<>% plyr::mapvalues(from = unique(df_samples$sample),
                                                  to = unique(df_samples$publication.id))
 table(B_cells_MCL@meta.data$orig.ident)
+B_cells_MCL$orig.ident %<>% as.character()
 NewNames = paste0(B_cells_MCL@meta.data$orig.ident,"_",B_cells_MCL@meta.data$Barcode)
 B_cells_MCL %<>% RenameCells(new.names = NewNames)
 rownames(B_cells_MCL@reductions$tsne@cell.embeddings) = colnames(B_cells_MCL)
@@ -94,20 +104,20 @@ rownames(B_cells_MCL@reductions$tsne@cell.embeddings) = colnames(B_cells_MCL)
 Idents(B_cells_MCL) = "orig.ident"
 (samples = df_samples$publication.id[df_samples$publication.id %in% B_cells_MCL$orig.ident])
 B_cells_MCL %<>% subset(idents = samples)
-chose <- c("Normal","X5_clusters")[2]
+chose <- c("Normal","X5_clusters")[1]
 if(chose == "Normal"){
-        B_cells_MCL@meta.data$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
-        B_cells_MCL@meta.data$orig.ident = gsub("N02|N01|N03|N04","Normal",B_cells_MCL@meta.data$orig.ident)
-        Idents(B_cells_MCL) = "X5_clusters"
-        B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
+        B_cells_MCL$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
+        normal <- grepl("N02|N01|N03|N04",B_cells_MCL$orig.ident)
+        B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"
         Idents(B_cells_MCL) = "X5_clusters_normal"
+        B_cells_MCL %<>% sortIdent()
         table(Idents(B_cells_MCL))
         X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
-                                                      logfc.threshold = 0.01,only.pos = F,
-                                                      min.pct = 0.01,return.thresh = 1,save.path = path)
+                                                      logfc.threshold = 0,only.pos = F,
+                                                      min.pct = 0.1,return.thresh = 1,save.path = path)
         
-        write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0.01_markers.csv"))
-        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_normal_FC0.01_markers.csv"),
+        write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0_markers.csv"))
+        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_normal_FC0_markers.csv"),
                                               row.names = 1, stringsAsFactors=F)
         colnames(X5_clusters_markers)[grep("cluster",colnames(X5_clusters_markers))] = "cluster"
 }
@@ -115,14 +125,14 @@ if(chose == "Normal"){
 if(chose == "X5_clusters"){
         Idents(B_cells_MCL) = "X5_clusters"
         B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
-        X5_clusters_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
-                                                      logfc.threshold = 0.01,only.pos = F, 
-                                                      min.pct = 0.01,return.thresh = 1,save.path = path)
+        table(Idents(B_cells_MCL))
+        X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,
+                                                  logfc.threshold = 0,only.pos = F, 
+                                                  min.pct = 0.1,return.thresh = 1)
         
-        write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.01_markers.csv"))
-        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_FC0.01_markers.csv"),
+        write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0_markers.csv"))
+        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_FC0_markers.csv"),
                                        row.names = 1, stringsAsFactors=F)
-}
 
         markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
         (MT_gene <- grep("^MT-",X5_clusters_markers$gene))

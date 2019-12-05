@@ -132,26 +132,44 @@ X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,logfc.threshold = 0.1,only
                                           min.pct = 0.1,return.thresh = 0.05)
 write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0.2_markers.csv"))
 
-X5_clusters_markers = read.csv("output/20190717/X5_clusters_FC0.2_markers.csv",row.names = 1)
+X5_clusters_markers = read.csv("Yang/Figure 2/Figure Sources/X5_clusters/X5_clusters_FC0.01_markers.csv",row.names = 1)
 #B_cells_MCL %<>% ScaleData()
 
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
 X5_clusters_markers = X5_clusters_markers[-MT_gene,]
-Top_n = 40
-top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
-features = c(as.character(top$gene),
-             tail(VariableFeatures(object = B_cells_MCL), 2),
-             markers)
-B_cells_MCL %<>% ScaleData(features=features)
-featuresNum <- make.unique(features, sep = ".")
-B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
-DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-            do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-            group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
-            pal_gsea = FALSE,
-            title = paste("Top",Top_n,"differentially expressed genes in B and MCL clusters"))
 
+if(cycle == F){
+        Top_n = 40
+        top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
+        features = c(as.character(top$gene),
+                     tail(VariableFeatures(object = B_cells_MCL), 2),
+                     markers)
+        B_cells_MCL %<>% ScaleData(features=features)
+        featuresNum <- make.unique(features, sep = ".")
+        B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
+        DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
+                    do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
+                    pal_gsea = FALSE,
+                    title = paste("Top",Top_n,"differentially expressed genes in B and MCL clusters"))
+}
+
+if(cycle == T){
+        cc_genes = unlist(cc.genes) %>% as.vector()
+        top = X5_clusters_markers[X5_clusters_markers$gene %in% cc_genes,] %>% group_by(cluster)
+        features = c(as.character(top$gene),
+                     tail(VariableFeatures(object = B_cells_MCL), 2),
+                     markers)
+        B_cells_MCL %<>% ScaleData(features=features)
+        featuresNum <- make.unique(features, sep = ".")
+        B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
+        DoHeatmap.1(B_cells_MCL, features = featuresNum,
+                    do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
+                    pal_gsea = FALSE,
+                    title = paste("Differentially expressed cell cycle genes in B and MCL clusters"))
+}
 ##############
 # DE genes between Clusters normal and 5 cluster top 40
 ###############
@@ -302,7 +320,7 @@ write.csv(B_cells_MCL_exp,paste0(path,"B_MCL_exp.csv"))
 B_cells_MCL@assays$RNA@scale.data = matrix(0,0,0);GC()
 B_cells_MCL@meta.data$old.ident = B_cells_MCL@meta.data$orig.ident
 B_cells_MCL@meta.data$orig.ident = gsub("BH|DJ|MD|NZ","Normal",B_cells_MCL@meta.data$orig.ident)
-B_cells_MCL@meta.data$X5_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
+.B_cells_MCL@meta.data$X5_orig.ident = paste(B_cells_MCL@meta.data$orig.ident,
                                             B_cells_MCL@meta.data$X5_clusters, sep = "_")
 B_cells_MCL@meta.data$X5_orig.ident = gsub('^Normal_.*', 'Normal', B_cells_MCL@meta.data$X5_orig.ident)
 
@@ -437,57 +455,76 @@ for(i in 1:2){
         GC()
 }
 
-# Doheatmap for MCL longitudinal by different clusters ================
+# Doheatmap for MCL longitudinal X5 clusters ================
+(load(file = "data/B_cells_MCL_43_20190917.Rda"))
+df_samples <- readxl::read_excel("doc/191030_scRNAseq_info.xlsx")
+colnames(df_samples) <- colnames(df_samples) %>% tolower
+sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
+markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
+df_samples = df_samples[sample_n,]
 
-df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
-colnames(df_samples) =  tolower(colnames(df_samples))
-df_samples[df_samples$sample %in% "MD","tsne"] = 0
-df_samples[df_samples$sample %in% "MD","sample"] = "Normal"
+table(B_cells_MCL@meta.data$orig.ident)
+
+B_cells_MCL@meta.data$orig.ident %<>% plyr::mapvalues(from = unique(df_samples$sample),
+                                                      to = unique(df_samples$publication.id))
+NewNames = paste0(B_cells_MCL@meta.data$orig.ident,"_",B_cells_MCL@meta.data$Barcode)
+B_cells_MCL %<>% RenameCells(new.names = NewNames)
+rownames(B_cells_MCL@reductions$tsne@cell.embeddings) = colnames(B_cells_MCL)
+gsub("_.*","",rownames(B_cells_MCL@reductions$tsne@cell.embeddings)) %>% table
 
 Idents(B_cells_MCL) = "groups"
-groups = c("Untreated","Pt-11","Pt-17","AFT-03","AFT-04","Pt-AA13","Pt-25","Pt-27")
-clusters = list(c(1,2))#,3,c(4,6))
+#groups = c("Untreated","Pt-11","Pt-17","AFT-03","AFT-04","Pt-AA13","Pt-25","Pt-27")
+clusters =  3:4
 groups = c("Untreated","Pt-17","Pt-25")
-for(i in 1:length(groups)){
+for(i in 2:3){
         
-        subset_MCL <- subset(B_cells_MCL, idents = c("Normal",groups[i]))
+        subset_MCL <- subset(B_cells_MCL, idents = groups[i])
         Idents(subset_MCL) = "X5_clusters"
-        for(k in 1:length(clusters)){
-                subset.MCL <- subset(subset_MCL,idents = clusters[[k]])
+        for(k in clusters){
+                subset.MCL <- subset(subset_MCL,idents = k)
                 
-                (samples = unique(subset.MCL$orig.ident))
-                df = df_samples[df_samples$sample %in% samples,]
+                print(samples <- unique(subset.MCL$orig.ident))
+                df <- df_samples[df_samples$publication.id %in% samples,]
                 subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident, 
-                                                         levels = df$sample[order(df$tsne)])
+                                                         levels = rev(df$publication.id))
                 Idents(subset.MCL) = "orig.ident"
                 gde.markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.3, only.pos = T,
                                                   test.use = "MAST")
-                write.csv(gde.markers,paste0(path,"B/B_MCL_DE/B_",groups[i],"_",
-                                             paste(clusters[[k]],collapse = "_"),".csv"))
+                write.csv(gde.markers,paste0(path,groups[i],"_Clusters_",k,
+                                             "_FC0.3_markers.csv"))
                 (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
                 if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
                 GC()
-                #DoHeatmap.1======
-                subset.MCL %<>% ScaleData(features= unique(gde.markers$gene))
-                Top_n = 20
-                DoHeatmap.1(subset.MCL, marker_df = gde.markers, Top_n = Top_n, do.print=T, angle = 0,
-                            group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
-                            label=F, cex.row=4, legend.size = NULL,width=10, height=7,unique.name = T,
+                #DoHeatmap.1======                
+                Top_n = 40
+                top = gde.markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
+                
+                features = c(as.character(top$gene),
+                             tail(VariableFeatures(object = subset.MCL), 2),
+                             markers)
+                subset.MCL %<>% ScaleData(features=features)
+                featuresNum <- make.unique(features, sep = ".")
+                subset.MCL %<>% MakeUniqueGenes(features = features)
+                DoHeatmap.1(object =subset.MCL, features = featuresNum, Top_n = Top_n,
+                            do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                            group.bar.height = 0, label=F, cex.row= ifelse(i==2,4,2), legend.size = 0,width=10, height=6.5,
+                            pal_gsea = FALSE,
                             title = paste("Top",Top_n,"DE genes in longitudinal",groups[i],
-                                          "B/MCL cells cluster",paste(clusters[[k]],collapse = " and ")))
+                                          "B/MCL cells cluster",k))
+                
                 # rename file
-                v <- paste(unique(subset.MCL$orig.ident),collapse = "_")
-                v = paste0(v,"_",FindIdentLabel(subset.MCL))
-                old.name = paste0(path,"Doheatmap_top",Top_n,"_",v,".jpeg")
-                file.rename(old.name, paste0(path,"Doheatmap_top",Top_n,"_",v,"cluster",
-                                             paste(clusters[[k]],collapse = "_"),".jpeg"))
+                v <- UniqueName(object = subset.MCL, fileName = "subset.MCL",unique.name = T)
+                v = paste0(v,"_",FindIdentLabel(object))
+                old.name = paste0(path,"Heatmap_top",Top_n,"_",v,"_Legend.jpeg")
+                file.rename(old.name, paste0(path,"Heatmap_top",Top_n,"_",groups[i],
+                                             "_cluster",k, "_rev.jpeg"))
                 remove(subset.MCL);GC()
         }
         remove(subset_MCL);GC()
 }
 
 
-# Doheatmap for MCL longitudinal ================
+# Doheatmap for MCL longitudinal Normal vs MCL ================
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")
 colnames(df_samples) =  tolower(colnames(df_samples))
 df_samples[df_samples$sample %in% "MD","tsne"] = 0

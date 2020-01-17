@@ -21,16 +21,16 @@ if(!dir.exists("doc")) dir.create("doc")
 # read sample summary list
 args <- commandArgs(trailingOnly = TRUE)
 if(length(args)==0) stop("Sample info must be provided in excel!")
-args = "doc/191001_scRNAseq_info.xlsx"
+args = "doc/191120_scRNAseq_info.xlsx"
 df_samples <- readxl::read_excel(args[1])
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
-df_samples = df_samples[sample_n,]
+#sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
+#df_samples = df_samples[sample_n,]
 head(df_samples)
 (attach(df_samples))
 samples = df_samples$sample
-
+df_samples$species = df_samples$organism
 # check missing data
 current <- list.files("data/scRNA-seq")
 (current <- current[!grepl(".Rda|RData",current)])
@@ -114,7 +114,6 @@ for(i in 1:length(df_samples$sample)){
 object <- Reduce(function(x, y) merge(x, y, do.normalize = F), Seurat_list)
 remove(Seurat_list);GC()
 
-
 object %<>% subset(subset = nFeature_RNA > 500 & nCount_RNA > 800 & percent.mt < 50)
 # FilterCellsgenerate Vlnplot before and after filteration
 Idents(object) = factor(Idents(object),levels = df_samples$sample)
@@ -160,22 +159,17 @@ Seurat_list <- SplitObject(object, split.by = "orig.ident")
 remove(object);GC()
 #======1.1.2 record data quality before removing low quanlity cells =========================
 # if args 2 is passed
-if(is.na(args[2])){
-        message("QC")
-        cell.number <- sapply(Seurat_list, function(x) length(colnames(x)))
-        QC_list <- lapply(Seurat_list, function(x) as.matrix(GetAssayData(x, slot = "counts")))
-        mean.nUMI <- sapply(QC_list, function(x) mean(colSums(x)))
-        mean.nGene <- sapply(QC_list, function(x) mean(apply(x,2,function(y) sum(length(y[y>0])))))
-        
-        min.nUMI <- sapply(QC_list, function(x) min(colSums(x)))
-        min.nGene <- sapply(QC_list, function(x) min(apply(x,2,function(y) sum(length(y[y>0])))))
-        
-        QC.list <- cbind(df_samples,cell.number, mean.nUMI, mean.nGene,
-                         min.nUMI,min.nGene, row.names = df_samples$sample)
-        write.csv(QC.list,paste0(path,"QC_list.csv"))
-        #QC.list %>% kable() %>% kable_styling()
-        remove(QC_list,mean.nUMI,mean.nGene,min.nUMI,min.nGene,QC.list);GC()
-}
+message("QC")
+cell.number <- sapply(Seurat_list, function(x) length(colnames(x)))
+nCount_RNA <- sapply(Seurat_list, function(x) mean(x$nCount_RNA))
+nFeature_RNA <- sapply(Seurat_list, function(x) mean(x$nFeature_RNA))
+percent.mt <- sapply(Seurat_list, function(x) mean(x$percent.mt))
+QC.list <- cbind(df_samples,cell.number, nCount_RNA, nFeature_RNA,percent.mt,
+                 row.names = df_samples$sample)
+write.csv(QC.list,paste0(path,"QC_list.csv"))
+#QC.list %>% kable() %>% kable_styling()
+remove(cell.number,nCount_RNA,nFeature_RNA,percent.mt,QC.list);GC()
+
 #========1.4 scran ===============================
 
 sce_list <- lapply(Seurat_list, as.SingleCellExperiment)

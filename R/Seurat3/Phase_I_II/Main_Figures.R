@@ -66,7 +66,7 @@ Idents(object) = "manual"
 object %<>% sortIdent()
 TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "manual",
            cols = ExtractMetaColor(object),no.legend = F,border = T,
-           pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
+           pt.size = 0.1, do.print = T,do.return = F,legend.size = 25,
            title.size = 20,legend.title = "tSNE plots for cell types of 36 samples",
            units= "in",width=10, height=7,hjust =0.5)
 npcs =50
@@ -83,7 +83,7 @@ features <- FilterGenes(object,c("CD19","CCND1","SOX11",
                                  "GNLY","KLRC1","NCAM1"))
 FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
               alpha = 1,reduction = "tsne",
-              threshold = 1, strip.text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
+              threshold = 1, strip.text.size = 0, border = T,do.print = T, do.return = F,ncol = 3, 
               units = "in",width=9, height=12, no.legend = T)
 FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
               alpha = 1,reduction = "umap",
@@ -104,34 +104,17 @@ rownames(B_cells_MCL@reductions$tsne@cell.embeddings) = colnames(B_cells_MCL)
 Idents(B_cells_MCL) = "orig.ident"
 (samples = df_samples$publication.id[df_samples$publication.id %in% B_cells_MCL$orig.ident])
 B_cells_MCL %<>% subset(idents = samples)
-chose <- c("Normal","X5_clusters")[1]
-if(chose == "Normal"){
-        B_cells_MCL$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
-        normal <- grepl("N02|N01|N03|N04",B_cells_MCL$orig.ident)
-        B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"
-        Idents(B_cells_MCL) = "X5_clusters_normal"
-        B_cells_MCL %<>% sortIdent()
-        table(Idents(B_cells_MCL))
-        X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
-                                                      logfc.threshold = 0,only.pos = F,
-                                                      min.pct = 0.1,return.thresh = 1,save.path = path)
-        
-        write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0_markers.csv"))
-        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_normal_FC0_markers.csv"),
-                                              row.names = 1, stringsAsFactors=F)
-        colnames(X5_clusters_markers)[grep("cluster",colnames(X5_clusters_markers))] = "cluster"
-}
+choose <- c("X5_clusters","Normal")[2]
 
-if(chose == "X5_clusters"){
-        Idents(B_cells_MCL) = "X5_clusters"
+if(choose == "X5_clusters"){
+        Idents(B_cells_MCL) <- "X5_clusters"
         B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
         table(Idents(B_cells_MCL))
         X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,
                                                   logfc.threshold = 0,only.pos = F, 
                                                   min.pct = 0.1,return.thresh = 1)
-        
-        write.csv(X5_clusters_markers,paste0(path,"X5_clusters_FC0_markers.csv"))
-        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters_FC0_markers.csv"),
+        write.csv(X5_clusters_markers,paste0(path,"X5_clusters/","X5_clusters_FC0_markers.csv"))
+        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters/","X5_clusters_FC0_markers.csv"),
                                        row.names = 1, stringsAsFactors=F)
 
         markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
@@ -146,29 +129,61 @@ if(chose == "X5_clusters"){
         featuresNum <- make.unique(features, sep = ".")
         B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
         
-        Idents(B_cells_MCL) = ifelse(chose == "Normal","X5_clusters_normal","X5_clusters")
-        Idents(B_cells_MCL) %<>% factor(levels = c(ifelse(chose == "Normal","Normal",""),
-                                                   1:5))
+        Idents(B_cells_MCL) = "X5_clusters"
+        Idents(B_cells_MCL) %<>% factor(levels = 1:5)
         DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
                     do.print=T, angle = 0, group.bar = F, title.size = 0, no.legend = F,size=5,hjust = 0.5,
                     group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
                     pal_gsea = FALSE,
-                    title = NULL)
+                    title = "Top 40 DE genes in 5 B/MCL clusters")
 }
 
+if(choose == "Normal"){
+        B_cells_MCL$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
+        normal <- grepl("N02|N01|N03|N04",B_cells_MCL$orig.ident)
+        B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"
+        Idents(B_cells_MCL) = "X5_clusters_normal"
+        B_cells_MCL %<>% sortIdent()
+        table(Idents(B_cells_MCL))
+        X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
+                                                      logfc.threshold = 0,only.pos = F,
+                                                      min.pct = 0.1,return.thresh = 1,save.path = path)
+        
+        write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0_markers.csv"))
+        X5_clusters_markers = read.csv(file=paste0(path,"X5_cluster_vs_Normal/X5_cluster_vs_Normal_FC0_markers.csv"),
+                                       row.names = 1, stringsAsFactors=F)
+        colnames(X5_clusters_markers)[grep("cluster",colnames(X5_clusters_markers))] = "cluster"
+        markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
+        (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
+        X5_clusters_markers = X5_clusters_markers[-MT_gene,]
+        Top_n = 40
+        top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
+        features = c(as.character(top$gene),
+                     tail(VariableFeatures(object = B_cells_MCL), 2),
+                     markers)
+        B_cells_MCL %<>% ScaleData(features=features)
+        featuresNum <- make.unique(features, sep = ".")
+        B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
+        
+        Idents(B_cells_MCL) = "X5_clusters_normal"
+        Idents(B_cells_MCL) %<>% factor(levels = c("Normal", 1:5))
+        table(Idents(B_cells_MCL))
+        DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
+                    do.print=T, angle = 0, group.bar = F, title.size = 0, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
+                    pal_gsea = FALSE,
+                    title = "Top 40 DE genes in Normal B and 5 MCL clusters")
+}
 
 #==== Figure 2-D ===========
-chose <- c("Normal","X5_clusters")[2]
-if(chose == "Normal"){
-        res = read.csv(file=paste0(path,"X5_clusters_normal_FC0.01_markers.csv"),
-                       row.names = 1, stringsAsFactors=F)
+choose <- c("X5_clusters","X5_cluster_vs_Normal")[2]
+res = read.csv(file = paste0("Yang/Figure 2/Figure Sources/",
+                             choose,"/",choose,"_FC0_markers.csv"),
+               row.names = 1, stringsAsFactors=F)
+if(choose == "X5_clusters") table(res$cluster)
+if(choose == "X5_cluster_vs_Normal"){
         table(res$cluster1.vs.cluster2)
-        res$cluster1.vs.cluster2 = gsub(" vs.Normal","",res$cluster1.vs.cluster2)
-}
-if(chose == "X5_clusters"){
-        res = read.csv(file=paste0(path,"X5_clusters_FC0.01_markers.csv"),
-                       row.names = 1, stringsAsFactors=F)
-        table(res$cluster)
+        res$cluster1.vs.cluster2 = gsub("Normal vs. ","",res$cluster1.vs.cluster2)
 }
 
 head(res)
@@ -179,12 +194,14 @@ hallmark <- fgsea::gmtPathways("../seurat_resources/msigdb/h.all.v6.2.symbols.gm
 names(hallmark) = gsub("HALLMARK_","",names(hallmark))
 names(hallmark) = gsub("\\_"," ",names(hallmark))
 
-FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
-             order.by = c(4,"NES"),decreasing = F,
-             size = "-log10(pval)", fill = "NES",sample = "B_MCL clusters", 
-             pathway.name = "Hallmark",rotate.x.text = F,
-             font.ytickslab = 13,font.xtickslab = 15,hjust = 1,
-             width=6.5, height=7)
+fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
+                        order.by = c(4,"NES"),decreasing = F,
+                        size = " -log10(pval)", fill = "NES",sample = choose, 
+                        pathway.name = "Hallmark",rotate.x.text = F,
+                        font.xtickslab=15, font.main=18, font.ytickslab = 14,
+                        font.legend = list(size = 15),font.label = list(size = 15),
+                        do.return = T,hjust = 1,
+                        width = 8,height = 8)
 
 
 #==== Figure 2-G ===========

@@ -17,16 +17,19 @@ library(ggsci)
 source("../R/Seurat3_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
-# 3.1.1 load data
+# 3.1.1 load datapath <- 
+
 # Load some results from Seurat
 #============ B cells  =====================
-res = read.csv(file="output/20190621/X5_clusters_FC0.1_markers.csv",
+choose <- c("X5_clusters","X5_cluster_vs_Normal")[2]
+res = read.csv(file = paste0("Yang/Figure 2/Figure Sources/",
+                             choose,"/",choose,"_FC0_markers.csv"),
                         row.names = 1, stringsAsFactors=F)
 table(res$cluster)
 head(res)
-res = res[order(res["p_val_adj"]),]
+res = res[order(res["avg_logFC"],decreasing = T),]
 head(res, 20)
-(clusters <- unique(res$cluster))
+(clusters <- sort(unique(res$cluster)))
 hallmark <- gmtPathways("../seurat_resources/msigdb/h.all.v6.2.symbols.gmt")
 biocarta <- gmtPathways("../seurat_resources/msigdb/c2.cp.biocarta.v6.2.symbols.gmt")
 kegg <- gmtPathways("../seurat_resources/msigdb/c2.cp.kegg.v6.2.symbols.gmt")
@@ -51,16 +54,18 @@ for(i in 1:length(clusters)) FgseaBarplot(pathways=allpathways, stats=res, nperm
                                        pathway.name = "Hallmark, biocarta,and KEGG")
 
 
-FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
+fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark, nperm=1000,padj = 0.25,pval = 0.05,
              order.by = c(4,"NES"),decreasing = F,
-             size = "-log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
+             size = " -log10(pval)", fill = "NES",sample = "each B & MCL clusters", 
              pathway.name = "Hallmark",rotate.x.text = F,
-             font.xtickslab=25, font.main=16,
-             font.legend = list(size = 20),font.label = list(size = 25))
+             font.xtickslab=15, font.main=18, font.ytickslab = 10,
+             font.legend = list(size = 15),font.label = list(size = 15),
+             do.return = T,hjust = 1,
+             width = 8,height = 8)
 
 FgseaDotPlot(stats=res, pathways=allpathways, nperm=1000,padj = 0.1,pval = 0.02,
              order.by = c(4,"NES"),decreasing = F,
-             size = "-log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
+             size = " -log10(pval)", fill = "NES",sample = "each B_MCL clusters", 
              rotate.x.text = F, pathway.name = "Hallmark, biocarta,and KEGG")
 
 df_samples <- readxl::read_excel("doc/190626_scRNAseq_info.xlsx")

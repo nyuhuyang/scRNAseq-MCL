@@ -44,11 +44,11 @@ features.list = lapply(list(c("EZH2","E2F1"),
 (cols.use.list = rep(list(c("#b88801","#2c568c", "#E31A1C")), length(features.list)))
 Idents(B_cells_MCL) ="orig.ident"
 cluster=F
-for(s in samples[4:4]){
+for(s in samples[6]){ #[4:length(samples)]
         s_path <- paste0(path,s,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
         subset_object = subset(B_cells_MCL, idents = s)
-        for(i in 5:length(features.list)){
+        for(i in 4){ #5:length(features.list
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
                                    overlay = T,cols = c("#d8d8d8",cols.use.list[[i]]),
@@ -85,8 +85,8 @@ for(s in samples[4:4]){
                         rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
-                        #write.csv(df,file = paste0(s_path,s,"_",paste(features.list[[i]],
-                        #                                              collapse = "_"),".csv"))
+                        write.csv(df,file = paste0(s_path,s,"_",paste(features.list[[i]],
+                                                                      collapse = "_"),".csv"))
                         
                         jpeg(paste0(s_path,s,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
                              units="in", width=7, height=7,res=600)
@@ -118,8 +118,8 @@ for(s in samples[4:4]){
                         rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
-                        #write.csv(df,file = paste0(s_path,s,"_",paste(features.list[[i]],
-                        #                                              collapse = "_"),"_cluster_",k,".csv"))
+                        write.csv(df,file = paste0(s_path,s,"_",paste(features.list[[i]],
+                                                                      collapse = "_"),"_cluster_",k,".csv"))
                         
                         jpeg(paste0(s_path,s,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),"_cluster_",k,".jpeg"), 
                              units="in", width=7, height=7,res=600)

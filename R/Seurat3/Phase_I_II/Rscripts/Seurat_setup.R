@@ -20,15 +20,13 @@ if(!dir.exists("doc")) dir.create("doc")
 # ######################################################################
 #======1.1 Setup the Seurat objects =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/191030_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/191120_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
-df_samples = df_samples[sample_n,]
 (attach(df_samples))
-df_samples
+samples = df_samples$sample
 
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "data/sce_48_20191022.Rda"))
+(load(file = "data/sce_41_20191205.Rda"))
 names(sce_list)
 object_list <- lapply(sce_list, as.Seurat)
 
@@ -90,13 +88,15 @@ p1 <- UMAPPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,legend.size
 
 
 #======1.6 Performing SCTransform and integration =========================
+(load(file = "data/MCL_41_20191205.Rda"))
+
 set.seed(100)
 object_list <- SplitObject(object, split.by = "orig.ident")
 remove(object);GC()
 object_list %<>% lapply(SCTransform)
 object.features <- SelectIntegrationFeatures(object_list, nfeatures = 3000)
 options(future.globals.maxSize= object.size(object_list)*1.5)
-npcs = 50
+npcs = 30
 object_list %<>% lapply(function(x) {
     x %<>% RunPCA(features = object.features, verbose = FALSE)
 })
@@ -106,24 +106,25 @@ anchors <- FindIntegrationAnchors(object_list, normalization.method = "SCT",
                                   anchor.features = object.features,
                                   reference = c(1, 2), reduction = "rpca", 
                                   dims = 1:npcs)
+remove(object_list);GC()
+
 object <- IntegrateData(anchorset = anchors, normalization.method = "SCT",dims = 1:npcs)
 
-remove(anchors,object_list);GC()
+remove(anchors);GC()
 
-object %<>% RunPCA(npcs = npcs, verbose = FALSE)
-#object <- JackStraw(object, num.replicate = 20,dims = 100)
-#object <- ScoreJackStraw(object, dims = 1:100)
+object %<>% RunPCA(npcs = 100, verbose = FALSE)
+object <- JackStraw(object, num.replicate = 20,dims = 100)
+object <- ScoreJackStraw(object, dims = 1:100)
 
-#jpeg(paste0(path,"JackStrawPlot.jpeg"), units="in", width=10, height=7,res=600)
-#JackStrawPlot(object, dims = 90:100)+
-#    ggtitle("JackStrawPlot")+
-#    theme(text = element_text(size=15),	
-#          plot.title = element_text(hjust = 0.5,size = 18))
-#dev.off()
+jpeg(paste0(path,"JackStrawPlot.jpeg"), units="in", width=10, height=7,res=600)
+JackStrawPlot(object, dims = 80:90)+
+    ggtitle("JackStrawPlot")+
+    theme(text = element_text(size=15),	
+          plot.title = element_text(hjust = 0.5,size = 18))
+dev.off()
 npcs =50
 object %<>% FindNeighbors(reduction = "pca",dims = 1:npcs)
-object %<>% FindClusters(reduction = "pca",resolution = 0.8,
-                         dims.use = 1:npcs,print.output = FALSE)
+object %<>% FindClusters(resolution = 0.8)
 object %<>% RunTSNE(reduction = "pca", dims = 1:npcs)
 object %<>% RunUMAP(reduction = "pca", dims = 1:npcs)
 p2 <- TSNEPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,legend.size = 15,
@@ -155,6 +156,6 @@ UMAPPlot.1(object = object, label = T,label.repel = T, group.by = "integrated_sn
 
 object@assays$RNA@scale.data = matrix(0,0,0)
 object@assays$integrated@scale.data = matrix(0,0,0)
-save(object, file = "data/MCL_48_20191104.Rda")
+save(object, file = "data/MCL_41_20191205~.Rda")
 
 format(object.size(object),unit = "GB")

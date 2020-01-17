@@ -59,5 +59,5 @@ if(args == 2){
         X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
                                                       logfc.threshold = 0,only.pos = F,
                                                       min.pct = 0.1,return.thresh = 1)
-        write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0.01_markers.csv"))
+        write.csv(X5_clusters_normal_markers,paste0(path,"X5_cluster_vs_Normal_FC0_markers.csv"))
 }

@@ -17,34 +17,24 @@ path <- "Yang/Figure 2/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # load data
-(load(file="data/MCL_V3_Harmony_43_20190627.Rda"))
+(load(file="data/MCL_41_harmony_20191231.Rda"))
 
-df_samples <- readxl::read_excel("doc/191030_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/191120_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
-sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
-df_samples = df_samples[sample_n,]
+table(object$orig.ident)
 
-object@meta.data$orig.ident %<>% plyr::mapvalues(from = unique(df_samples$sample),
-                                                      to = unique(df_samples$publication.id))
-table(object@meta.data$orig.ident)
-NewNames = paste0(object@meta.data$orig.ident,"_",object@meta.data$Barcode)
-object %<>% RenameCells(new.names = NewNames)
-rownames(object@reductions$tsne@cell.embeddings) = colnames(object)
+(df_samples = df_samples[df_samples$`sample name` %in% object$orig.ident,])
+(samples = df_samples$`sample name`[df_samples$`sample name` %in% object$orig.ident])
 
+object$orig.ident %<>% factor(levels = samples)
 Idents(object) = "groups"
-
-object %<>% subset(idents = c("Pt-203","Pt-204"),invert = T)
-Idents(object) = "orig.ident"
-(df_samples = df_samples[df_samples$publication.id %in% object$orig.ident,])
-(samples = df_samples$publication.id[df_samples$publication.id %in% object$orig.ident])
-Idents(object) %<>% factor(levels = samples)
 table(Idents(object))
 
 # preprocess
-#Idents(object) = "Doublets"
-#object %<>% subset(idents = "Singlet")
-Idents(object) = "manual"
-object <- subset(object,idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
+Idents(object) = "Doublets"
+object %<>% subset(idents = "Singlet")
+Idents(object) = "cell.types"
+object %<>% subset(idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
 Idents(object) = "res.0.6"
 object %<>% subset(idents = 11,invert = T)
 object %<>% sortIdent()
@@ -52,7 +42,7 @@ remove <- object$orig.ident %in% "Pt2_30Pd" & object$res.0.6 %in% 9
 object <- object[,!remove]
 
 #==== Figure 2-A ===========
-object@meta.data$manual %<>% plyr::mapvalues(from = c("B_cells","MCL",
+object$manual <- plyr::mapvalues(object@meta.data$cell.types,from = c("B_cells","MCL",
                                                       "Myeloid cells",
                                                       "NK_cells","T_cells:CD4+",
                                                       "T_cells:CD8+"),
@@ -60,20 +50,19 @@ object@meta.data$manual %<>% plyr::mapvalues(from = c("B_cells","MCL",
                                                     "Monocytes",
                                                     "NK","CD4 T",
                                                     "CD8 T"))
-object@meta.data$manual %<>% as.character()
+object$manual %<>% as.character()
+object$manual.colors = object$cell.types.colors
 Idents(object) = "manual"
 object %<>% sortIdent()
 TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "manual",
-           cols = ExtractMetaColor(object),no.legend = F,border = T,
+           cols = ExtractMetaColor(object),no.legend = T,border = T,
            pt.size = 0.1, do.print = T,do.return = F,legend.size = 25,
-           title.size = 20,legend.title = "tSNE plots for cell types of 36 samples",
+           title.size = 20,legend.title = "tSNE plots for cell types of 41 samples",
            units= "in",width=10, height=7,hjust =0.5)
-npcs =50
-object %<>% RunUMAP(reduction = "harmony", dims = 1:npcs)
 UMAPPlot.1(object = object, label = F, label.repel = F, group.by = "manual",
            cols = ExtractMetaColor(object),no.legend = F,border = T,
            pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
-           title.size = 20,legend.title = "UMAP plots for cell types of 36 samples",
+           title.size = 20,legend.title = "UMAP plots for cell types of 41 samples",
            units= "in",width=10, height=7,hjust =0.5)
 #==== Figure 2-B ===========
 features <- FilterGenes(object,c("CD19","CCND1","SOX11",

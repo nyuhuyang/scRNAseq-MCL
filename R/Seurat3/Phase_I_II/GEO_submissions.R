@@ -51,6 +51,6 @@ sparsity <- function(SMT){
 # linux
 files=$(ls)
 echo $files
-md5sum $files > MCL_fastq_checksums.md5
+md5sum $files > MCL_fastq_counts_checksums.md5
 md5sum -c BladderCancer_bam_checksums.md5
 "https://www.howtoforge.com/linux-md5sum-command/"

@@ -27,11 +27,11 @@ gsub("_.*","",rownames(B_cells_MCL@reductions$tsne@cell.embeddings)) %>% table
 
 
 Idents(B_cells_MCL) = "orig.ident"
-samples = c("Pt10_LN2Pd","Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
+samples = c("All_samples","Pt10_LN2Pd","Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
 features.list = lapply(list(c("EZH2","E2F1"),
                             c("EZH2","PCNA"),
                             c("EZH2","CDK1"),
-                            c("EZH2","EZH1"),
+                            c("EZH1","EZH2"),
                             c("POLR2M", "CRBN"),
                             c("POLR2M", "IKZF1"),
                             c("POLR2M", "IKZF3"),
@@ -44,15 +44,17 @@ features.list = lapply(list(c("EZH2","E2F1"),
 (cols.use.list = rep(list(c("#b88801","#2c568c", "#E31A1C")), length(features.list)))
 Idents(B_cells_MCL) ="orig.ident"
 cluster=F
-for(s in samples[6]){ #[4:length(samples)]
+for(s in samples[c(2,7)]){ #[4:length(samples)]
         s_path <- paste0(path,s,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
-        subset_object = subset(B_cells_MCL, idents = s)
-        for(i in 4){ #5:length(features.list
+        if(s == "All_samples") {
+                subset_object = B_cells_MCL
+        } else subset_object = subset(B_cells_MCL, idents = s)
+        for(i in 4){ #5:
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
                                    overlay = T,cols = c("#d8d8d8",cols.use.list[[i]]),
-                                   pt.size = 4, alpha = 0.75, breaks =8)
+                                   pt.size = 2, alpha = 0.75, breaks =8)
                 jpeg(paste0(s_path,s,"_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
                      units="in", width=7, height=7,res=600)
                 g = g+theme(plot.title = element_text(hjust = 0.5,size = 20),
@@ -91,7 +93,7 @@ for(s in samples[6]){ #[4:length(samples)]
                         jpeg(paste0(s_path,s,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
                              units="in", width=7, height=7,res=600)
                         g <- FeatureScatter(subset_object, feature1 = features.list[[i]][1],
-                                            pt.size = 4,
+                                            pt.size = 2,
                                             feature2 = features.list[[i]][2],,slot = "data")
                         print(g)
                         dev.off()
@@ -130,7 +132,8 @@ for(s in samples[6]){ #[4:length(samples)]
                         dev.off()
                 }
                 
-        }
+        
+                Progress(i,length(features.list))}
 }
 
 Idents(B_cells_MCL) = "orig.ident"

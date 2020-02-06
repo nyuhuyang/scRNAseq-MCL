@@ -4,6 +4,7 @@
 # 
 # ######################################################################
 #devtools::install_github(repo = "ChristophH/sctransform", ref = "develop")
+
 invisible(lapply(c("Seurat","dplyr","kableExtra","ggplot2","cowplot","sctransform"), function(x) {
     suppressPackageStartupMessages(library(x,character.only = T))
 }))
@@ -20,13 +21,13 @@ if(!dir.exists("doc")) dir.create("doc")
 # ######################################################################
 #======1.1 Setup the Seurat objects =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/191120_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/191030_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 (attach(df_samples))
 samples = df_samples$sample
 
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "data/sce_41_20191205.Rda"))
+(load(file = "data/sce_43_20190429.Rda"))
 names(sce_list)
 object_list <- lapply(sce_list, as.Seurat)
 
@@ -36,7 +37,6 @@ for(i in 1:length(samples)){
         object_list[[i]]@meta.data$projects <- df_samples$project[i]
         object_list[[i]]@meta.data$groups <- df_samples$groups[i]
         object_list[[i]]@meta.data$tissues <- df_samples$tissue[i]
-        object_list[[i]]@meta.data$tsne <- df_samples$tsne[i]
 }
 #========1.3 merge ===================================
 object <- Reduce(function(x, y) merge(x, y, do.normalize = F), object_list)

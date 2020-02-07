@@ -79,73 +79,56 @@ FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "r
               units = "in",width=9, height=12, no.legend = T)
 
 #==== Figure 2-C ===========
-(load(file = "data/B_cells_MCL_43_20190917.Rda"))
+B_cells_MCL = readRDS(file = "data/MCL_41_B_20200206.rds")
+Idents(B_cells_MCL) = "orig.ident" 
+B_cells_MCL %<>% subset(idents = "Pt2_30Pd", invert = T)
+Idents(B_cells_MCL) = "X5clusters"
 
-B_cells_MCL@meta.data$orig.ident %<>% plyr::mapvalues(from = unique(df_samples$sample),
-                                                 to = unique(df_samples$publication.id))
-table(B_cells_MCL@meta.data$orig.ident)
-B_cells_MCL$orig.ident %<>% as.character()
-NewNames = paste0(B_cells_MCL@meta.data$orig.ident,"_",B_cells_MCL@meta.data$Barcode)
-B_cells_MCL %<>% RenameCells(new.names = NewNames)
-rownames(B_cells_MCL@reductions$tsne@cell.embeddings) = colnames(B_cells_MCL)
+B_cells_MCL %<>% sortIdent()
+Idents(B_cells_MCL) %<>% factor(levels = paste0("C",1:5))
+table(Idents(B_cells_MCL))
+X5clusters_markers = read.csv(file= paste0(path,"MCL_41-FC0.1.csv"),
+                              row.names = 1, stringsAsFactors=F)
+table(X5clusters_markers$cluster)
+markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
+(MT_gene <- grep("^MT-",X5clusters_markers$gene))
+X5clusters_markers = X5clusters_markers[-MT_gene,]
+Top_n = 40
+top = X5clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
+features = c(as.character(top$gene),
+             tail(VariableFeatures(object = B_cells_MCL), 2),
+             markers)
+B_cells_MCL %<>% ScaleData(features=features)
+featuresNum <- make.unique(features, sep = ".")
+B_cells_MCL %<>% MakeUniqueGenes(features = features)
 
-Idents(B_cells_MCL) = "orig.ident"
-(samples = df_samples$publication.id[df_samples$publication.id %in% B_cells_MCL$orig.ident])
-B_cells_MCL %<>% subset(idents = samples)
-choose <- c("X5_clusters","Normal")[2]
-
-if(choose == "X5_clusters"){
-        Idents(B_cells_MCL) <- "X5_clusters"
-        B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
-        table(Idents(B_cells_MCL))
-        X5_clusters_markers <- FindAllMarkers.UMI(B_cells_MCL,
-                                                  logfc.threshold = 0,only.pos = F, 
-                                                  min.pct = 0.1,return.thresh = 1)
-        write.csv(X5_clusters_markers,paste0(path,"X5_clusters/","X5_clusters_FC0_markers.csv"))
-        X5_clusters_markers = read.csv(file=paste0(path,"X5_clusters/","X5_clusters_FC0_markers.csv"),
-                                       row.names = 1, stringsAsFactors=F)
-
-        markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
-        (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
-        X5_clusters_markers = X5_clusters_markers[-MT_gene,]
-        Top_n = 40
-        top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
-        features = c(as.character(top$gene),
-                     tail(VariableFeatures(object = B_cells_MCL), 2),
-                     markers)
-        B_cells_MCL %<>% ScaleData(features=features)
-        featuresNum <- make.unique(features, sep = ".")
-        B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
-        
-        Idents(B_cells_MCL) = "X5_clusters"
-        Idents(B_cells_MCL) %<>% factor(levels = 1:5)
-        DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-                    do.print=T, angle = 0, group.bar = F, title.size = 0, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
-                    pal_gsea = FALSE,
-                    title = "Top 40 DE genes in 5 B/MCL clusters")
-}
+DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
+            do.print=T, angle = 0, group.bar = T, title.size = 0, no.legend = F,size=5,hjust = 0.5,
+            group.bar.height = 0.02, label=T, cex.row= 2, legend.size = 0,width=10, height=6.5,
+            pal_gsea = FALSE,
+            unique.name = "cell.types",
+            title = "Top 40 DE genes in 5 B/MCL clusters")
 
 if(choose == "Normal"){
-        B_cells_MCL$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
+        B_cells_MCL$X5clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5clusters))
         normal <- grepl("N02|N01|N03|N04",B_cells_MCL$orig.ident)
-        B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"
-        Idents(B_cells_MCL) = "X5_clusters_normal"
+        B_cells_MCL@meta.data[normal,"X5clusters_normal"] = "Normal"
+        Idents(B_cells_MCL) = "X5clusters_normal"
         B_cells_MCL %<>% sortIdent()
         table(Idents(B_cells_MCL))
-        X5_clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
+        X5clusters_normal_markers <- FindPairMarkers(B_cells_MCL,ident.1 = 1:5, ident.2 = rep("Normal",5),
                                                       logfc.threshold = 0,only.pos = F,
                                                       min.pct = 0.1,return.thresh = 1,save.path = path)
         
-        write.csv(X5_clusters_normal_markers,paste0(path,"X5_clusters_normal_FC0_markers.csv"))
-        X5_clusters_markers = read.csv(file=paste0(path,"X5_cluster_vs_Normal/X5_cluster_vs_Normal_FC0_markers.csv"),
+        write.csv(X5clusters_normal_markers,paste0(path,"X5clusters_normal_FC0_markers.csv"))
+        X5clusters_markers = read.csv(file=paste0(path,"X5_cluster_vs_Normal/X5_cluster_vs_Normal_FC0_markers.csv"),
                                        row.names = 1, stringsAsFactors=F)
-        colnames(X5_clusters_markers)[grep("cluster",colnames(X5_clusters_markers))] = "cluster"
+        colnames(X5clusters_markers)[grep("cluster",colnames(X5clusters_markers))] = "cluster"
         markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
-        (MT_gene <- grep("^MT-",X5_clusters_markers$gene))
-        X5_clusters_markers = X5_clusters_markers[-MT_gene,]
+        (MT_gene <- grep("^MT-",X5clusters_markers$gene))
+        X5clusters_markers = X5clusters_markers[-MT_gene,]
         Top_n = 40
-        top = X5_clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
+        top = X5clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
         features = c(as.character(top$gene),
                      tail(VariableFeatures(object = B_cells_MCL), 2),
                      markers)
@@ -153,7 +136,7 @@ if(choose == "Normal"){
         featuresNum <- make.unique(features, sep = ".")
         B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
         
-        Idents(B_cells_MCL) = "X5_clusters_normal"
+        Idents(B_cells_MCL) = "X5clusters_normal"
         Idents(B_cells_MCL) %<>% factor(levels = c("Normal", 1:5))
         table(Idents(B_cells_MCL))
         DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
@@ -164,11 +147,11 @@ if(choose == "Normal"){
 }
 
 #==== Figure 2-D ===========
-choose <- c("X5_clusters","X5_cluster_vs_Normal")[2]
+choose <- c("X5clusters","X5_cluster_vs_Normal")[2]
 res = read.csv(file = paste0("Yang/Figure 2/Figure Sources/",
                              choose,"/",choose,"_FC0_markers.csv"),
                row.names = 1, stringsAsFactors=F)
-if(choose == "X5_clusters") table(res$cluster)
+if(choose == "X5clusters") table(res$cluster)
 if(choose == "X5_cluster_vs_Normal"){
         table(res$cluster1.vs.cluster2)
         res$cluster1.vs.cluster2 = gsub("Normal vs. ","",res$cluster1.vs.cluster2)
@@ -228,28 +211,28 @@ for(test in tests){
 #==== Figure 3-C ===========
 #(load("data/B_cells_MCL_43_20190904.Rda"))
 #B_cells_MCL@meta.data$orig.ident = gsub("N02|N01|N03|N04","Normal",B_cells_MCL@meta.data$orig.ident)
-B_cells_MCL@meta.data$X5_clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5_clusters))
+B_cells_MCL@meta.data$X5clusters_normal = as.numeric(as.character(B_cells_MCL@meta.data$X5clusters))
 normal <- B_cells_MCL$orig.ident %in% "Normal"
-B_cells_MCL@meta.data[normal,"X5_clusters_normal"] = "Normal"
+B_cells_MCL@meta.data[normal,"X5clusters_normal"] = "Normal"
 B_cells_MCL <- sortIdent(B_cells_MCL,numeric = T)
-Idents(B_cells_MCL) = "X5_clusters_normal"
+Idents(B_cells_MCL) = "X5clusters_normal"
 table(Idents(B_cells_MCL))
 
 Idents(B_cells_MCL) = "orig.ident"
 Pt_10 <- subset(B_cells_MCL, idents = c("Pt-10-LN-C2","Normal"))
-Pt_10@meta.data$X5_clusters_normal = as.numeric(as.character(Pt_10@meta.data$X5_clusters))
+Pt_10@meta.data$X5clusters_normal = as.numeric(as.character(Pt_10@meta.data$X5clusters))
 normal <- Pt_10$orig.ident %in% "Normal"
-Pt_10@meta.data[normal,"X5_clusters_normal"] <- 0
-Idents(Pt_10) = "X5_clusters_normal"
+Pt_10@meta.data[normal,"X5clusters_normal"] <- 0
+Idents(Pt_10) = "X5clusters_normal"
 Pt_10 <- sortIdent(Pt_10,numeric = T)
-Idents(Pt_10) = "X5_clusters_normal"
+Idents(Pt_10) = "X5clusters_normal"
 table(Idents(Pt_10))
 Pt_10_DE <- FindPairMarkers(Pt_10,ident.1 = 1:4, ident.2 = rep(0,4),
                             logfc.threshold = 0.1,only.pos = T,
                             min.pct = 0.1,return.thresh = 0.05,save.path = path)
 
-write.csv(Pt_10_DE,paste0(path,"Pt_10_DE_X5_clusters_normal_FC0.1_markers.csv"))
-Pt_10_DE = read.csv("output/20190904/Pt_10_DE_X5_clusters_normal_FC0.1_markers.csv",row.names = 1)
+write.csv(Pt_10_DE,paste0(path,"Pt_10_DE_X5clusters_normal_FC0.1_markers.csv"))
+Pt_10_DE = read.csv("output/20190904/Pt_10_DE_X5clusters_normal_FC0.1_markers.csv",row.names = 1)
 
 markers <- FilterGenes(Pt_10,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 (MT_gene <- grep("^MT-",Pt_10_DE$gene))
@@ -262,7 +245,7 @@ Pt_10 %<>% ScaleData(features=unique(c(as.character(top$gene),markers)))
 featuresNum <- make.unique(c(as.character(top$gene),markers), sep = ".")
 Pt_10 %<>% MakeUniqueGenes(top = top, features = markers)
 
-Idents(Pt_10) = "X5_clusters_normal"
+Idents(Pt_10) = "X5clusters_normal"
 DoHeatmap.1(Pt_10, features = featuresNum, Top_n = Top_n,
             do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0, label=F, cex.row= 2, legend.size = 0,width=10, height=6.5,
@@ -275,10 +258,10 @@ DoHeatmap.1(Pt_10, features = featuresNum, Top_n = Top_n,
 B_cells_MCL <- subset(object,idents = c("B_cells","MCL"))
 Idents(B_cells_MCL) <-  "res.0.6"
 B_cells_MCL <- subset(B_cells_MCL, idents = c(0,1,5,6,9,13,14,18,19,20))
-B_cells_MCL@meta.data$X5_clusters <- plyr::mapvalues(x = B_cells_MCL@meta.data$res.0.6,
+B_cells_MCL@meta.data$X5clusters <- plyr::mapvalues(x = B_cells_MCL@meta.data$res.0.6,
                                                      from = c(0,1,13,14,18,19,20,5,6,9),
                                                      to =   c(1,2,2,  1, 1, 2, 1, 3,4,5))
-Idents(B_cells_MCL) <- "X5_clusters"
+Idents(B_cells_MCL) <- "X5clusters"
 
 TSNEPlot.1(B_cells_MCL, pt.size = 0.2,label = T, label.repel = T,
            do.print = T,no.legend = T,border = T,alpha = 1,

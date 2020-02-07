@@ -3,7 +3,7 @@
 #  0 setup environment, install libraries if necessary, load libraries
 # 
 # ######################################################################
-devtools::install_github("immunogenomics/harmony", ref= "ee0877a",force = T)
+#devtools::install_github("immunogenomics/harmony", ref= "ee0877a",force = T)
 invisible(lapply(c("Seurat","dplyr","kableExtra","ggplot2","cowplot","sctransform",
                    "harmony"), function(x) {
     suppressPackageStartupMessages(library(x,character.only = T))
@@ -15,6 +15,8 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 (load(file = "data/MCL_41_harmony_20191231.Rda"))
 Idents(object) = "Doublets"
 object %<>% subset(idents = "Singlet")
+Idents(object) = "orig.ident"
+object %<>% subset(idents = "Pt2_30Pd",invert = T)
 Idents(object) = "cell.types"
 object %<>% subset(idents = c("B_cells","MCL"))
 
@@ -27,17 +29,61 @@ UMAPPlot(object, cols = c("#E6AB02","#2055da"),
     geom_segment(aes(x = 4, y = -4, xend = 4, yend = 2))+
     geom_segment(aes(x = 4, y = 2, xend = 10, yend = 2))
 dev.off()
+
 object@meta.data %<>% cbind(object[["umap"]]@cell.embeddings )
-rm_cell <- (object$UMAP_2 < -4) | (object$UMAP_2 < 2 & object$UMAP_1 > 4)
 object %<>% subset(subset = UMAP_2 > -4)
 object %<>% subset(subset = UMAP_1 > 4 & UMAP_2 < 2, invert = T)
 
-lapply(c(UMAPPlot.1,TSNEPlot.1), function(fun)
-    fun(object, group.by = "cell.types",
-       cols = c("#E6AB02","#2055da"),
-       unique.name = "cell.types",do.print = T, 
-       do.return = F)
-)
+TSNEPlot.1(object, group.by = "cell.types",
+   cols = c("#E6AB02","#2055da"),
+   unique.name = "cell.types",do.print = T, 
+   do.return = F)
+lapply(c("groups","orig.ident","conditions","tissues"), function(group.by)
+    TSNEPlot.1(object, group.by=group.by,pt.size = 0.5,label = F,
+               cols = Singler.colors,
+               label.repel = T,alpha = 0.9,
+               unique.name = "group.by",
+               no.legend = F,label.size = 4, repel = T, 
+               title = paste("Harmony Integration by",group.by),
+               do.print = T, do.return = F))
+# re-run cluster
+npcs = 70
+object %<>% FindNeighbors(reduction = "harmony",dims = 1:npcs)
+res =1
+object %<>% FindClusters(resolution = res)
+Idents(object) = "SCT_snn_res.1"
+object %<>% RenameIdents("0" = "C1",
+                         "1" = "C1",
+                         "2" = "C2",
+                         "3" = "C2",
+                         "4" = "C5",
+                         "5" = "C4",
+                         "6" = "C5",
+                         "7" = "C2",
+                         "8" = "C2",
+                         "9" = "C3",
+                         "10"= "C1",
+                         "11"= "C5",
+                         "12"= "C1",
+                         "13"= "C1",
+                         "14"= "C1",
+                         "15"= "C1",
+                         "16"= "C2",
+                         "17"= "C1",
+                         "18"= "C1",
+                         "19"= "C1",
+                         "20"= "C1")
+object[["X5clusters"]] = as.character(Idents(object))
+Idents(object) = "X5clusters"
+lapply(c("SCT_snn_res.1","X5clusters"), function(group.by)
+    TSNEPlot.1(object, group.by=group.by,pt.size = 0.3,label = T,
+               label.repel = T,alpha = 0.9,
+               do.return = F,
+               no.legend = T,label.size = 4, repel = T, 
+               title = paste("res =",res),
+               do.print = T))
+saveRDS(object, file = "data/MCL_41_B_20200207.rds")
+
 
 #======3.2 rerun harmony =========================
 object@reductions = list();GC()
@@ -85,36 +131,35 @@ object %<>% RunUMAP(reduction = "harmony", dims = 1:npcs)
 saveRDS(object, file = "data/MCL_41_B_20200204.rds")
 
 Idents(object)="cell.types"
-lapply(c(TSNEPlot.1, UMAPPlot.1), function(fun) 
-    fun(object, group.by="cell.types",pt.size = 0.5,label = F,
-        label.repel = T,alpha = 0.9,
-        cols = ExtractMetaColor(object),
-        unique.name = "cell.types",
-        no.legend = T,label.size = 4, repel = T, 
-        title = "rerun Harmony on MCL and B cells",
-        do.print = T, do.return = F))
-for(group.by in c("groups","orig.ident","conditions","tissues")){
-    lapply(c(TSNEPlot.1, UMAPPlot.1), function(fun) 
-        fun(object, group.by=group.by,pt.size = 0.5,label = F,
-            cols = Singler.colors,
-            label.repel = T,alpha = 0.9,
-            unique.name = "cell.types",
-            no.legend = F,label.size = 4, repel = T, 
-            title = paste("Harmony Integration by",group.by),
-            do.print = T, do.return = F))
-}
-res = c(seq(0.001,0.009, by = 0.001),seq(0.01,0.09, by = 0.01),seq(0.1,2, by = 0.1))
+TSNEPlot.1(object, group.by="cell.types",pt.size = 0.5,label = F,
+    label.repel = T,alpha = 0.9,
+    cols = ExtractMetaColor(object),
+    unique.name = "cell.types",
+    no.legend = T,label.size = 4, repel = T, 
+    title = "rerun Harmony on MCL and B cells",
+    do.print = T, do.return = F)
+
+lapply(c("groups","orig.ident","conditions","tissues"), function(group.by)
+    TSNEPlot.1(B_cells_MCL, group.by=group.by,pt.size = 0.5,label = F,
+               cols = Singler.colors,
+               label.repel = T,alpha = 0.9,
+               unique.name = "group.by",
+               no.legend = F,label.size = 4, repel = T, 
+               title = paste("Harmony Integration by",group.by),
+               do.print = T, do.return = F))
+
+res = c(seq(0.1,2, by = 0.1))
 for(i in seq_along(res)){
     object %<>% FindClusters(resolution = res[i])
     Idents(object) = paste0("SCT_snn_res.",res[i])
-    UMAPPlot.1(object, group.by=paste0("SCT_snn_res.",res[i]),pt.size = 0.3,label = T,
+    TSNEPlot.1(object, group.by=paste0("SCT_snn_res.",res[i]),pt.size = 0.3,label = T,
                label.repel = T,alpha = 0.9,
                do.return = F,
                no.legend = T,label.size = 4, repel = T, 
                title = paste("res =",res[i],"in B and MCL based on harmony"),
                do.print = T, save.path = path)
-    file.rename(paste0(path,"UMAPPlot_object_SCT_snn_res.",res[i],".jpeg"),
-                paste0(path,i,"-UMAPPlot_object_SCT_snn_res.",res[i],".jpeg"))
+    file.rename(paste0(path,"TSNEPlot_object_SCT_snn_res.",res[i],".jpeg"),
+                paste0(path,i,"-TSNEPlot_object_SCT_snn_res.",res[i],".jpeg"))
     Progress(i,length(res))
 }
 object@meta.data = object@meta.data[,c("orig.ident","sample","tests","percent.mt","conditions",

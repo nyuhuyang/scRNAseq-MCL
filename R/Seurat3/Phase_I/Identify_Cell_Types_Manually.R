@@ -19,17 +19,16 @@ features <- FilterGenes(object,c("CD19","CCND1","SOX11",
 features <- c(FilterGenes(object,c("CD19","CCND1","SOX11",
                                    "IRF4","NFKB1","CD274",
                                    "PCNA","CDK1","MKI67")))
-lapply(c("tsne","umap"), function(reduction) 
-        FeaturePlot.1(object,features = features, pt.size = 0.005, 
-                      cols = c("lightgrey", "red"),
-                      alpha = 1,reduction = reduction,
-                      unique.name = "cell.types",label = T,
-                      threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
-                      units = "in",width=9, height=12, no.legend = T))
+FeaturePlot.1(object,features = features, pt.size = 0.005, 
+              cols = c("lightgrey", "red"),
+              alpha = 1,reduction = "tsne",
+              unique.name = "cell.types",label = F,
+              threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
+              units = "in",width=9, height=12, no.legend = T)
 QC <- c("percent.mt","nCount_SCT","nFeature_SCT")
 FeaturePlot.1(object,features = QC, pt.size = 0.005, 
               cols = c("lightgrey", "red"),
-              alpha = 1,reduction = "umap",
+              alpha = 1,reduction = "tsne",
               unique.name = "cell.types",label = F,
               threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
               units = "in",width=9, height=4, no.legend = T)

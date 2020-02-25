@@ -15,4 +15,4 @@ singler <- CreateBigSingleRObject.1(object_data, annot = NULL, project.name="EC-
                                     normalize.gene.length = F, variable.genes = "de", fine.tune = T,
                                     reduce.file.size = F, do.signatures = F, do.main.types = T,
                                     temp.dir = getwd(), numCores = SingleR.numCores)
-save(singler,file="output/ref_MCL_blue_encode_20200225.RData")
+save(singler,file="output/singlerT_MCL_41_20200225.Rda")

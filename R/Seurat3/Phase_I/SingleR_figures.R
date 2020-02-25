@@ -14,7 +14,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.2 SingleR specifications ==========================================
 # Step 1: Spearman coefficient
 (load(file = "data/MCL_41_harmony_20191231.Rda"))
-(load(file="output/singlerT_MCL_41_20200203.Rda"))
+(load(file="output/singlerT_MCL_41_20200225.Rda"))
 
 # if singler didn't find all cell labels
 length(singler$singler[[1]]$SingleR.single$labels) == ncol(object)
@@ -25,10 +25,18 @@ if(length(singler$singler[[1]]$SingleR.single$labels) < ncol(object)){
 }
 
 table(rownames(singler$singler[[1]]$SingleR.single$labels) == colnames(object))
-singler$meta.data$orig.ident = object@meta.data$orig.ident # the original identities, if not supplied in 'annot'
+
+if(!all(rownames(singler$singler[[1]]$SingleR.single$labels) %in% colnames(object))){
+  cells = rownames(singler$singler[[1]]$SingleR.single$labels)
+  cells = cells[!cells %in% colnames(object)]
+  unique(gsub("_.*","",cells))
+  rownames(singler$singler[[1]]$SingleR.single$labels) %<>% gsub("Pt-28-PB-C25D1",
+                                                                 "Pt-28-PB-C28D1",.)
+}
+singler$meta.data$orig.ident = object$orig.ident # the original identities, if not supplied in 'annot'
 singler$meta.data$xy = object@reductions$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = Idents(object) # the Seurat clusters (if 'clusters' not provided)
-save(singler,file="output/singlerT_MCL_41_20200203.Rda")
+save(singler,file="output/singlerT_MCL_41_20200225.Rda")
 ##############################
 # add singleR label to Seurat
 ###############################
@@ -38,6 +46,7 @@ singlerDF = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$label
                        "orig.ident" = gsub("\\_.*","",rownames(singler$singler[[1]]$SingleR.single$labels)),
                        row.names = rownames(singler$singler[[1]]$SingleR.single$labels))
 head(singlerDF)
+table(rownames(singlerDF) %in% colnames(object))
 singlerDF = singlerDF[colnames(object),]
 table(rownames(singlerDF) == colnames(object))
 apply(singlerDF,2,function(x) length(unique(x)))
@@ -111,7 +120,7 @@ lapply(c(UMAPPlot.1,TSNEPlot.1), function(fun)
            pt.size = 0.1,label.size = 3, do.print = T,do.return = F,
            title = "Cell type labeling by Blueprint + Encode + MCL"))
 
-save(object,file="data/MCL_41_harmony_20191231.Rda")
+save(object,file="data/MCL_41_harmony_20200225.Rda")
 
 ##############################
 # draw tsne plot

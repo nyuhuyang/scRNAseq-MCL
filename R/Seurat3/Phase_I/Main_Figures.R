@@ -16,7 +16,7 @@ library(fgsea)
 source("../R/Seurat3_functions.R")
 
 # load data
-(load(file="data/MCL_41_harmony_20191231.Rda"))
+(load(file="data/MCL_41_harmony_20200225.Rda"))
 df_samples <- readxl::read_excel("doc/191120_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 table(object$orig.ident)
@@ -55,12 +55,7 @@ TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "cell_types",
            pt.size = 0.1, do.print = T,do.return = F,legend.size = 25,
            title.size = 20,title = "tSNE plots for cell types of 41 samples",
            units= "in",width=9, height=7,hjust =0.5, save.path = path)
-UMAPPlot.1(object = object, label = F, label.repel = F, group.by = "cell_types",
-           cols = ExtractMetaColor(object),no.legend = F,border = T,
-           pt.size = 0.5, do.print = T,do.return = F,legend.size = 25,
-           title.size = 20,title = "UMAP plots for cell types of 41 samples",
-           units= "in",width=9, height=7,hjust =0.5, save.path = path)
-#==== Figure 2-B ===========
+#==== Figure 3-B ===========
 features <- FilterGenes(object,c("CD19","CCND1","SOX11",
                                  "CD3D","CD4","CD8A",
                                  "MS4A7","CD14","FCGR1A",
@@ -78,7 +73,7 @@ FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "r
 file.rename(paste0(path,"FeaturePlot__object_cell_types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
             paste0(path,"FeaturePlot_nolabel.jpeg"))
 
-#==== Figure 2-C ===========
+#==== Figure 3-C ===========
 path <- "Yang/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 

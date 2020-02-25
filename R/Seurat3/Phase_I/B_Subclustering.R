@@ -12,7 +12,7 @@ source("../R/Seurat3_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #======3.1 subset B and MCL =========================
-(load(file = "data/MCL_41_harmony_20191231.Rda"))
+(load(file = "data/MCL_41_harmony_20200225.Rda"))
 Idents(object) = "Doublets"
 object %<>% subset(idents = "Singlet")
 Idents(object) = "cell.types"

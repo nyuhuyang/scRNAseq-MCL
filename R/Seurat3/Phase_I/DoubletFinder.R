@@ -23,7 +23,7 @@ if(!dir.exists(path))dir.create(path, recursive = T)
 
 # samples
 
-(load(file = "data/MCL_41_harmony_20191231.Rda"))
+(load(file = "data/MCL_41_harmony_20200225.Rda"))
 (samples = unique(object$orig.ident))
 object_list <- SplitObject(object,split.by = "orig.ident")
 rm(object);GC()
@@ -35,69 +35,16 @@ for (i in 1:length(object_list)) {
     Progress(i,length(object_list))
 }
 save(sweep.res_list,file = "output/MCL_41_harmony_20200203_sweep.res_list.Rda")
+(load(file = "output/MCL_41_harmony_20200203_sweep.res_list.Rda"))
 sweep_list <- lapply(sweep.res_list, function(x) summarizeSweep(x, GT = FALSE))
 bcmvn_list <- lapply(sweep_list,find.pK)
-# find histgram local maximam
-find.localMaxima <- function(x) {
-    # Use -Inf instead if x is numeric (non-integer)
-    y <- diff(c(-.Machine$integer.max, x)) > 0L
-    rle(y)$lengths
-    y <- cumsum(rle(y)$lengths)
-    y <- y[seq.int(1L, length(y), 2L)]
-    if (x[[1]] == x[[2]]) {
-        y <- y[-1]
-    }
-    which(x == max(x[y]))
-}
+
 
 (maximal_pk <- sapply(bcmvn_list,function(x) {
     as.numeric(as.character(x[find.localMaxima(x$BCmetric),"pK"]))
     }))
 maximal_pk
 
-# http://rstudio-pubs-static.s3.amazonaws.com/329613_f53e84d1a18840d5a1df55efb90739d9.html
-qplot_2axis <- function(data,x = "pK", y1 = "MeanBC", y2 = "BCmetric"){
-    if(class(data[,x]) == "factor") data[,x] <- as.numeric(as.character(data[,x]))
-    data_y1 <- data[,y1]
-    data_y2 <- data[,y2]
-    a <- range(data_y1)
-    b <- range(data_y2)
-    scale_factor <- diff(a)/diff(b)
-    data_y2 <- ((data_y2 - b[1]) * scale_factor) + a[1]
-    trans <- ~ ((. - a[1]) / scale_factor) + b[1]
-    
-    g <- ggplot(data = data, aes_string(x = x, y = y1))+
-        geom_line()+geom_point()+
-        geom_point(aes(y = data_y2),colour = "blue")+
-        geom_line(aes(y = data_y2),colour = "blue")+
-        scale_y_continuous(name = y1,
-                           sec.axis = sec_axis(trans=trans, name=y2))+
-        theme(axis.text.y.right = element_text(color = "blue"))
-    
-    g
-    
-}
-#qplot_2axis(data = bcmvn_list[[2]])
-
-Multiplet_Rate <- function(object, numBatches = 1, num10xRuns = 1){
-    
-    numCellsRecovered = 1.0 * ncol(object)
-    m = 4.597701e-06
-    r = 0.5714286
-    
-    numCellsLoaded = numCellsRecovered / r
-    multipletRate = m * numCellsLoaded / num10xRuns
-    
-    singletRate = 1.0 - multipletRate;
-    numSinglet = singletRate * numCellsRecovered
-    numMultiplet = numCellsRecovered - numSinglet
-    numIdentMultiplet = numMultiplet * (numBatches - 1) / numBatches
-    numNonIdentMultiplet = numMultiplet - numIdentMultiplet
-    numCells = numSinglet + numNonIdentMultiplet
-    
-    return(numNonIdentMultiplet/numCells)
-}
-Multiplet_Rate(object_list[[1]])
 ## Homotypic Doublet Proportion Estimate -------------------------------------------------------------------------------------
 for(i in 1:length(object_list)){
     print(paste("processing",unique(object_list[[i]]$orig.ident)))

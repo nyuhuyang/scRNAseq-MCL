@@ -15,7 +15,7 @@ library(ggsci)
 source("../R/Seurat3_functions.R")
 
 # load data
-choose = c("All_samples","B")[2]
+choose = c("All_samples","B")[1]
 if(choose == "All_samples") (load(file="data/MCL_41_harmony_20191231.Rda"))
 if(choose == "B") object = readRDS(file = "data/MCL_41_B_20200207.rds")
 

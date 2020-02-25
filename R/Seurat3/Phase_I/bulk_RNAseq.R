@@ -36,6 +36,7 @@ RemoveDup <- function(mat){
 MCL_B_bulk <- inner_join(B_bulk, MCL_bulk, by = "X")
 MCL_B_bulk <- RemoveDup(MCL_B_bulk);dim(MCL_B_bulk)
 
+meta.data["progress",] %<>% gsub("MCL:","",.)
 pt_names <- as.character(meta.data["sample",7:ncol(meta.data)])
 meta.data["sample",7:ncol(meta.data)] = paste0("Pt",pt_names)
 meta.data["patient",] = gsub(" .*","",meta.data["sample",])
@@ -43,15 +44,16 @@ meta.data["patient",] = gsub(" .*","",meta.data["sample",])
 genes.sd = genefilter::rowSds(MCL_B_bulk)
 variable.genes = head(genes.sd[order(genes.sd,decreasing = T)], 4000)
 
-y = MCL_B_bulk[names(variable.genes),];dim(y)
-for(label in c("sample","cell.type","patient")){
+labels = c("sample","progress","patient")
+for(i in seq_along(labels)){
+        y = MCL_B_bulk[names(variable.genes),]
         colnames(y) %<>% plyr::mapvalues(from = colnames(y), 
-                                         to = as.character(meta.data[label,]))
+                                         to = as.character(meta.data[labels[i],]))
         system.time(cor.mtr <- cor(y, method = "spearman"))
         hc_c <- hclust(as.dist(1-cor(cor.mtr, method="spearman")), method="ward.D2")
         hc_r <- hclust(as.dist(1-cor(t(cor.mtr), method="spearman")), method="ward.D2")
         diag(cor.mtr) <-NA
-        jpeg(paste0(path,"bulk_RNAseq_heatmap_",label,".jpeg"), units="in", width=10, height=10,res=600)
+        jpeg(paste0(path,"bulk_RNAseq_heatmap_",labels[i],".jpeg"), units="in", width=10, height=10,res=600)
         print(pheatmap(cor.mtr,cex=.9,
                        cluster_rows= hc_r,
                        cluster_cols = hc_c,
@@ -60,4 +62,5 @@ for(label in c("sample","cell.type","patient")){
                        fontsize = 20,
                        main = ""))
         dev.off()
+        Progress(i, length(labels))
 }

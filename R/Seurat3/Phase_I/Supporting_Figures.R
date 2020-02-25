@@ -19,7 +19,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # load data
 
-(load(file="data/MCL_41_harmony_20191231.Rda"))
+(load(file="data/MCL_41_harmony_20200225.Rda"))
 df_samples <- readxl::read_excel("doc/191120_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 object$orig.ident %<>% factor(levels = df_samples$`sample name`)

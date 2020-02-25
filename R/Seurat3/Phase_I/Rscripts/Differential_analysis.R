@@ -29,10 +29,13 @@ step = 1
 if(step == 1){ # need 128 GB
         object = readRDS(file = "data/MCL_41_B_20200207.rds")
         DefaultAssay(object)  = "SCT"
-        Idents(object) = "X5clusters"
+        Idents(object) = "orig.ident"
+        object %<>% subset(idents = "Pt2_30Pd",invert = T)
+        Idents(object) = "X4clusters"
         system.time(MCL_markers <- FindAllMarkers.UMI(object, 
                                                        logfc.threshold = r[2], 
                                                       only.pos = ifelse(r[1],T,F),
-                                                      test.use = "MAST"))
+                                                      test.use = "MAST",
+                                                      return.thresh = 1))
         write.csv(MCL_markers,paste0(path,"MCL_41-FC",r[2],".csv"))
 }

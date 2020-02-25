@@ -27,6 +27,7 @@ df_samples = as.data.frame(df_samples)
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 #sample_n = which(df_samples$tests %in% c("control",paste0("test",2:12)))
 #df_samples = df_samples[sample_n,]
+dim(df_samples)
 head(df_samples)
 (attach(df_samples))
 samples = df_samples$sample
@@ -63,7 +64,7 @@ message("Loading the datasets")
 ## Load the dataset
 Seurat_raw <- list()
 Seurat_list <- list()
-for(i in 1:length(df_samples$sample)){
+for(i in i:length(df_samples$sample)){
         Seurat_raw[[i]] <- Read10X(data.dir = paste0("data/scRNA-seq/",df_samples$sample.id[i],
                                    "/outs/filtered_gene_bc_matrices/",species))
         colnames(Seurat_raw[[i]]) = paste0(df_samples$sample[i],"_",colnames(Seurat_raw[[i]]))
@@ -71,10 +72,9 @@ for(i in 1:length(df_samples$sample)){
                                                  min.cells = 0,
                                                min.features = 0)
         Seurat_list[[i]]@meta.data$tests <- df_samples$tests[i]
-
+        Progress(i, length(df_samples$sample))
 }
 remove(Seurat_raw);GC()
-
 
 #========1.1.3 g1 QC plots before filteration=================================
 object <- Reduce(function(x, y) merge(x, y, do.normalize = F), Seurat_list)

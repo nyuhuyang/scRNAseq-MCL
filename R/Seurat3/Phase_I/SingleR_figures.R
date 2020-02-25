@@ -84,18 +84,15 @@ singlerDF$CCND1 = CCND1$CCND1
 singlerDF[(singlerDF$CCND1 >0 & singlerDF$cell.types %in% "B_cells"),"cell.types"] = "MCL"
 # cell.types false positive results  ========
 table(singlerDF$cell.types, object@meta.data$orig.ident) %>% kable %>% kable_styling()
-normal_cells <- object$orig.ident %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
-singlerDF[normal_cells,"cell.types"] = gsub("MCL","B_cells",
-                                              singlerDF[normal_cells,"cell.types"])
+normal_cells <- object$sample %in% c("BH","DJ","MD","NZ") %>% rownames(singlerDF)[.]
+singlerDF[normal_cells,"cell.types"] %<>% gsub("MCL","B_cells",.)
 # singler1sub false positive results  =========
 table(singlerDF$singler1sub, object$orig.ident) %>% kable %>% kable_styling()
-singlerDF[normal_cells,"singler1sub"] = gsub("MCL:.*$","B_cells:Memory",
-                                              singlerDF[normal_cells,"singler1sub"])
+singlerDF[normal_cells,"singler1sub"] %<>% gsub("MCL:.*$","B_cells:Memory",.)
 table(singlerDF$cell.types, object$orig.ident) %>% kable %>% kable_styling()
 table(singlerDF$singler1sub, object$orig.ident)%>% kable %>% kable_styling()
 table(singlerDF$cell.types %>% sort)%>% kable %>% kable_styling()
 table(singlerDF$cell.types) %>% kable() %>% kable_styling()
-singlerDF = singlerDF[, -5]
 ##############################
 # process color scheme
 ##############################
@@ -104,7 +101,7 @@ singlerDF = singlerDF[, -5]
 #singler_colors1[duplicated(singler_colors1)]
 #singler_colors2 = as.vector(singler_colors$singler.color2[!is.na(singler_colors$singler.color2)])
 singler_colors2 = c("#E6AB02","#6A3D9A", "#2055da", "#FB9A99", "#A65628", "#B3B3B3", "#B3DE69", "#F0027F")
-object <- AddMetaData(object = object,metadata = singlerDF)
+object <- AddMetaData(object = object,metadata = singlerDF["cell.types"])
 object <- AddMetaColor(object = object, label= "cell.types", colors = singler_colors2)
 Idents(object) <- "cell.types"
 

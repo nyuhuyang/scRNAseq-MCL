@@ -111,7 +111,7 @@ p3 <- UMAPPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,legend.size
                  label.size = 4, repel = T,title = "CCA Intergrated UMAP plot")
 save(object, file = "data/MCL_41_20191205.Rda")
 
-#======1.8 old Harmony =========================
+#======1.8  Harmony =========================
 (load(file = "data/MCL_41_20191205.Rda"))
 DefaultAssay(object)  = "SCT"
 object <- FindVariableFeatures(object = object, selection.method = "vst",

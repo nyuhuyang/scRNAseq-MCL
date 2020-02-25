@@ -1,15 +1,12 @@
 ############################################
 # combine hpca and blueprint_encode
 ############################################
-if (!requireNamespace("BiocManager", quietly = TRUE))
-install.packages("BiocManager")
-
-BiocManager::install("SingleR")
+#devtools::install_github('dviraran/SingleR')
 library(SingleR)
 library(genefilter)
 library(dplyr)
 library(magrittr)
-source("../R/Seurat_functions.R")
+source("../R/Seurat3_functions.R")
 source("../R/SingleR_functions.R")
 source("R/util.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
@@ -68,45 +65,39 @@ title(main="blueprint_encode_rm")
 
 sort(unique(blueprint_encode$main_types))
 types = FineTune(as.character(blueprint_encode$types[-rm_index]),
-main.type = FALSE)
+                       main.type = FALSE)
 main_types = FineTune(as.character(blueprint_encode$main_types[-rm_index]),
-main.type = TRUE)
+                            main.type = TRUE)
 sort(unique(main_types))
 Blueprint_encode = CreateSinglerReference(name = 'Blueprint_encode',
-expr = blueprint_encode_rm,
-types = types,
-main_types = main_types)
+                                          expr = blueprint_encode_rm,
+                                          types = types, 
+                                          main_types = main_types)
 save(Blueprint_encode,file='../SingleR/data/Blueprint_encode.RData')
 
 # 2. check and prepare MCL data==============================
-MCL_bulk <- read.csv(file="data/RNAseq/MCL_bulk.csv") #remove X
+MCL_bulk <- read.csv(file="data/RNAseq/MCL_bulk_191006.csv", stringsAsFactors = F)
+head(MCL_bulk);dim(MCL_bulk)
+B_bulk <- read.csv(file="data/RNAseq/B_bulk_191006.csv", stringsAsFactors = F)
+head(B_bulk);dim(B_bulk)
 
-head(MCL_bulk)
-dim(MCL_bulk)
-table(dup <- duplicated(t(MCL_bulk[1:200,])))
-MCL_bulk <- MCL_bulk[,!dup]
-MCL_bulk <- RemoveDup(MCL_bulk)
-#testMMM(MCL_bulk)
-
-B_bulk <- read.csv(file="data/RNAseq/B_bluk.csv") #remove X
-B_bulk <- RemoveDup(B_bulk)
-
-B_MCL_bulk <- merge(log1p(B_bulk),log1p(MCL_bulk),
-by="row.names",all=FALSE)
+B_MCL_bulk <- inner_join(B_bulk, MCL_bulk, by = "X")
 B_MCL_bulk <- RemoveDup(B_MCL_bulk)
+head(B_MCL_bulk);dim(B_MCL_bulk)
 
+B_MCL_bulk <- log1p(B_MCL_bulk)
 
 # 3. merge MCL and Blueprint_encode =====================
 (load(file='../SingleR/data/Blueprint_encode.RData'))
 dim(Blueprint_encode$data)
 MCL_blue_encode <- merge(B_MCL_bulk, Blueprint_encode$data,
-by="row.names",all=FALSE)
+                         by="row.names",all=FALSE)
 MCL_blue_encode <- RemoveDup(MCL_blue_encode)
-#testMMM(MCL_blue_encode)
+testMMM(MCL_blue_encode)
 
 colsum <- colSums(MCL_blue_encode)
-scale_factor = median(colsum)
-MCL_blue_encode = MCL_blue_encode/colsum * scale_factor
+#scale_factor = median(colsum)
+#MCL_blue_encode = MCL_blue_encode/colsum * scale_factor
 #testMMM(MCL_blue_encode)
 
 jpeg(paste0(path,"boxplot_MCL_blue_encode.jpeg"), units="in", width=10, height=7,res=600)
@@ -117,12 +108,12 @@ dev.off()
 
 # Create Singler Reference
 ref = CreateSinglerReference(name = 'MCL_blue_encode',
-expr = as.matrix(MCL_blue_encode), # the expression matrix
-types = c(rep("B_cells:PB",ncol(B_bulk)),
-rep("MCL",ncol(MCL_bulk)),
-Blueprint_encode$types),
-main_types = c(rep("B_cells",ncol(B_bulk)),
-rep("MCL",ncol(MCL_bulk)),
-Blueprint_encode$main_types))
+                             expr = as.matrix(MCL_blue_encode), # the expression matrix
+                             types = c(rep("B_cells:PB",ncol(B_bulk)-1),
+                                       rep("MCL",ncol(MCL_bulk)-1),
+                                       Blueprint_encode$types), 
+                             main_types = c(rep("B_cells",ncol(B_bulk)-1),
+                                            rep("MCL",ncol(MCL_bulk)-1),
+                                            Blueprint_encode$main_types))
 
-save(ref,file='data/ref_MCL_blue_encode_20190916.RData') # it is best to name the object and the file with the same name.
+save(ref,file='data/ref_MCL_blue_encode_20200225.RData')

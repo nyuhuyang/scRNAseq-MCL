@@ -15,8 +15,6 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 (load(file = "data/MCL_41_harmony_20191231.Rda"))
 Idents(object) = "Doublets"
 object %<>% subset(idents = "Singlet")
-Idents(object) = "orig.ident"
-object %<>% subset(idents = "Pt2_30Pd",invert = T)
 Idents(object) = "cell.types"
 object %<>% subset(idents = c("B_cells","MCL"))
 
@@ -56,35 +54,54 @@ object %<>% RenameIdents("0" = "C1",
                          "1" = "C1",
                          "2" = "C2",
                          "3" = "C2",
-                         "4" = "C5",
-                         "5" = "C4",
-                         "6" = "C5",
+                         "4" = "C4",
+                         "5" = "C3",
+                         "6" = "C4",
                          "7" = "C2",
                          "8" = "C2",
-                         "9" = "C3",
+                         "9" = "C2",
                          "10"= "C1",
-                         "11"= "C5",
-                         "12"= "C1",
+                         "11"= "C3",
+                         "12"= "C4",
                          "13"= "C1",
                          "14"= "C1",
                          "15"= "C1",
-                         "16"= "C2",
-                         "17"= "C1",
+                         "16"= "C1",
+                         "17"= "C2",
                          "18"= "C1",
                          "19"= "C1",
-                         "20"= "C1")
-object[["X5clusters"]] = as.character(Idents(object))
-Idents(object) = "X5clusters"
-lapply(c("SCT_snn_res.1","X5clusters"), function(group.by)
+                         "20"= "C1",
+                         "21"= "C1",
+                         "22"= "C1")
+object[["X4clusters"]] = as.character(Idents(object))
+Idents(object) = "X4clusters"
+lapply(c("SCT_snn_res.1","X4clusters"), function(group.by)
     TSNEPlot.1(object, group.by=group.by,pt.size = 0.3,label = T,
                label.repel = T,alpha = 0.9,
                do.return = F,
                no.legend = T,label.size = 4, repel = T, 
-               title = paste("res =",res),
+               title = paste("res =0.1"),
                do.print = T))
 saveRDS(object, file = "data/MCL_41_B_20200207.rds")
 
+# cell.types false positive results  ========
+table(object$cell.types, object$orig.ident) %>% kable %>% kable_styling()
+normal_cells <- object$sample %in% c("BH","DJ","MD","NZ") %>% colnames(object)[.]
+object@meta.data[normal_cells,"cell.types"] %<>% gsub("MCL","B_cells",.)
 
+# UMI
+object$orig.ident_X4cluster = gsub("N01|N02|N03","Normal",object$orig.ident)
+object$orig.ident_X4cluster %<>% paste0("_",object$X4clusters)
+object$orig.ident_X4cluster %<>% gsub("Normal_.*","Normal",.)
+
+Idents(object) = "orig.ident_X4cluster"
+exp = AverageExpression(object,assays = "SCT")
+write.csv(exp$SCT,paste0(path,"MCL_41_UMI.csv"))
+
+cell_number = table(object$orig.ident_X4cluster) %>% 
+    as.data.frame() %>% t
+rownames(cell_number) = c("Sample","Cell.number")
+write.csv(cell_number,paste0(path,"MCL_41_UMI_cell_number.csv"))
 #======3.2 rerun harmony =========================
 object@reductions = list();GC()
 
@@ -181,7 +198,34 @@ object %<>% RenameIdents("0" = "C1",
                          "11" = "C5",
                          "12" = "C1",
                          "13" = "C5")
-object[["X5clusters"]] = as.character(Idents(object))
-Idents(object) = "X5clusters"
+object[["X4clusters"]] = as.character(Idents(object))
+Idents(object) = "X4clusters"
 object %<>% sortIdent()
 saveRDS(object, file = "data/MCL_41_B_20200204.rds")
+#======3.3 fine adjust cluster =========================
+X4clusters_markers = read.csv(file= paste0("Yang/Figure 2/Figure Sources/",
+                                           "MCL_41-FC0.05.csv"),
+                              row.names = 1, stringsAsFactors=F)
+Top_n = 40
+top = X4clusters_markers %>% group_by(cluster) %>%
+    top_n(Top_n, cluster) %>% top_n(Top_n, avg_logFC)
+C2_top <- top[top$cluster %in% "C2",]
+Idents(object) = "X4clusters"
+C1 <- subset(object, idents = "C1")
+C1 %<>% AddModuleScore(features = list(C2_top$gene),ctrl = 5,name = "C2_top_gene")
+
+FeaturePlot.1(C1,features = "C2_top_gene1", pt.size = 1, cols = c("gray90", "red"),
+              alpha = 1,reduction = "tsne", 
+             text.size = 20, border = T,do.print = T, do.return = F,
+              units = "in",width=9, height=12, no.legend = T)
+C1 %<>% ScaleData(features=C2_top$gene)
+Idents(C1) = "conditions"
+UMAPPlot(C1,label=T)
+DoHeatmap.1(C1, features = C2_top$gene, Top_n = Top_n,
+            do.print=T, angle = 90, group.bar = T, title.size = 0, no.legend = F,size=5,hjust = 0.5,
+            group.bar.height = 0.02, label=T, cex.row= 2, legend.size = 0,width=10, height=6.5,
+            pal_gsea = FALSE,
+            unique.name = "cell.types",
+            title = "Top 40 DE genes in C1 clusters using new DEGs",
+            save.path = path)
+rerunH <- readRDS(paste0(path,"rerunH_B_SCT_snn_res.0.3.rds"))

@@ -29,11 +29,12 @@ print(paste0("slurm_arrayid=",i))
 # 
 # ######################################################################
 
-# samples
+# need 16GB
 
 (load(file = "data/MCL_41_harmony_20200225.Rda"))
 (samples = unique(object$orig.ident))
-object_list <- SplitObject(object,split.by = "orig.ident")
+Idents(object) = "orig.ident"
+sub_object <- subset(object, idents = samples[i])
 rm(object);GC()
 (load(file = "output/MCL_41_harmony_20200203_sweep.res_list.Rda"))
 sweep_list <- lapply(sweep.res_list, function(x) summarizeSweep(x, GT = FALSE))
@@ -43,26 +44,25 @@ bcmvn_list <- lapply(sweep_list,find.pK)
 (maximal_pk <- sapply(bcmvn_list,function(x) {
     as.numeric(as.character(x[find.localMaxima(x$BCmetric),"pK"]))
     }))
-maximal_pk
 
 ## Homotypic Doublet Proportion Estimate -------------------------------------------------------------------------------------
-print(paste("processing",unique(object_list[[i]]$orig.ident)))
-homotypic.prop <- modelHomotypic(object_list[[i]]@meta.data$cell.types)
-nExp_poi <- round(Multiplet_Rate(object_list[[i]])*length(colnames(object_list[[i]])))  ## Assuming 7.5% doublet formation rate - tailor for your dataset
+print(paste("processing",unique(sub_object$orig.ident)))
+homotypic.prop <- modelHomotypic(sub_object@meta.data$cell.types)
+nExp_poi <- round(Multiplet_Rate(sub_object)*length(colnames(sub_object)))  ## Assuming 7.5% doublet formation rate - tailor for your dataset
 nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
 
 ## Run DoubletFinder with varying classification stringencies ----------------------------------------------------------------
-object_list[[i]] <- doubletFinder_v3(object_list[[i]], PCs = 1:50, 
+sub_object <- doubletFinder_v3(sub_object, PCs = 1:50, 
                                      pN = 0.25, pK = maximal_pk[i], 
                                      nExp = nExp_poi, reuse.pANN = FALSE, sct = T)
-object_list[[i]] <- doubletFinder_v3(object_list[[i]], PCs = 1:50, 
+sub_object <- doubletFinder_v3(sub_object, PCs = 1:50, 
                                      pN = 0.25, pK = maximal_pk[i],
                                      nExp = nExp_poi.adj, 
-                                     reuse.pANN = grep("pANN",colnames(object_list[[i]]@meta.data),value = T),
+                                     reuse.pANN = grep("pANN",colnames(sub_object@meta.data),value = T),
                                      sct = TRUE)
-colName = colnames(object_list[[i]]@meta.data)
+colName = colnames(sub_object@meta.data)
 colName[grep("DF.classifications",colName)] = c("Low_confident_doublets",
                                                 "High_confident_doublets")
-colnames(object_list[[i]]@meta.data) = colName
+colnames(sub_object@meta.data) = colName
 
-saveRDS(object_list[[i]]@meta.data,file=paste0(path,"object_list_",i,"_meta.data.rds"))
+saveRDS(sub_object@meta.data,file=paste0(path,"object_list_",i,"_meta.data.rds"))

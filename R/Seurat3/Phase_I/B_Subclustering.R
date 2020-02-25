@@ -23,14 +23,14 @@ UMAPPlot(object, cols = c("#E6AB02","#2055da"),
            group.by = "cell.types")+
     ggtitle("remove sparse B and MCL cells")+
     TitleCenter()+
-    geom_segment(aes(x = -16, y = -4, xend = 4, yend = -4))+
-    geom_segment(aes(x = 4, y = -4, xend = 4, yend = 2))+
-    geom_segment(aes(x = 4, y = 2, xend = 10, yend = 2))
+    geom_segment(aes(x = -16, y = -4, xend = 0, yend = -4))+
+    geom_segment(aes(x = 0, y = -4, xend = 0, yend = 2))+
+    geom_segment(aes(x = 0, y = 2, xend = 10, yend = 2))
 dev.off()
 
 object@meta.data %<>% cbind(object[["umap"]]@cell.embeddings )
 object %<>% subset(subset = UMAP_2 > -4)
-object %<>% subset(subset = UMAP_1 > 4 & UMAP_2 < 2, invert = T)
+object %<>% subset(subset = UMAP_1 > 0 & UMAP_2 < 2, invert = T)
 
 TSNEPlot.1(object, group.by = "cell.types",
    cols = c("#E6AB02","#2055da"),
@@ -56,13 +56,13 @@ object %<>% RenameIdents("0" = "C1",
                          "3" = "C2",
                          "4" = "C4",
                          "5" = "C3",
-                         "6" = "C4",
-                         "7" = "C2",
-                         "8" = "C2",
+                         "6" = "C2",
+                         "7" = "C4",
+                         "8" = "C4",
                          "9" = "C2",
-                         "10"= "C1",
+                         "10"= "C2",
                          "11"= "C3",
-                         "12"= "C4",
+                         "12"= "C1",
                          "13"= "C1",
                          "14"= "C1",
                          "15"= "C1",
@@ -82,7 +82,7 @@ lapply(c("SCT_snn_res.1","X4clusters"), function(group.by)
                no.legend = T,label.size = 4, repel = T, 
                title = paste("res =0.1"),
                do.print = T))
-saveRDS(object, file = "data/MCL_41_B_20200207.rds")
+saveRDS(object, file = "data/MCL_41_B_20200225.rds")
 
 # cell.types false positive results  ========
 table(object$cell.types, object$orig.ident) %>% kable %>% kable_styling()

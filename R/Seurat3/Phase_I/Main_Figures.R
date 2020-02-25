@@ -77,7 +77,7 @@ file.rename(paste0(path,"FeaturePlot__object_cell_types_CD19-CCND1-SOX11-CD3D-CD
 path <- "Yang/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
-B_cells_MCL = readRDS(file = "data/MCL_41_B_20200207.rds")
+B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 Idents(B_cells_MCL) = "orig.ident" 
 B_cells_MCL %<>% subset(idents = "Pt2_30Pd", invert = T)
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))

@@ -24,11 +24,6 @@ df_samples <- readxl::read_excel("doc/191120_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 object$orig.ident %<>% factor(levels = df_samples$`sample name`)
 
-table(object$Doublets) %>% prop.table()
-
-Idents(object) = "Doublets"
-object %<>% subset(idents = "Singlet")
-
 mean(object$nCount_SCT)
 mean(object$nFeature_SCT)
 
@@ -80,9 +75,9 @@ ggviolin(QC_list, x = "submitter", y= "mean.reads.per.cell",
          xlab = "",ylab = "Mean Reads per Cell",
          add = c("jitter","mean_sd"),
          draw_quantiles = 0.5,
-         #yscale = "log10"
+         yscale = "log10"
          )+
-        scale_y_continuous(expand = c(0, 0), limits = c(0,350000))+
+        #scale_y_continuous(expand = c(0, 0), limits = c(0,350000))+
                  theme(plot.title = element_text(hjust = 0.5,size=15),
                        axis.title.x=element_blank(),
                        axis.text.x=element_blank())
@@ -93,9 +88,11 @@ ggviolin(QC_list, x = "submitter", y= "cell.number",
          title = "Cell number in each scRNA-seq",
          xlab = "",ylab = "Cell Number",
          add = c("jitter","mean_sd"),
-         ylim = c(0, max(QC_list$cell.number)+1000),
-         draw_quantiles = 0.5)+
-        scale_y_continuous(expand = c(0, 0), limits = c(0,6000))+
+         #ylim = c(0, max(QC_list$cell.number)+1000),
+         draw_quantiles = 0.5,
+         yscale = "log10"
+         )+
+        #scale_y_continuous(expand = c(0, 0), limits = c(0,6000))+
         theme(plot.title = element_text(hjust = 0.5,size=15),
               axis.title.x=element_blank(),
               axis.text.x=element_blank())
@@ -107,9 +104,9 @@ ggviolin(QC_list, x = "submitter", y= "mean.nUMI",
          xlab = "",ylab = "Mean UMI per Cell",
          add = c("jitter","mean_sd"),
          draw_quantiles = 0.5,
-         #yscale = "log10"
+         yscale = "log10"
          )+
-        scale_y_continuous(expand = c(0, 0), limits = c(0,12000))+
+        #scale_y_continuous(expand = c(0, 0), limits = c(0,12000))+
         theme(plot.title = element_text(hjust = 0.5,size=13),
               axis.title.x=element_blank(),
               axis.text.x=element_blank())
@@ -121,9 +118,9 @@ ggviolin(QC_list, x = "submitter", y= "mean.nGene",
          xlab = "",ylab = "Mean genes per Cell",
          add = c("jitter","mean_sd"),
          draw_quantiles = 0.5,
-         #yscale = "log10"
+         yscale = "log10"
          )+
-        scale_y_continuous(expand = c(0, 0), limits = c(0,4000))+
+        #scale_y_continuous(expand = c(0, 0), limits = c(0,4000))+
         theme(plot.title = element_text(hjust = 0.5,size=13),
               axis.title.x=element_blank(),
               axis.text.x=element_blank())
@@ -156,7 +153,8 @@ jpeg(paste0(path,"S2_nGene.jpeg"), units="in", width=7, height=5,res=600)
 g2[[1]]+ggtitle("Distribution of Gene Number per Cells")+
         xlab("scRNA-seq samples")+
         ylab("Gene Number")+
-        ylim(0,max(object$nFeature_SCT)+100)+
+        scale_y_log10()+
+        #ylim(0,max(object$nFeature_SCT)+100)+
         theme(plot.title = element_text(face = 'plain'))
 dev.off()
 
@@ -164,7 +162,8 @@ jpeg(paste0(path,"S2_nUMI.jpeg"), units="in", width=7, height=5,res=600)
 g2[[2]]+ggtitle("Distribution of transcripts per Cells")+
         xlab("scRNA-seq samples")+
         ylab("UMI per Cell")+
-        ylim(0,max(object$nCount_SCT)+1000)+
+        scale_y_log10()+
+        #ylim(0,max(object$nCount_SCT)+1000)+
         theme(plot.title = element_text(face = 'plain'))
 dev.off()
 

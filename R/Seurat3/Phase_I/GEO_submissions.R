@@ -25,9 +25,10 @@ library(Matrix)
 library(coop)
 library(data.table)
 source("../R/Seurat3_functions.R")
+(load(file="data/MCL_41_harmony_20191230.Rda"))
 
 object_list <- SplitObject(object, split.by = "orig.ident")
-counts_list <- lapply(object_list, function(x) object@assays$RNA@counts)
+counts_list <- lapply(object_list, function(x) x@assays$RNA@counts)
 dt_list <- lapply(counts_list, function(x) as.data.table(x,keep.rownames=TRUE))
 (samples <- sapply(counts_list, function(x) sub("_.*","",colnames(x)[1])))
 #
@@ -54,3 +55,12 @@ echo $files
 md5sum $files > MCL_fastq_counts_checksums.md5
 md5sum -c BladderCancer_bam_checksums.md5
 "https://www.howtoforge.com/linux-md5sum-command/"
+
+ncftp
+set passive on
+set so-bufsize 33554432
+open ftp://geoftp:rebUzyi1@ftp-private.ncbi.nlm.nih.gov
+cd uploads/yah2014_Ixm16U6w
+mkdir MCL_data
+cd MCL_data
+put -R *

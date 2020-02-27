@@ -38,7 +38,7 @@ table(Idents(object))
 path <- "Yang/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
-object$cell_types <- plyr::mapvalues(object@meta.data$cell.types,from = c("B_cells","MCL",
+object$cell.types <- plyr::mapvalues(object@meta.data$cell.types,from = c("B_cells","MCL",
                                                       "Myeloid cells",
                                                       "NK_cells","T_cells:CD4+",
                                                       "T_cells:CD8+"),
@@ -46,11 +46,11 @@ object$cell_types <- plyr::mapvalues(object@meta.data$cell.types,from = c("B_cel
                                                     "Monocytes",
                                                     "NK","CD4 T",
                                                     "CD8 T"))
-object$cell_types %<>% as.character()
-object$cell_types.colors = object$cell.types.colors
-Idents(object) = "cell_types"
+object$cell.types %<>% as.character()
+object$cell.types.colors = object$cell.types.colors
+Idents(object) = "cell.types"
 object %<>% sortIdent()
-TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "cell_types",
+TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "cell.types",
            cols = ExtractMetaColor(object),no.legend = F,border = T,
            pt.size = 0.1, do.print = T,do.return = F,legend.size = 25,
            title.size = 20,title = "tSNE plots for cell types of 41 samples",
@@ -64,13 +64,13 @@ FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "r
               alpha = 1,reduction = "tsne",
               threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
               units = "in",width=9, height=12, no.legend = T, save.path = path)
-file.rename(paste0(path,"FeaturePlot__object_cell_types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
+file.rename(paste0(path,"FeaturePlot__object_cell.types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
             paste0(path,"FeaturePlot_label.jpeg"))
 FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
               alpha = 1,reduction = "tsne",
               threshold = 1, text.size = 0, border = T,do.print = T, do.return = F,ncol = 3, 
               units = "in",width=9, height=12, no.legend = T, save.path = path)
-file.rename(paste0(path,"FeaturePlot__object_cell_types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
+file.rename(paste0(path,"FeaturePlot__object_cell.types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
             paste0(path,"FeaturePlot_nolabel.jpeg"))
 
 #==== Figure 3-C ===========
@@ -82,9 +82,9 @@ Idents(B_cells_MCL) = "orig.ident"
 B_cells_MCL %<>% subset(idents = "Pt2_30Pd", invert = T)
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
-choose = c("X4clusters","X4cluster_vs_Normal")[1]
-cell_types = c("MCL_B_cells","MCL")[2]
-if(cell_types == "MCL_cells") {
+choose = c("X4clusters","X4cluster_vs_Normal")[2]
+cell.types = c("MCL_B_cells","MCL")[1]
+if(cell.types == "MCL_cells") {
         Idents(B_cells_MCL) = "cell.types"
         B_cells_MCL %<>% subset(idents = "MCL")
 }
@@ -124,32 +124,23 @@ if(choose == "X4clusters"){
                     unique.name = "cell.types",
                     title = "Top 40 DE genes in 4 B/MCL clusters",
                     save.path = paste0(path,choose,"/"))
-        file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_",cell_types,"_X4clusters_Legend.jpeg"),
-                    paste0(path,choose,"/Heatmap_top40_",cell_types,"_X4clusters.jpeg"))
+        file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_",cell.types,"_X4clusters_Legend.jpeg"),
+                    paste0(path,choose,"/Heatmap_top40_",cell.types,"_X4clusters.jpeg"))
 }
 
 
 if(choose == "X4cluster_vs_Normal"){
         B_cells_MCL$X4clusters_normal = as.character(B_cells_MCL$X4clusters)
+        B_cells_MCL$X4clusters_normal %<>% paste(B_cells_MCL$cell.types, sep = "_")
+        B_cells_MCL$X4clusters_normal %<>% gsub(".*_B_cells","B_cells",.)
+        B_cells_MCL$X4clusters_normal %<>% gsub("_MCL","",.)
         normal <- grepl("N01|N02|N03",B_cells_MCL$orig.ident)
         B_cells_MCL@meta.data[normal,"X4clusters_normal"] = "Normal"
         Idents(B_cells_MCL) = "X4clusters_normal"
         B_cells_MCL %<>% sortIdent()
         table(Idents(B_cells_MCL))
-        X4clusters_normal_markers <- FindPairMarkers(B_cells_MCL,
-                                                     ident.1 = c("Normal",paste0("C",1:4)), 
-                                                     ident.2 = list(paste0("C",1:4),
-                                                                    "Normal","Normal","Normal","Normal"),
-                                                      logfc.threshold = 0.25,only.pos = T,
-                                                      min.pct = 0.1,return.thresh = 0.05,
-                                                     save.path = path,
-                                                     latent.vars = "nCount_SCT")
-        
-        write.csv(X4clusters_normal_markers,paste0(path, choose,"/X4clusters_normal_FC0.25_markers.csv"))
-        X4clusters_markers = read.csv(file=paste0(path, choose,"/X4clusters_normal_FC0.25_markers.csv"),
+        X4clusters_markers = read.csv(file=paste0(path, choose,"/X4cluster_vs_Normal_41-FC0.csv"),
                                        row.names = 1, stringsAsFactors=F)
-        colnames(X4clusters_markers)[grep("cluster",colnames(X4clusters_markers))] = "cluster"
-        X4clusters_markers$cluster %<>% gsub(" /.*","",.)
         table(X4clusters_markers$cluster)
         markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
         (MT_gene <- grep("^MT-",X4clusters_markers$gene))
@@ -157,7 +148,7 @@ if(choose == "X4cluster_vs_Normal"){
         Top_n = 40
         top = X4clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
         table(top$cluster)
-        top = top[top$cluster %in% c("C1","C2","C3","C4"),]
+        top = top[top$cluster %in% c("B_cells","C1","C2","C3","C4"),]
         write.csv(top,paste0(path,choose,"/top40_4clusters_over_normal_genes_heatmap.csv"))
         features = c(as.character(top$gene),
                      tail(VariableFeatures(object = B_cells_MCL), 2),
@@ -167,30 +158,27 @@ if(choose == "X4cluster_vs_Normal"){
         B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
         
         Idents(B_cells_MCL) = "X4clusters_normal"
-        Idents(B_cells_MCL) %<>% factor(levels = c("Normal", paste0("C",1:4)))
+        Idents(B_cells_MCL) %<>% factor(levels = c("Normal", "B_cells", paste0("C",1:4)))
         table(Idents(B_cells_MCL))
         DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-                    do.print=T, angle = 0, group.bar = T, title.size = 0, no.legend = F,size=5,hjust = 0.5,
+                    do.print=T, angle = 0, group.bar = T, 
+                    group.colors = c("#B3DE69","#31aa3a",group.colors),
+                    title.size = 0, no.legend = F,size=5,hjust = 0.5,
                     group.bar.height = 0.02, label=T, cex.row= 2, legend.size = 0,width=10, height=6.5,
                     pal_gsea = FALSE,
                     unique.name = "cell.types",
                     title = "Top 40 DE genes in 4 B/MCL clusters vs Normal",
-                    save.path = path)
+                    save.path = paste0(path,choose,"/"))
         file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_B_cells_MCL_X4clusters_normal_Legend.jpeg"),
                     paste0(path,choose,"/Heatmap_top40_MCL_B_cells_X4clusters_normal.jpeg"))
 }
 
 #==== Figure 3-D ===========
-choose <- c("X4clusters","X4cluster_vs_Normal")[1]
+choose <- c("X4clusters","X4cluster_vs_Normal")[2]
 res = read.csv(file = paste0("Yang/Figure 3/Figure Sources/",
                              choose,"/",choose,"_41-FC0.csv"),
                row.names = 1, stringsAsFactors=F)
-if(choose == "X4clusters") table(res$cluster)
-if(choose == "X4cluster_vs_Normal"){
-        table(res$cluster1.vs.cluster2)
-        res$cluster1.vs.cluster2 = gsub("Normal vs. ","",res$cluster1.vs.cluster2)
-}
-
+table(res$cluster)
 head(res)
 res = res[order(res["p_val_adj"]),]
 head(res, 20)
@@ -198,24 +186,44 @@ head(res, 20)
 hallmark <- fgsea::gmtPathways("../seurat_resources/msigdb/h.all.v6.2.symbols.gmt")
 names(hallmark) = gsub("HALLMARK_","",names(hallmark))
 names(hallmark) = gsub("\\_"," ",names(hallmark))
-hallmark =  hallmark[c("TNFA SIGNALING VIA NFKB",)]
-hallmark$`NFKB SIGNALING` =  read.delim("data/200222 NFKB pathway gene list.txt") %>% 
+hallmark$`NF-kB signaling` =  read.delim("data/200222 NFKB pathway gene list.txt") %>% 
         pull %>% as.character()
+hallmark$`MYC TARGETS` = c(hallmark$`MYC TARGETS V1`,hallmark$`MYC TARGETS V2`)
+select = c("TNFA SIGNALING VIA NFKB","MYC TARGETS","E2F TARGETS","OXIDATIVE PHOSPHORYLATION",
+           "G2M CHECKPOINT","DNA REPAIR","REACTIVE OXIGEN SPECIES PATHWAY",
+           "MTORC1 SIGNALING","GLYCOLYSIS","UNFOLDED PROTEIN RESPONSE","FATTY ACID METABOLISM",
+           "CHOLESTEROL HOMEOSTASIS","HYPOXIA", "PI3K AKT MTOR SIGNALING","INTERFERON ALPHA RESPONSE",
+           "TGF BETA SIGNALING","APOPTOSIS","IL6 JAK STAT3 SIGNALING", "INTERFERON GAMMA RESPONSE",
+           "P53 PATHWAY","IL2 STAT5 SIGNALING", "INFLAMMATORY RESPONSE","NF-kB signaling","KRAS SIGNALING DN",
+           "KRAS SIGNALING UP")
+hallmark =  hallmark[select]
+Names = c("TNFa signaling via NF-kB","Myc targets","E2F targets",
+          "Oxidative phosphorylation","G2M checkpoint","DNA repair",
+          "Reactive oxygen species pathway","mTORC1 signaling","Glycolysis",
+          "Unfolded protein response","Fatty acid metabolism","Cholesterol homeostasis",
+          "Hypoxia","PI3K/AKT/mTOR signaling","Interferon alpha response","TFG b signaling",
+          "Apoptosis", "IL-6/JAK/STAT3 signaling", "Interferon gamma response",
+          "p53 pathway","IL-2/STAT5 signaling","Inflammatory response",
+          "NF-kB signaling","KRAS signaling dn","KRAS signaling up")
+names(hallmark) = Names
 # Now, run the fgsea algorithm with 1000 permutations:
 fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark,
                         padj = 0.25,pval = 0.05,
                         order.yaxis.by = c("C4","NES"),
-                        order.xaxis = paste0("C",1:4),
+                        order.xaxis = if(choose == "X4cluster_vs_Normal") {
+                                c("B_cells", paste0("C",1:4))} else paste0("C",1:4),
                         decreasing = F,
                         Rowv = F,Colv = F,
                         size = " -log10(pval)", fill = "NES",
                         pathway.name = "Hallmark",rotate.x.text = T,
-                        title = "in B and MCL",
+                        title = "Cluster",
                         font.xtickslab=10, font.main=14, font.ytickslab = 10,
-                        font.legend = list(size = 12),font.label = list(size = 12),
-                        do.return = T,save.path = path, do.print = T,
-                        width = 5,height = 6)
-write.csv(fgseaRes, file = paste0(path,choose,"_FDR0.25_pval0.05.csv"))
+                        font.legend = list(size = 10),font.label = list(size = 10),
+                        do.return = T, do.print = T,
+                        width = 4.3,height = 4,save.path = paste0(path,choose,"/"))
+file.rename(paste0(path,choose,"/Dotplot_Cluster_Hallmark_0.25_0.05.jpeg"),
+            paste0(path,choose,"/Dotplot_",choose,"_Hallmark_0.25_0.05.jpeg"))
+write.csv(fgseaRes, file = paste0(path,choose,"/Dotplot",choose,"_FDR0.25_pval0.05.csv"))
 
 ##########################################
 #==== Figure 3C ===========
@@ -234,10 +242,10 @@ sub_object = sub_object[,c(keep_normal,keep_untreated)]
 Idents(sub_object) = "orig.ident"
 table(Idents(sub_object))
 
-Idents(sub_object) = "cell_types"
+Idents(sub_object) = "cell.types"
 TSNEPlot.1(sub_object, pt.size =0.3, 
            text.size = 14,no.legend = T,
-           group.by = "cell_types",split.by = "orig.ident",legend.size = 0,
+           group.by = "cell.types",split.by = "orig.ident",legend.size = 0,
            cols = ExtractMetaColor(sub_object), ncol = length(unique(sub_object$orig.ident)),
            unique.name = "groups", do.print = T,do.return = F,border = T,
            width=8.5, height=2, save.path = path)
@@ -249,7 +257,7 @@ path <- "Yang/B_pairwise_heatmaps/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
 # =========Doheatmap for Normal / MCL ============
-B_cells_MCL = readRDS(file = "data/MCL_41_B_20200207.rds")
+B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 B_cells_MCL$orig.ident %<>% gsub("N02|N01|N03","Normal",.)
 B_cells_MCL$X4_orig.ident = paste(B_cells_MCL$orig.ident,
                                    B_cells_MCL$X4clusters, sep = "_")
@@ -362,7 +370,7 @@ for(i in 1:9){
         # remove cluster with less than 3 cells======
         
         table_subset.MCL <- table(subset.MCL@meta.data$X4_orig.ident) %>% as.data.frame
-        (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character())
+        (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 5,"Var1"] %>% as.character())
         (X4_cluster <- keep.MCL %>% unique %>% 
                         gsub('.*\\_C',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)])
         
@@ -377,12 +385,12 @@ for(i in 1:9){
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,
                    do.return = F,do.print = F, unique.name = T)
         
-        #gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
-        #                               ident.2 = c(ident.2,ident.1), only.pos = T,
-        #                               logfc.threshold = 0.1,min.cells.group =3,
-        #                               min.pct = 0.1,return.thresh = 0.05,
-        #                               latent.vars = "nCount_SCT")
-        #write.csv(gde.markers, paste0(path,"DE_analysis_files/",samples1,"_vs_",samples2,".csv"))
+        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
+                                       ident.2 = c(ident.2,ident.1), only.pos = T,
+                                       logfc.threshold = 0.05,min.cells.group =3,
+                                       min.pct = 0.1,
+                                       latent.vars = "nCount_SCT")
+        write.csv(gde.markers, paste0(path,"DE_analysis_files/",samples1,"_vs_",samples2,".csv"))
         gde.markers = read.csv(paste0(path,"DE_analysis_files/",samples1,"_vs_",samples2,".csv"),row.names = 1)
         print(table(gde.markers$cluster1.vs.cluster2))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
@@ -419,12 +427,18 @@ for(i in 1:9){
 #### Fig 4E ########################################################################
 path <- "Yang/Figure 4/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
+B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
+B_cells_MCL$X4_orig.ident = paste(B_cells_MCL$orig.ident,
+                                  B_cells_MCL$X4clusters, sep = "_")
+Idents(B_cells_MCL) = "cell.types"
+B_cells_MCL %<>% subset(idents = "MCL")
 (samples1 = list_samples$MCL.1[1])
 (samples2 = list_samples$MCL.2[1])
-
+Idents(B_cells_MCL) = "orig.ident"
 subset.MCL <- subset(B_cells_MCL, idents = c(samples1,samples2))
 subset.MCL$orig.ident %<>% factor(levels = c(samples1,samples2))
 # merge C1+C2 and C3+C4
+
 subset.MCL$X4_orig.ident %<>% gsub("C1|C2","C1+2",.)
 subset.MCL$X4_orig.ident %<>% gsub("C3|C4","C3+4",.)
 
@@ -470,18 +484,20 @@ group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200207.rds")
 choose = c("X4clusters","X4cluster_vs_Normal")[1]
 if(choose == "X4clusters"){
+        Idents(B_cells_MCL) = "cell.types"
+        B_cells_MCL %<>% subset(idents = "MCL")
         Idents(B_cells_MCL) = "orig.ident"
         B_cells_MCL %<>% subset(idents = "Pt10_LN2Pd")
         Idents(B_cells_MCL) = "X4clusters"
         B_cells_MCL %<>% sortIdent()
         table(Idents(B_cells_MCL))
-        #system.time(MCL_markers <- FindAllMarkers.UMI(B_cells_MCL, 
-        #                                              only.pos = T,
-        #                                              test.use = "MAST",
-        #                                              logfc.threshold = 0.05,
-        #                                              min.pct = 0.1,return.thresh = 0.05,
-        #                                              latent.vars = "nCount_SCT"))
-        #write.csv(MCL_markers,paste0(path,"Pt10_LN2Pd_X4clusters_FC0.05_markers.csv"))
+        system.time(MCL_markers <- FindAllMarkers.UMI(B_cells_MCL, 
+                                                      only.pos = T,
+                                                      test.use = "MAST",
+                                                      logfc.threshold = 0.05,
+                                                      min.pct = 0.1,return.thresh = 0.05,
+                                                      latent.vars = "nCount_SCT"))
+        write.csv(MCL_markers,paste0(path,"Pt10_LN2Pd_X4clusters_FC0.05_markers.csv"))
         X4clusters_markers = read.csv(file= paste0(path,"Pt10_LN2Pd_X4clusters_FC0.05_markers.csv"),
                                       row.names = 1, stringsAsFactors=F)
         table(X4clusters_markers$cluster)
@@ -550,7 +566,7 @@ Idents(object) = "cell.types"
 object %<>% subset(idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
 table(Idents(object))
 
-object$cell_types <- plyr::mapvalues(object@meta.data$cell.types,
+object$cell.types <- plyr::mapvalues(object@meta.data$cell.types,
                                      from = c("B_cells","MCL",
                                               "Myeloid cells",
                                               "NK_cells","T_cells:CD4+",
@@ -559,16 +575,16 @@ object$cell_types <- plyr::mapvalues(object@meta.data$cell.types,
                                             "Monocytes",
                                             "NK","CD4 T",
                                             "CD8 T"))
-object$cell_types %<>% as.character()
-object$cell_types.colors = object$cell.types.colors
+object$cell.types %<>% as.character()
+object$cell.types.colors = object$cell.types.colors
 
 
 Idents(object) = "groups"
 (groups = Idents(object) %>% unique %>% as.character %>% sort)
-for(i in 3:length(groups)){
+for(i in 1:length(groups)){
         sub_object <- subset(object, idents = groups[i])
-        Idents(sub_object) = "cell_types"
-        TSNEPlot.1(object = sub_object, label = F, label.repel = F, group.by = "cell_types",
+        Idents(sub_object) = "cell.types"
+        TSNEPlot.1(object = sub_object, label = F, label.repel = F, group.by = "cell.types",
                    cols = ExtractMetaColor(sub_object),no.legend = F,border = T,
                    pt.size = 1, do.print = T,do.return = F,legend.size = 25,
                    unique.name = "groups",
@@ -580,11 +596,11 @@ path <- "Yang/Figure Sources/tSNE plots/Groups_split/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 Idents(object) = "groups"
-for(i in 3:length(groups)){
+for(i in 1:length(groups)){
         sub_object <- subset(object, idents = c("Normal",groups[i]))
-        Idents(sub_object) = "cell_types"
+        Idents(sub_object) = "cell.types"
         TSNEPlot.1(object = sub_object, label = F, label.repel = F, 
-                   group.by = "cell_types",split.by = "orig.ident",
+                   group.by = "cell.types",split.by = "orig.ident",
                    cols = ExtractMetaColor(sub_object),no.legend = T,border = T,
                    pt.size = 0.2, do.print = T,do.return = F,legend.size = 12,
                    unique.name = "groups",

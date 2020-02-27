@@ -49,7 +49,7 @@ ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
           label = "Percent",
           sort.val = "desc",
           width = 1, size = 0.5,
-          title = "Numbers of major cell types in total 43 samples")+NoLegend()+
+          title = "Numbers of major cell types in total 41 samples")+NoLegend()+
         theme(plot.title = element_text(hjust = 0.5,size=15))+
         scale_y_continuous(expand = c(0, 0), limits = c(0,max(cell_Freq$Cell_Number)+1500))
 dev.off()

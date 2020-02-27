@@ -13,6 +13,7 @@ library(fgsea)
 library(tibble)
 library(ggsci)
 library(ggpubr)
+library(scales) # to access break formatting functions
 source("../R/Seurat3_functions.R")
 path <- "Yang/Figure 4S/Supplementary Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
@@ -100,7 +101,9 @@ ggviolin(QC_list, x = "submitter", y= "cell.number",
          title = "Cell number in each scRNA-seq",
          xlab = "",ylab = "Cell Number",
          add = c("jitter","mean_sd"),
-         draw_quantiles = 0.5)+
+         draw_quantiles = 0.5
+         )+
+        scale_y_log10(breaks = c(500,1000,2000,3000,5000,8000))+
         theme(plot.title = element_text(hjust = 0.5,size=15),
               axis.title.x=element_blank(),
               axis.text.x=element_blank())

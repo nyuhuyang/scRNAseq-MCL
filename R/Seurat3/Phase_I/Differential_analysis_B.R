@@ -49,6 +49,22 @@ for(i in seq_along(idents.all)){
 gde.all <- bind_rows(genes.de)
 rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$gene))
 write.csv(gde.all, file = paste0(path,choose,"/",choose,"_41-FC0.csv"))
+#============
+choose = "X4cluster_vs_B"
+(de_file_names = list.files("output/20200227",pattern = "MCL_B_41-FC0_"))
+idents.all = paste0("C",1:4)
+genes.de <- list()
+for(i in seq_along(idents.all)){
+        genes.de[[i]] <- read.csv(paste0("output/20200227/",de_file_names[i]),
+                                  stringsAsFactors = F,row.names = 1)
+        genes.de[[i]] <- genes.de[[i]][order(genes.de[[i]]$p_val, -genes.de[[i]][, 2]), ]
+        
+        genes.de[[i]]$cluster <- idents.all[i]
+        genes.de[[i]]$gene <- rownames(x = genes.de[[i]])
+}
+gde.all <- bind_rows(genes.de)
+rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$gene))
+write.csv(gde.all, file = paste0(path,choose,"/",choose,"_41-FC0.csv"))
 #===================
 path <- "Yang/Figure Sources/Log2UMI/"
 if(!dir.exists(path)) dir.create(path, recursive = T)

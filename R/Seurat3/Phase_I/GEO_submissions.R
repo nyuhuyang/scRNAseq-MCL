@@ -1,6 +1,13 @@
+library(dbplyr)
+library(magrittr)
 # Generate raw_counts_txt
 
-
+# Modify SRA metadata
+metadata = read.delim("Yang/SRA/191228_SRA_metadata.txt",header = T, 
+                      stringsAsFactors = F)
+metadata$filename %<>% gsub(".*/","",.) %>% paste0(".fastq.gz")
+write.table(metadata, file = "Yang/SRA/202002228_SRA_metadata.txt",
+            sep = "\t", dec = ".", row.names = FALSE)
 library(magrittr)
 # read fastq files
 links = read.csv("doc/fastq_link.txt",stringsAsFactors = F) %>% .[,1] %>% 
@@ -61,6 +68,14 @@ set passive on
 set so-bufsize 33554432
 open ftp://geoftp:rebUzyi1@ftp-private.ncbi.nlm.nih.gov
 cd uploads/yah2014_Ixm16U6w
-mkdir MCL_data
+cd MCL_data
+put -R *
+
+        
+ncftp
+set passive on
+set so-bufsize 33554432
+open ftp://geoftp:rebUzyi1@ftp-private.ncbi.nlm.nih.gov
+cd uploads/yah2014_Ixm16U6w
 cd MCL_data
 put -R *

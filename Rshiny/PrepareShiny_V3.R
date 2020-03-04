@@ -60,8 +60,7 @@ PrepareShiny <- function(object, samples, Rshiny_path, split.by = "orig.ident",r
         if(!dir.exists(shiny_data_path)) dir.create(shiny_data_path, recursive = T)
         save(exp,tsne,max_exp, file = paste0(shiny_data_path,basename(Rshiny_path),".Rda"))
 }
-(load(file = "data/MCL_V3_Harmony_43_20190627.Rda"))
-(load(file = "data/MCL_41_harmony_20191231.Rda"))
+(load(file = "data/MCL_41_harmony_20200225.Rda"))
 #============== expression Rda ===============
 object$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
 Idents(object) = "Doublets"

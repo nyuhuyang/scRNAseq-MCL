@@ -6,7 +6,7 @@ print(args.ID)
 import os
 import loompy
 
-path="/athena/elementolab/scratch/yah2014/Projects/scRNAseq-Glioma/data/velocyto"
+path="/athena/elementolab/scratch/yah2014/Projects/scRNAseq-MCL/data/velocyto"
 os.chdir(path) # change current path
 print(os.getcwd())
 # List all filer folder's names.

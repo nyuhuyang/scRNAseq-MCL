@@ -1,14 +1,11 @@
 #!/bin/bash -l
-#$ -P mRNA velocyto
-#$ -N python script
-#$ -j y
-#$ -m a
-#$ -M yah2014@med.cornell.edu
-#$ -l h_rt=4:00:00
-#$ -l athena=true
-#$ -l h_vmem=50G
 
-#$ -q *@@red
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --output=velocyto_%A_%a.txt
+#SBATCH --job-name=velocyto
+#SBATCH --mem=20G  # memory requested, units available: K,M,G,T
+
 
 # Keep track of information related to the current job
 echo "=========================================================="

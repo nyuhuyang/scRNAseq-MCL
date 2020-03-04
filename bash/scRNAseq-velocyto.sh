@@ -6,10 +6,11 @@
 #SBATCH --job-name=velocyto
 #SBATCH --mem=80G  # memory requested, units available: K,M,G,T
 
+conda activate r3.6
 #---------------------Variables to be set-------------------------#
 PROJECT_NAME="scRNAseq-MCL"
 path=/athena/elementolab/scratch/yah2014/Projects/${PROJECT_NAME}/data/bam
-file_folder=$(ls ${path} | tail -n +${SGE_TASK_ID}| head -1) # Uses job array for each sample in the folder
+file_folder=$(ls ${path} | tail -n +${SLURM_ARRAY_TASK_ID}| head -1) # Uses job array for each sample in the folder
 file="${file_folder}.bam" # add .bam
 rmsk_gtf=/athena/elementolab/scratch/yah2014/Indexed_genome/hg19_rmsk.gtf
 genes_gtf=/athena/elementolab/scratch/yah2014/Indexed_genome/refdata-cellranger-hg19-3.0.0/genes/genes.gtf

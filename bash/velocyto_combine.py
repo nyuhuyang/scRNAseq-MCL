@@ -1,8 +1,8 @@
 import argparse
-parser = argparse.ArgumentParser(description='select a group name, for example:"PM1415"')
+parser = argparse.ArgumentParser(description='select a group name, for example:"Pt_25"')
 parser.add_argument("ID", help="merge a group of loom files according to the group name")
 args = parser.parse_args()
-print(args.ID)
+print(args.ID) # args_ID
 import os
 import loompy
 

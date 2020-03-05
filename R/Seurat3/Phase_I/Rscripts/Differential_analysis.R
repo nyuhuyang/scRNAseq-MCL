@@ -12,7 +12,6 @@ source("../R/Seurat3_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path))dir.create(path, recursive = T)
 
-# change the current plan to access parallelization
 
 # SLURM_ARRAY_TASK_ID
 slurm_arrayid <- Sys.getenv('SLURM_ARRAY_TASK_ID')

@@ -14,13 +14,13 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
 
-samples = c("Pt-25_merged","Pt-25-SB-C1","Pt-25-C1",
+samples = c("Pt-25-SB-C1","Pt-25-C1",
             "Pt-25-C1D8", "Pt-25-C24","Pt-25-AMB-C25","Pt-25-C25")
 cell.types = c("All","B and MCL")
 args = data.frame(samples = rep(samples,  time = 2),
-                  cell.types =  rep(cell.types, each = 7),
+                  cell.types =  rep(cell.types, each = 6),
                   stringsAsFactors = F)
-arg = args[i,]
+(arg = args[i,])
 # load data
 (load(file="data/MCL_41_harmony_20200225.Rda"))
 Idents(object) = "groups"
@@ -50,7 +50,7 @@ rownames(object@reductions$harmony@cell.embeddings) = colnames(object)
 # subset RNA_velocyto
 RNA_velocyto %<>% subset(cells = colnames(object))
 RNA_velocyto@reductions$harmony = object@reductions$harmony
-RNA_velocyto@reductions$umap = object@reductions$umap
+RNA_velocyto@reductions$tsne = object@reductions$tsne
 RNA_velocyto@meta.data %<>% cbind(object@meta.data)
 
 # RunVelocity

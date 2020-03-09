@@ -13,13 +13,17 @@ B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 Idents(B_cells_MCL) = "orig.ident"
 samples = c("All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR",
             "Pt10_LN2Pd","Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
-features.list = lapply(list(c("NFKB2","MAP3K8"),
+features.list = lapply(list(c("BCL6","IRF4"),
+                            c("MYC", "BCL6"),
+                            c("MEF2B", "BCL6"),
+                            c("CDKN1A", "BCL6"),
+                            c("NFKB2","MAP3K8"),
+                            c("FOXM1","IRF4"),
+                            c("RELB","IRF4"),
                             c("NFKB2","RELB"),
                             c("MAP3K8","RELB"),
                             c("NFKB2","IRF4"),
                             c("MYC", "IRF4"),
-                            c("BCL6","IRF4"),
-                            c("MYC", "BCL6"),
                             c("EZH2","E2F1"),
                             c("EZH2","PCNA"),
                             c("EZH2","CDK1"),
@@ -35,14 +39,14 @@ features.list = lapply(list(c("NFKB2","MAP3K8"),
                        function(x) FilterGenes(B_cells_MCL,x,unique = F))
 (cols.use.list = rep(list(c("#b88801","#2c568c", "#E31A1C")), length(features.list)))
 Idents(B_cells_MCL) ="orig.ident"
-cluster=F
-for(s in samples[2:4]){ #length(samples)
+cluster=T
+for(s in samples[2]){ #length(samples)
         s_path <- paste0(path,s,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
         if(s == "All_samples") {
                 subset_object = B_cells_MCL
         } else subset_object = subset(B_cells_MCL, idents = s)
-        for(i in 1:7){ #5:
+        for(i in 5){ #5:
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
                                    overlay = T,cols = c("#d8d8d8",cols.use.list[[i]]),
@@ -120,7 +124,7 @@ for(s in samples[2:4]){ #length(samples)
                         g <- FeatureScatter(subset_object_n, feature1 = features.list[[i]][1],
                                             pt.size = 4,
                                             feature2 = features.list[[i]][2],,slot = "data")
-                        #print(g)
+                        print(g)
                         dev.off()
                 }
                 

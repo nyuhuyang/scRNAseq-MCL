@@ -4,7 +4,7 @@
 #SBATCH --ntasks=1
 #SBATCH --output=velocyto_%A_%a.txt
 #SBATCH --job-name=velocyto
-#SBATCH --mem=80G  # memory requested, units available: K,M,G,T
+#SBATCH --mem=256G  # memory requested, units available: K,M,G,T
 
 conda activate scanpy
 #---------------------Variables to be set-------------------------#

@@ -61,9 +61,11 @@ PrepareShiny <- function(object, samples, Rshiny_path, split.by = "orig.ident",r
         save(exp,tsne,max_exp, file = paste0(shiny_data_path,basename(Rshiny_path),".Rda"))
 }
 (load(file = "data/MCL_41_harmony_20200225.Rda"))
+object = readRDS("data/MCL_41_B_20200225.rds")
 #============== expression Rda ===============
 object$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
 Idents(object) = "Doublets"
 object %<>% subset(idents = "Singlet")
+
 PrepareShiny(object, samples = samples, Rshiny_path = Rshiny_path, 
              verbose = T)

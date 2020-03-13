@@ -11,9 +11,20 @@ if(!dir.exists(path))dir.create(path, recursive = T)
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 
 Idents(B_cells_MCL) = "orig.ident"
-samples = c("All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR",
+samples = c("Pt25_SB1","Pt25_24", "Pt25_AMB25Pd",
+            "All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR",
             "Pt10_LN2Pd","Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
-features.list = lapply(list(c("BCL6","IRF4"),
+features.list = lapply(list(c("HLA-DPA1", "MCM7"),
+                            c("HLA-A", "MCM7"),
+                            c("HLA-B", "MCM7"),
+                            c("HLA-DPA1", "CCND1"),
+                            c("HLA-A", "CCND1"),
+                            c("HLA-B", "CCND1"),
+                            c("IRF4", "BCL6"),
+                            c("IRF4", "CCND1"),
+                            c("BCL6", "CCND1"),
+                            c("CCND1","MCM7"),
+                            c("BCL6","IRF4"),
                             c("MYC", "BCL6"),
                             c("MEF2B", "BCL6"),
                             c("CDKN1A", "BCL6"),
@@ -39,14 +50,14 @@ features.list = lapply(list(c("BCL6","IRF4"),
                        function(x) FilterGenes(B_cells_MCL,x,unique = F))
 (cols.use.list = rep(list(c("#b88801","#2c568c", "#E31A1C")), length(features.list)))
 Idents(B_cells_MCL) ="orig.ident"
-cluster=T
-for(s in samples[2]){ #length(samples)
+cluster=F
+for(s in samples[1:3]){ #length(samples)
         s_path <- paste0(path,s,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
         if(s == "All_samples") {
                 subset_object = B_cells_MCL
         } else subset_object = subset(B_cells_MCL, idents = s)
-        for(i in 5){ #5:
+        for(i in 1:3){ #5:
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
                                    overlay = T,cols = c("#d8d8d8",cols.use.list[[i]]),
@@ -89,8 +100,9 @@ for(s in samples[2]){ #length(samples)
                         jpeg(paste0(s_path,s,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
                              units="in", width=7, height=7,res=600)
                         g <- FeatureScatter(subset_object, feature1 = features.list[[i]][1],
-                                            pt.size = 2,
-                                            feature2 = features.list[[i]][2],slot = "data")
+                                            group.by = "orig.ident",
+                                            pt.size = 2,cols = "black",
+                                            feature2 = features.list[[i]][2],slot = "data")+ NoLegend()
                         print(g)
                         dev.off()
                 }
@@ -123,12 +135,10 @@ for(s in samples[2]){ #length(samples)
                              units="in", width=7, height=7,res=600)
                         g <- FeatureScatter(subset_object_n, feature1 = features.list[[i]][1],
                                             pt.size = 4,
-                                            feature2 = features.list[[i]][2],,slot = "data")
+                                            feature2 = features.list[[i]][2],slot = "data")+ NoLegend()
                         print(g)
                         dev.off()
                 }
-                
-        
                 Progress(i,length(features.list))}
 }
 

@@ -34,6 +34,7 @@ RemoveDup <- function(mat){
 # 1. check and filter blueprint_encode data==============================
 data("blueprint_encode")
 names(blueprint_encode)
+unique(blueprint_encode$types)
 dim(blueprint_encode$data)
 head(blueprint_encode$types)
 length(blueprint_encode$types)
@@ -74,7 +75,6 @@ Blueprint_encode = CreateSinglerReference(name = 'Blueprint_encode',
                                           types = types, 
                                           main_types = main_types)
 save(Blueprint_encode,file='../SingleR/data/Blueprint_encode.RData')
-
 # 2. check and prepare MCL data==============================
 MCL_bulk <- read.csv(file="data/RNAseq/MCL_bulk_191006.csv", stringsAsFactors = F)
 head(MCL_bulk);dim(MCL_bulk)

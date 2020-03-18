@@ -41,15 +41,6 @@ save(singler,file="output/singlerT_MCL_41_20200225.Rda")
 # add singleR label to Seurat
 ###############################
 
-singlerDF = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$labels,
-                       "singler1main" = singler$singler[[1]]$SingleR.single.main$labels,
-                       "orig.ident" = gsub("\\_.*","",rownames(singler$singler[[1]]$SingleR.single$labels)),
-                       row.names = rownames(singler$singler[[1]]$SingleR.single$labels))
-head(singlerDF)
-table(rownames(singlerDF) %in% colnames(object))
-singlerDF = singlerDF[colnames(object),]
-table(rownames(singlerDF) == colnames(object))
-apply(singlerDF,2,function(x) length(unique(x)))
 
 ##############################
 # check the spearman correlation

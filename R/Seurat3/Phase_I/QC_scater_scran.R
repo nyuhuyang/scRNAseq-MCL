@@ -64,7 +64,7 @@ message("Loading the datasets")
 ## Load the dataset
 Seurat_raw <- list()
 Seurat_list <- list()
-for(i in i:length(df_samples$sample)){
+for(i in seq_along(df_samples$sample)){
         Seurat_raw[[i]] <- Read10X(data.dir = paste0("data/scRNA-seq/",df_samples$sample.id[i],
                                    "/outs/filtered_gene_bc_matrices/",species))
         colnames(Seurat_raw[[i]]) = paste0(df_samples$sample[i],"_",colnames(Seurat_raw[[i]]))

@@ -37,6 +37,7 @@ print(head(fData(cds)))
 expressed_genes <- row.names(subset(fData(cds),
                                     num_cells_expressed >= 10))
 length(expressed_genes)
+
 #Trajectory step 1: choose genes that define a cell's progress
 clustering_DEG_genes <- differentialGeneTest(cds[expressed_genes,],
                                              fullModelFormulaStr = "~X4clusters",

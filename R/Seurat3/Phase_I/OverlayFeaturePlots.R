@@ -11,10 +11,12 @@ if(!dir.exists(path))dir.create(path, recursive = T)
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 
 Idents(B_cells_MCL) = "orig.ident"
-samples = c("Pt25_SB1","Pt25_24", "Pt25_AMB25Pd",
+samples = c("Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd",
             "All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR",
             "Pt10_LN2Pd","Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
-features.list = lapply(list(c("HLA-DPA1", "MCM7"),
+features.list = lapply(list(c("HLA-DPA1", "EZH2"),
+                            c("IRF4","PIK3IP1"),
+                            c("HLA-DPA1", "MCM7"),
                             c("HLA-A", "MCM7"),
                             c("HLA-B", "MCM7"),
                             c("HLA-DPA1", "CCND1"),
@@ -51,13 +53,13 @@ features.list = lapply(list(c("HLA-DPA1", "MCM7"),
 (cols.use.list = rep(list(c("#b88801","#2c568c", "#E31A1C")), length(features.list)))
 Idents(B_cells_MCL) ="orig.ident"
 cluster=F
-for(s in samples[1:3]){ #length(samples)
+for(s in samples[1:6]){ #length(samples)
         s_path <- paste0(path,s,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
         if(s == "All_samples") {
                 subset_object = B_cells_MCL
         } else subset_object = subset(B_cells_MCL, idents = s)
-        for(i in 1:3){ #5:
+        for(i in 1:2){ #5:
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
                                    overlay = T,cols = c("#d8d8d8",cols.use.list[[i]]),

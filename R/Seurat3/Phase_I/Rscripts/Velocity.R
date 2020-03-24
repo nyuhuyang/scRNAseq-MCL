@@ -19,7 +19,6 @@ loom_files = list.files("data/velocyto/",pattern = "loom")
 (sample = gsub("\\.loom","",loom_file))
 
 # load data
-# load data
 object = readRDS(file = "data/MCL_41_B_20200225.rds")
 Idents(object) = "orig.ident"
 object %<>% subset(idents = sample)
@@ -47,6 +46,7 @@ RNA_velocyto@meta.data %<>% cbind(object@meta.data)
 
 RNA_velocyto %<>% RunVelocity(deltaT = 1, kCells = 25, fit.quantile = 0.5, reduction = "harmony")
 idents <- c("X4clusters","cell.types")
+RNA_velocyto %<>% subset(cells = c("PtU04:CTAATGGCATCGGGTCx"), invert = T)
 
 for(ident in idents){
         Idents(RNA_velocyto) = ident

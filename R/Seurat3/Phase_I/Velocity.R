@@ -114,3 +114,17 @@ for(redu in reductions){
 
 }
 saveRDS(RNA_velocyto, paste0(path,"Pt-25/","velocity.rds"))
+
+path <- "Yang/20200325_Velocity/"
+(samples = list.files(path))
+for(s in seq_along(samples)){
+        file.remove(paste0(path,samples[s],"/velocity",samples[s],".rds"))
+        file.remove(paste0(path,samples[s],"/TSNEPlot_RNA_velocyto_cell.types_Legend.jpeg"))
+        file.remove(paste0(path,samples[s],"/TSNEPlot_RNA_velocyto_X4clusters_Legend.jpeg"))
+}
+
+path <- "Yang/20200325_monocle2/"
+(samples = list.files(path))
+for(s in seq_along(samples)){
+        file.remove(paste0(path,samples[s],"/monocle2_",samples[s],"_DE.rds"))
+}

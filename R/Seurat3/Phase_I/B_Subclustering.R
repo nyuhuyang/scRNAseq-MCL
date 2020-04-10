@@ -47,7 +47,8 @@ lapply(c("groups","orig.ident","conditions","tissues"), function(group.by)
 # re-run cluster
 npcs = 70
 object %<>% FindNeighbors(reduction = "harmony",dims = 1:npcs)
-res =1
+res =1.
+
 object %<>% FindClusters(resolution = res)
 Idents(object) = "SCT_snn_res.1"
 object %<>% RenameIdents("0" = "C1",
@@ -74,14 +75,17 @@ object %<>% RenameIdents("0" = "C1",
                          "21"= "C1",
                          "22"= "C1")
 object[["X4clusters"]] = as.character(Idents(object))
+object[["X5clusters"]] = object[["X4clusters"]]
+object$X5clusters[(object$SCT_snn_res.1.2 == 7)] = "C5"
 Idents(object) = "X4clusters"
-lapply(c("SCT_snn_res.1","X4clusters"), function(group.by)
+lapply(c("SCT_snn_res.1","X4clusters", "X5clusters"), function(group.by)
     TSNEPlot.1(object, group.by=group.by,pt.size = 0.3,label = T,
                label.repel = T,alpha = 0.9,
-               do.return = F,
+               do.return = F,cols = Singler.colors,
                no.legend = T,label.size = 4, repel = T, 
                title = paste("res =0.1"),
                do.print = T))
+
 saveRDS(object, file = "data/MCL_41_B_20200225.rds")
 
 # cell.types false positive results  ========

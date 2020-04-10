@@ -4,17 +4,23 @@ library(tidyr)
 library(kableExtra)
 library(magrittr)
 source("../R/Seurat3_functions.R")
-path <- paste0("Yang/Figure 4 Xiangao/")
+path <- "Yang/PRC2_Figure 3"
 if(!dir.exists(path))dir.create(path, recursive = T)
 
 #=============== multiple color in the single Featureplot===================================
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
-
+B_cells_MCL$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
 Idents(B_cells_MCL) = "orig.ident"
 samples = c("Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd",
-            "All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR",
-            "Pt10_LN2Pd","Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
-features.list = lapply(list(c("HLA-DPA1", "EZH2"),
+            "Pt10_LN2Pd","All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR","Normal",
+            "Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
+features.list = lapply(list(c("EZH2","EZH1"),
+                            c("EZH1","CCND1"),
+                            c("EZH2","CCND1"),
+                            c("EZH1","E2F1"),
+                            c("EZH2","E2F1"),
+                            c("EZH1","PCNA"),
+                            c("EZH2","PCNA"),
                             c("IRF4","PIK3IP1"),
                             c("HLA-DPA1", "MCM7"),
                             c("HLA-A", "MCM7"),
@@ -37,10 +43,6 @@ features.list = lapply(list(c("HLA-DPA1", "EZH2"),
                             c("MAP3K8","RELB"),
                             c("NFKB2","IRF4"),
                             c("MYC", "IRF4"),
-                            c("EZH2","E2F1"),
-                            c("EZH2","PCNA"),
-                            c("EZH2","CDK1"),
-                            c("EZH1","EZH2"),
                             c("POLR2M", "CRBN"),
                             c("POLR2M", "IKZF1"),
                             c("POLR2M", "IKZF3"),
@@ -50,21 +52,30 @@ features.list = lapply(list(c("HLA-DPA1", "EZH2"),
                             c("MBOAT7", "IKZF1"),
                             c("MBOAT7", "IKZF3")),
                        function(x) FilterGenes(B_cells_MCL,x,unique = F))
-(cols.use.list = rep(list(c("#b88801","#2c568c", "#E31A1C")), length(features.list)))
 Idents(B_cells_MCL) ="orig.ident"
 cluster=F
-for(s in samples[1:6]){ #length(samples)
-        s_path <- paste0(path,s,"/")
+ScatterPlot = F
+features_list <- unlist(features.list) %>% unique()
+max_UMI = B_cells_MCL[["SCT"]]@data %>% .[features_list,] %>% apply(1,max)
+
+breaks = 4
+save.path <- paste0(path,"/global_max_1_",breaks,"/")
+if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
+
+for(s in 9:12){ #length(samples)
+        sample = samples[s]
+        s_path <- paste0(save.path,sample,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
-        if(s == "All_samples") {
+        if(sample == "All_samples") {
                 subset_object = B_cells_MCL
-        } else subset_object = subset(B_cells_MCL, idents = s)
-        for(i in 1:2){ #5:
+        } else subset_object = subset(B_cells_MCL, idents = sample)
+        for(i in 1:7){ #5:
                 # FeaturePlot.2
-                g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
-                                   overlay = T,cols = c("#d8d8d8",cols.use.list[[i]]),
-                                   pt.size = 2, alpha = 0.75, breaks =8)
-                jpeg(paste0(s_path,s,"_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
+                g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],
+                                   do.return = T, max.cutoff = max_UMI[features.list[[i]]],
+                                   overlay = T,cols.use = c("#d8d8d8","#b88801","#2c568c", "#E31A1C"), 
+                                   pt.size = 3, alpha = 1, breaks = breaks)
+                jpeg(paste0(s_path,sample,"_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
                      units="in", width=7, height=7,res=600)
                 g = g+theme(plot.title = element_text(hjust = 0.5,size = 20),
                             legend.position="bottom",
@@ -96,17 +107,18 @@ for(s in samples[1:6]){ #length(samples)
                         rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
-                        write.csv(df,file = paste0(s_path,s,"_",paste(features.list[[i]],
+                        write.csv(df,file = paste0(s_path,sample,"_",paste(features.list[[i]],
                                                                       collapse = "_"),".csv"))
-                        
-                        jpeg(paste0(s_path,s,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
-                             units="in", width=7, height=7,res=600)
-                        g <- FeatureScatter(subset_object, feature1 = features.list[[i]][1],
-                                            group.by = "orig.ident",
-                                            pt.size = 2,cols = "black",
-                                            feature2 = features.list[[i]][2],slot = "data")+ NoLegend()
-                        print(g)
-                        dev.off()
+                        if(ScatterPlot){
+                                jpeg(paste0(s_path,sample,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
+                                     units="in", width=7, height=7,res=600)
+                                g <- FeatureScatter(subset_object, feature1 = features.list[[i]][1],
+                                                    group.by = "orig.ident",
+                                                    pt.size = 2,#cols = "black",
+                                                    feature2 = features.list[[i]][2],slot = "data")+ NoLegend()
+                                print(g)
+                                dev.off()
+                        }
                 }
                 if(cluster == T) for(k in unique(subset_object$X4clusters)){
                         subset_object_n <- subset(subset_object, idents = k)
@@ -130,19 +142,20 @@ for(s in samples[1:6]){ #length(samples)
                         rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
-                        write.csv(df,file = paste0(s_path,s,"_",paste(features.list[[i]],
+                        write.csv(df,file = paste0(s_path,sample,"_",paste(features.list[[i]],
                                                                       collapse = "_"),"_cluster_",k,".csv"))
                         
-                        jpeg(paste0(s_path,s,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),"_cluster_",k,".jpeg"), 
+                        jpeg(paste0(s_path,sample,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),"_cluster_",k,".jpeg"), 
                              units="in", width=7, height=7,res=600)
                         g <- FeatureScatter(subset_object_n, feature1 = features.list[[i]][1],
                                             pt.size = 4,
                                             feature2 = features.list[[i]][2],slot = "data")+ NoLegend()
                         print(g)
-                        dev.off()
+                        dev.off()                                                                                                                                                        
                 }
-                Progress(i,length(features.list))}
+        Progress(s,12)}
 }
+
 
 Idents(B_cells_MCL) = "orig.ident"
 for(N in c("B_cells", "MCL")){
@@ -155,7 +168,7 @@ for(N in c("B_cells", "MCL")){
         for(i in 5:length(features.list)){
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
-                                   overlay = T,cols = c("#d8d8d8",cols.use.list[[i]]),
+                                   overlay = T,cols = c("#d8d8d8","#b88801","#2c568c", "#E31A1C"),
                                    pt.size = 4, alpha = 0.75, breaks =8)
                 jpeg(paste0(s_path,N,"_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
                      units="in", width=7, height=7,res=600)

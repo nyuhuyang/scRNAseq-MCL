@@ -82,7 +82,7 @@ Idents(B_cells_MCL) = "orig.ident"
 B_cells_MCL %<>% subset(idents = "Pt2_30Pd", invert = T)
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
-choose = c("X4clusters","X4cluster_vs_Normal","X4cluster_vs_B")[2]
+choose = c("X4clusters","X4cluster_vs_Normal","X4cluster_vs_B")[1]
 if(choose == "X4clusters"){
         Idents(B_cells_MCL) = "X4clusters"
         
@@ -296,7 +296,7 @@ TSNEPlot.1(sub_object, pt.size =0.3,
 ###############################
 path <- "Yang/B_pairwise_heatmaps/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
-group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
+group.colors = gg_color_hue(n=4)
 # =========Doheatmap for Normal / MCL ============
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 B_cells_MCL$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
@@ -401,7 +401,8 @@ markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SO
 
 Idents(B_cells_MCL) = "orig.ident"
 choose = c("X4cluster_vs_Normal","X4clusters")[2]
-for(i in 1:9){
+run_DE = FALSE
+for(i in 1:10){ #1:10
         
         (samples1 = list_samples$MCL.1[i])
         (samples2 = list_samples$MCL.2[i])
@@ -411,7 +412,7 @@ for(i in 1:9){
         # remove cluster with less than 3 cells======
         
         table_subset.MCL <- table(subset.MCL@meta.data$X4_orig.ident) %>% as.data.frame
-        (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 5,"Var1"] %>% as.character())
+        (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 3,"Var1"] %>% as.character())
         (X4_cluster <- keep.MCL %>% unique %>% 
                         gsub('.*\\_C',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)])
         
@@ -426,12 +427,14 @@ for(i in 1:9){
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,
                    do.return = F,do.print = F, unique.name = T)
         
-        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
+        if(run_DE) {
+                gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
                                        ident.2 = c(ident.2,ident.1), only.pos = T,
                                        logfc.threshold = 0.05,min.cells.group =3,
                                        min.pct = 0.1,
                                        latent.vars = "nCount_SCT")
-        write.csv(gde.markers, paste0(path,"DE_analysis_files/",samples1,"_vs_",samples2,".csv"))
+                write.csv(gde.markers, paste0(path,"DE_analysis_files/",samples1,"_vs_",samples2,".csv"))
+        }
         gde.markers = read.csv(paste0(path,"DE_analysis_files/",samples1,"_vs_",samples2,".csv"),row.names = 1)
         print(table(gde.markers$cluster1.vs.cluster2))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
@@ -456,7 +459,7 @@ for(i in 1:9){
         DoHeatmap.matrix(scale_exp, features = featuresNum,
                          group.by = group.by,size = 6,angle =90,
                          draw.lines =F, raster = FALSE,
-                         pal_gsea = FALSE,
+                         pal_gsea = FALSE,label = T,
                          group.colors = rep(group.colors[X4_cluster], 2),
                          width=3, height=25,res=600,no.legend = T,
                          cex.row=5,

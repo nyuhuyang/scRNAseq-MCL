@@ -4,8 +4,8 @@ library(tidyr)
 library(kableExtra)
 library(magrittr)
 source("../R/Seurat3_functions.R")
-path <- "Yang/PRC2_Figure 3"
-if(!dir.exists(path))dir.create(path, recursive = T)
+save.path <- "Yang/Figure 4 Xiangao/"
+if(!dir.exists(save.path))dir.create(save.path, recursive = T)
 
 #=============== multiple color in the single Featureplot===================================
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
@@ -23,6 +23,8 @@ features.list = lapply(list(c("EZH2","EZH1"),
                             c("EZH2","PCNA"),
                             c("IRF4","PIK3IP1"),
                             c("HLA-DPA1", "MCM7"),
+                            c("HLA-DPB1", "EZH2"),
+                            c("HLA-DPB1", "EZH1"),
                             c("HLA-A", "MCM7"),
                             c("HLA-B", "MCM7"),
                             c("HLA-DPA1", "CCND1"),
@@ -55,24 +57,24 @@ features.list = lapply(list(c("EZH2","EZH1"),
 Idents(B_cells_MCL) ="orig.ident"
 cluster=F
 ScatterPlot = F
-features_list <- unlist(features.list) %>% unique()
-max_UMI = B_cells_MCL[["SCT"]]@data %>% .[features_list,] %>% apply(1,max)
+#features_list <- unlist(features.list) %>% unique()
+#max_UMI = B_cells_MCL[["SCT"]]@data %>% .[features_list,] %>% apply(1,max)
 
-breaks = 4
+breaks = 0  
 save.path <- paste0(path,"/global_max_1_",breaks,"/")
 if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
 
-for(s in 9:12){ #length(samples)
+for(s in 10){ #length(samples)
         sample = samples[s]
         s_path <- paste0(save.path,sample,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
         if(sample == "All_samples") {
                 subset_object = B_cells_MCL
         } else subset_object = subset(B_cells_MCL, idents = sample)
-        for(i in 1:7){ #5:
+        for(i in 5){ #5:
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],
-                                   do.return = T, max.cutoff = max_UMI[features.list[[i]]],
+                                   do.return = T, 
                                    overlay = T,cols.use = c("#d8d8d8","#b88801","#2c568c", "#E31A1C"), 
                                    pt.size = 3, alpha = 1, breaks = breaks)
                 jpeg(paste0(s_path,sample,"_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
@@ -91,19 +93,13 @@ for(s in 9:12){ #length(samples)
                         df1 <- table(features_var[,1]>0,features_var[,2]>0) %>% #prop.table(margin = NULL) %>%
                                 as.data.frame() %>% spread(Var2,Freq)
                         df = df1[,-1]
-                        if(class(df) == "integer") next
-                        p_value = c()
-                        ColSum <- colSums(df)
-                        for(m in 1:nrow(df)){
-                                (conting <- rbind(df[m,],ColSum-df[m,]))
-                                FISH <- fisher.test(conting,workspace = 2000000)
-                                (p_value[m] = FISH$p.value)
-                                #CHI = chisq.test(conting, correct = T)
-                                #chisq_p_value[i] = CHI$p.value             
-                        }
-                        df$p_value = p_value
+                        if(class(df) == "integer") next # if no expression
+                        if(nrow(df) == 1) next # if only one expression
+                        FISH <- fisher.test(df,workspace = 2000000)
+                        df$p_value = FISH$p.value
                         df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni", 
                                                 n = nrow(df))
+                        df[2,c("p_value","p_val_adj")] = ""
                         rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
@@ -126,19 +122,13 @@ for(s in 9:12){ #length(samples)
                         df1 <- table(features_var[,1]>0,features_var[,2]>0) %>% #prop.table(margin = NULL) %>%
                                 as.data.frame() %>% spread(Var2,Freq)
                         df = df1[,-1]
-                        if(class(df) == "integer") next
-                        p_value = c()
-                        ColSum <- colSums(df)
-                        for(m in 1:nrow(df)){
-                                (conting <- rbind(df[m,],ColSum-df[m,]))
-                                FISH <- fisher.test(conting,workspace = 2000000)
-                                (p_value[m] = FISH$p.value)
-                                #CHI = chisq.test(conting, correct = T)
-                                #chisq_p_value[i] = CHI$p.value             
-                        }
-                        df$p_value = p_value
+                        if(class(df) == "integer") next # if no expression
+                        if(nrow(df) == 1) next # if only one expression
+                        FISH <- fisher.test(df,workspace = 2000000)
+                        df$p_value = FISH$p.value
                         df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni", 
                                                 n = nrow(df))
+                        df[2,c("p_value","p_val_adj")] = ""
                         rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
@@ -148,14 +138,13 @@ for(s in 9:12){ #length(samples)
                         jpeg(paste0(s_path,sample,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),"_cluster_",k,".jpeg"), 
                              units="in", width=7, height=7,res=600)
                         g <- FeatureScatter(subset_object_n, feature1 = features.list[[i]][1],
-                                            pt.size = 4,
+                                            pt.size = 3,
                                             feature2 = features.list[[i]][2],slot = "data")+ NoLegend()
                         print(g)
                         dev.off()                                                                                                                                                        
                 }
-        Progress(s,12)}
+        Progress(s,length(samples))}
 }
-
 
 Idents(B_cells_MCL) = "orig.ident"
 for(N in c("B_cells", "MCL")){

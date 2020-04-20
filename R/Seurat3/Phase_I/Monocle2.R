@@ -155,3 +155,25 @@ for(c in seq_along(X4clusters)){
         dev.off()
         Progress(c, length(group_by))
 }
+
+
+plot_cell_trajectory(subset_cds,color_by = group_by[3], show_branch_points = FALSE)
+
+
+my_gene = c("CCND1","CDK4","MCM7","EZH2","EZH1")
+my_gene = FilterGenes(object, c("CCND1","MIR155HG","GAPDH","ACTB","TUBA1B","PKM","IRF4"))
+
+# plot genes that are expressed in a branch dependent manner ===============
+jpeg(paste0(path,"Pt25_branched_pseudotime~.jpeg"),
+     units="in", width=7, height=7,res=600)
+plot_genes_branched_pseudotime(subset_cds[my_gene,],color_by = "orig.ident",
+                               branch_point = 1,
+                               ncol = 1)
+dev.off()
+
+jpeg(paste0(path,"Pt25_25Pd_branched_pseudotime.jpeg"),
+     units="in", width=7, height=7,res=600)
+plot_genes_branched_pseudotime(cds[my_gene,],color_by = "orig.ident",
+                               branch_point = 1,
+                               ncol = 1)
+dev.off()

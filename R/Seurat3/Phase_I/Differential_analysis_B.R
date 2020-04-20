@@ -13,7 +13,7 @@ library(gplots)
 library(cowplot)
 source("../R/Seurat3_functions.R")
 
-path <- "Yang/Figure 3/Figure Sources/"
+path <- "Yang/Figure 2/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #============= after running Differential_analysis.R Rsscript ===========
 # X4clusters =====
@@ -205,3 +205,46 @@ for(i in 1:length(groups)){
                     title = paste("Top",Top_n,"DE genes of",groups[i],
                                   "MCL cells over Normal B cells"))
 }
+
+# venn diagram
+path <- paste0("output/",gsub("-","",Sys.Date()),"/")
+if(!dir.exists(path)) dir.create(path, recursive = T)
+save.path <- "Yang/Figure 2/Figure Sources/"
+choose = "X4cluster_vs_Normal"
+gde.all <- read.csv(file = paste0(save.path,choose,"/",choose,"_41-FC0.csv"))
+gde.all <- gde.all[gde.all$avg_logFC > 0 ,]
+eulerr(gde.all,shape =  "ellipse",key = c("C1","C2","C3","C4","B_cells"),
+       cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,
+       save.path = paste0(path, "All_"))
+
+B_markers <- gde.all[gde.all$cluster %in% "B_cells",]
+gde.all <- gde.all[!(gde.all$gene %in% B_markers$gene),]
+gde.all %<>% rbind(B_markers)
+pos.share_genes <- eulerr(gde.all,shape =  "ellipse",key = c("C1","C2","C3","C4","B_cells"),
+       cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,
+       save.path = paste0(path, "B_exclusive"), return.raw = T)
+core_MCL_genes <- Reduce(intersect, pos.share_genes[2:4])
+write.csv(core_MCL_genes, paste0(path, "core_MCL_genes.csv"))
+
+core_MCL_genes_df <- gde.all[gde.all$gene %in% core_MCL_genes,] %>% group_by(cluster) %>%
+        top_n(20, avg_logFC) %>%
+        arrange(p_val_adj, 
+                desc(avg_UMI.1)
+        )
+write.csv(core_MCL_genes_df, paste0(path, "core_MCL_genes_table.csv"))
+
+#==============
+choose = "X4clustes"
+gde.all <- read.csv(file = paste0(save.path,choose,"/",choose,"_41-FC0.csv"))
+gde.all <- gde.all[gde.all$avg_logFC > 0 ,]
+
+eulerr(gde.all,shape =  "ellipse",key = c("C1","C2"),
+       cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,
+       save.path = paste0(path, "C1_C2"))
+eulerr(gde.all,shape =  "ellipse",key = c("C1","C2","C3"),
+             cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,
+       save.path = paste0(path, "C1_C2_C3"))
+eulerr(gde.all,shape =  "ellipse",key = c("C1","C2","C3","C4"),
+             cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,
+       save.path = paste0(path, "C1_C2_C3_C4"))
+

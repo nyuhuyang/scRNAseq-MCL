@@ -4,9 +4,9 @@ invisible(lapply(c("Seurat","velocyto.R","SeuratWrappers","dplyr",
                            suppressPackageStartupMessages(library(x,character.only = T))
                    }))
 source("../R/Seurat3_functions.R")
-path <- "output/20200409_Velocity/"
+path <- "Yang/20200409_Velocity/"
 if(!dir.exists(path))dir.create(path, recursive = T)
-#SBATCH --mem=32G
+#SBATCH --mem=64G
 # SLURM_ARRAY_TASK_ID
 slurm_arrayid <- Sys.getenv('SLURM_ARRAY_TASK_ID')
 if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")

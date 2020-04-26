@@ -25,7 +25,8 @@ sample_pairs = list(c("N01","N02","N03","N04"),
                     c("Pt11_LN1","Pt11_1"),
                     c("Pt11_1","Pt11_14","Pt11_28"),
                     c("Pt11_14","Pt11_28"),
-                    c("Pt17_LN1","Pt17_2","Pt17_7","Pt17_12","Pt17_31"),
+                    c("Pt17_LN1","Pt17_2","Pt17_7","Pt17_12","Pt17_31"),#7
+                    c("Pt17_LN1","Pt17_2","Pt17_12")#8
                     c("Pt17_LN1","Pt17_2"),
                     c("Pt17_2","Pt17_7"),
                     c("Pt17_2","Pt17_12"),
@@ -33,16 +34,17 @@ sample_pairs = list(c("N01","N02","N03","N04"),
                     c("Pt17_2","Pt17_7","Pt17_12"),
                     c("Pt17_7","Pt17_12","Pt17_31"),
                     c("Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),
-                    c("Pt25_SB1","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#15
-                    c("Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#16
+                    c("Pt25_SB1","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#16
+                    c("Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#17
+                    c("Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#18
                     c("Pt25_SB1","Pt25_1"), 
                     c("Pt25_1","Pt25_1_8"),
                     c("Pt25_1_8","Pt25_24"),
                     c("Pt25_24","Pt25_25Pd"),
-                    c("Pt25_24","Pt25_AMB25Pd"),#21
+                    c("Pt25_24","Pt25_AMB25Pd"),#23
                     c("Pt25_25Pd","Pt25_AMB25Pd"),
                     c("Pt25_SB1","Pt25_AMB25Pd"),
-                    c("Pt25_SB1","Pt25_24"),#24
+                    c("Pt25_SB1","Pt25_24"),#26
                     c("Pt27_1","Pt27_1_8","Pt27_12"),
                     c("Pt27_1","Pt27_1_8"),
                     c("Pt27_1","Pt27_12"),
@@ -92,12 +94,14 @@ if(run_differentialGeneTest){
         
 } else clustering_DEG_genes = readRDS(paste0(save.path,"monocle2_",paste(sample, collapse = "-"),"_DE.rds"))
 
-
+print("clustering_DEG_genes")
 cds_ordering_genes <-row.names(clustering_DEG_genes)[order(clustering_DEG_genes$qval)][
         1:min(nrow(clustering_DEG_genes),1000)]
 cds %<>% setOrderingFilter(ordering_genes = cds_ordering_genes)
 cds %<>% reduceDimension(method = 'DDRTree')
 cds %<>% orderCells()
+
+saveRDS(cds, paste0(save.path,"monocle2_",paste(sample, collapse = "-"),"_cds.rds"))
 #Trajectory step 2: generate Trajectory plot for all samples
 group_by <- c("X4_orig.ident", "orig.ident","X4clusters", "Pseudotime","cell.types")
 for(k in seq_along(group_by)){
@@ -111,6 +115,7 @@ for(k in seq_along(group_by)){
         
         print(g)
         dev.off()
+        Progress(k, length(group_by))
 }
 
 #Trajectory step 2: generate Trajectory plot by each sample

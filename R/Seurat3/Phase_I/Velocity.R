@@ -5,6 +5,7 @@ library(SeuratWrappers)
 library(dplyr)
 library(magrittr)
 source("../R/Seurat3_functions.R")
+source("R/util.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
@@ -39,11 +40,21 @@ for(f in folder_list) {
 }
 # load data
 object = readRDS(file = "data/MCL_41_B_20200225.rds")
-Idents(object) = "groups"
-object %<>% subset(idents = "Pt25")
-ldat <- ReadVelocity(file = "data/velocyto/Pt-25_merged.loom")
-RNA_velocyto <- as.Seurat(x = ldat)
+Idents(object) = "orig.ident"
 
+arg =2
+groups = c("Pt-17","Pt-25")
+
+sample_pairs = list(c("Pt17_LN1","Pt17_2","Pt17_7","Pt17_12","Pt17_31"),#7
+                    c("Pt25_SB1","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"))
+(sample = sample_pairs[[arg]])
+object %<>% subset(idents = sample)
+ldat <- ReadVelocity(file = paste0("data/velocyto/",groups[arg],"_merged.loom"))
+
+RNA_velocyto <- as.Seurat(x = ldat)
+rm(ldat)
+save.path = paste0(path, groups[arg],"/")
+if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
 # rename and subset Seurat
 Barcode = colnames(object)
 Barcode %<>% gsub("_",":",.)
@@ -51,7 +62,7 @@ Barcode %<>% paste0("x")
 object %<>% RenameCells(new.names = Barcode)
 RNA_velocyto %<>% subset(cells = colnames(object))
 
-choose = c("inherit","redo")[2]
+choose = c("inherit","redo","monocle2")[3]
 # inherit umap
 if(choose == "inherit"){
         RNA_velocyto@assays$SCT = object@assays$SCT
@@ -59,7 +70,7 @@ if(choose == "inherit"){
         rownames(object@reductions$tsne@cell.embeddings) = colnames(object)
         rownames(object@reductions$umap@cell.embeddings) = colnames(object)
         rownames(object@reductions$harmony@cell.embeddings) = colnames(object)
-        
+        RNA_velocyto@reductions$harmony = object@reductions$tsne
         RNA_velocyto@reductions$harmony = object@reductions$harmony
         RNA_velocyto@reductions$umap = object@reductions$umap
         RNA_velocyto@meta.data %<>% cbind(object@meta.data)
@@ -76,44 +87,105 @@ if(choose == "redo"){
         RNA_velocyto %<>% RunUMAP(dims = 1:50)
         RNA_velocyto %<>% RunTSNE(dims = 1:50)
 }
-groups <- c("orig.ident","X4clusters","tissues","cell.types")
-lapply(groups, function(g) {
+# inherit ddtree from monocle
+if(choose == "monocle2"){
+        RNA_velocyto@assays$SCT = object@assays$SCT
+        monocle.path = paste0("Yang/20200413_monocle2/",paste(sample, collapse = "-"),"/")
+        cds = readRDS(paste0(monocle.path,"monocle2_",paste(sample, collapse = "-"),"_cds.rds"))
+        object@reductions$tsne@cell.embeddings = t(cds@reducedDimS)
+        colnames(object@reductions$tsne@cell.embeddings) = paste0("tSNE_",1:2)
+        rownames(object@reductions$pca@cell.embeddings) = colnames(object)
+        rownames(object@reductions$tsne@cell.embeddings) = colnames(object)
+        RNA_velocyto@reductions$pca = object@reductions$pca
+        RNA_velocyto@reductions$tsne = object@reductions$tsne
+        RNA_velocyto[["orig.ident"]] = NULL
+        RNA_velocyto@meta.data %<>% cbind(object@meta.data)
+        RNA_velocyto[["Pseudotime"]] = cds$Pseudotime
+}
+group_by <- c("orig.ident","X4clusters","cell.types","Pseudotime")[1:3]
+RNA_velocyto %<>% AddMetaColor(label= "X4clusters", colors = gg_color_hue(length(unique(RNA_velocyto$X4clusters))))
+RNA_velocyto %<>% AddMetaColor(label= "orig.ident", colors = gg_color_hue(length(unique(RNA_velocyto$orig.ident))))
+
+for(g in group_by) {
         Idents(RNA_velocyto) = g
         TSNEPlot.1(RNA_velocyto, group.by = g, cols = ExtractMetaColor(RNA_velocyto),
-                   do.print = T, save.path = paste0(path,"Pt-25/"))
-})
-
+                   do.print = T, save.path = save.path, unique.name = F)  
+}
 
 # RunVelocity
-
-RNA_velocyto %<>% RunVelocity(deltaT = 1, kCells = 25, fit.quantile = 0.5, reduction = "pca")
-reductions = c("tsne", "umap")
-for(redu in reductions){
-        for(g in groups){
-                Idents(RNA_velocyto) = g
-                RNA_velocyto %<>% sortIdent()
-                ident.colors = ExtractMetaColor(RNA_velocyto)
-                names(x = ident.colors) <- levels(x = RNA_velocyto)
-                cell.colors <- ident.colors[Idents(object = RNA_velocyto)]
-                names(x = cell.colors) <- colnames(x = RNA_velocyto)
-                TSNEPlot.1(RNA_velocyto, group.by = g, cols = unique(cell.colors),
-                           label = T, label.repel = T,
-                           do.print = T,do.return = F, save.path = paste0(path,"Pt-25/"))
-                UMAPPlot.1(RNA_velocyto,do.return = F,  group.by = g, cols = unique(cell.colors),
-                           do.print = T, save.path = paste0(path,"Pt-25/"))
-                RNA_velocyto %<>% prepare.velocity.on.embedding.cor(n = 200, reduction = redu,scale = "sqrt")
-                jpeg(paste0(path,"Pt-25/","velocity_Pt25_",g,"_",redu,".jpeg"), units="in", width=10, height=7,res=600)
-                show.velocity.on.embedding.cor(emb = Embeddings(object = RNA_velocyto, reduction = redu), 
-                                               vel = Tool(object = RNA_velocyto, slot = "RunVelocity"), n = 200, scale = "sqrt", 
-                                               cell.colors = ac(x = cell.colors, alpha = 0.5), 
-                                               cex = 0.8, arrow.scale = 3, show.grid.flow = TRUE, min.grid.cell.mass = 0.5, 
-                                               grid.n = 40, arrow.lwd = 1, 
-                                               do.par = FALSE, cell.border.alpha = 0.1)
-                dev.off()  
-        }
-
+RNA_velocyto %<>% RunVelocity(deltaT = 1, kCells = 25, fit.quantile = 0.5, reduction = "tsne") #harmony
+for(g in group_by){
+        RNA_velocyto[[g]] = droplevels(object[[g]])
+        Idents(RNA_velocyto) = g
+        RNA_velocyto %<>% sortIdent()
+        ident.colors = ExtractMetaColor(RNA_velocyto)
+        cell.colors <- ident.colors[RNA_velocyto@meta.data[,g]]
+        names(x = cell.colors) <- colnames(x = RNA_velocyto)
+        RNA_velocyto %<>% prepare.velocity.on.embedding.cor(n = 200, reduction = "tsne",scale = "sqrt")
+        jpeg(paste0(path,groups[arg], "/","velocity_",groups[arg],"_",g,".jpeg"), units="in", width=8, height=8,res=600)
+        show.velocity.on.embedding.cor.1(emb = Embeddings(object = RNA_velocyto, reduction = "tsne"), 
+                                       vel = Tool(object = RNA_velocyto, slot = "RunVelocity"), n = 200, scale = "sqrt", 
+                                       cell.colors = ac(x = cell.colors, alpha = 0.8), 
+                                       cex = 1.2, arrow.scale = 3, show.grid.flow = TRUE, min.grid.cell.mass = 0.5, 
+                                       grid.n = 40, arrow.lwd = 0.8, arrow.colors = "grey40",
+                                       do.par = FALSE, cell.border.alpha = 0.5)
+        dev.off()  
 }
-saveRDS(RNA_velocyto, paste0(path,"Pt-25/","velocity.rds"))
+
+saveRDS(RNA_velocyto, paste0(path,groups[arg],"/velocity",groups[arg],".rds"))
+#RNA_velocyto = readRDS(paste0(path,groups[arg],"/velocity",groups[arg],".rds"))
+#Trajectory step 2: generate RNA velocyto on Trajectory plot by each sample
+save.path.sub = paste0(save.path, "subset/")
+if(!dir.exists(save.path.sub)) dir.create(save.path.sub, recursive = T)
+
+samples <- unique(RNA_velocyto$orig.ident) %>% as.character()
+group_by <- c("X4clusters", "cell.types")
+Idents(RNA_velocyto) = "orig.ident"
+for(s in seq_along(samples)){
+        subset_object <- subset(RNA_velocyto, idents = samples[s])
+        for(k in seq_along(group_by)){
+                Idents(subset_object) = group_by[k]
+                ident.colors = ExtractMetaColor(subset_object)
+                cell.colors <- ident.colors[subset_object@meta.data[,group_by[k]]]
+                names(x = cell.colors) <- colnames(x = subset_object)
+                RNA_velocyto %<>% prepare.velocity.on.embedding.cor(n = 200, reduction = "tsne",scale = "sqrt")
+                jpeg(paste0(save.path.sub,"velocity_",samples[s],"_",group_by[k],".jpeg"), units="in", width=8, height=8,res=600)
+                show.velocity.on.embedding.cor.1(emb = Embeddings(object = subset_object, reduction = "tsne"), 
+                                               vel = Tool(object = subset_object, slot = "RunVelocity"), n = 200, scale = "sqrt", 
+                                               cell.colors = ac(x = cell.colors, alpha = 0.8), 
+                                               cex = 1.2, arrow.scale = 3, show.grid.flow = TRUE, min.grid.cell.mass = 0.5, 
+                                               grid.n = 40, arrow.lwd = 0.8, arrow.colors = "grey40",
+                                               do.par = FALSE, cell.border.alpha = 0.5)
+                dev.off()
+                Progress((s-1)*length(samples)+k, length(samples)*length(group_by))
+        }
+}
+
+
+#Trajectory step 3: generate RNA velocyto on Trajectory plot by each cluster
+X4clusters <- sort(unique(cds$X4clusters))
+file_name = paste(c(samples[1],gsub(".*_","",samples[2:length(samples)])),collapse = "_")
+sample_name = paste(c(samples[1],gsub(".*_","",samples[2:length(samples)])),collapse = ", ")
+Idents(RNA_velocyto) = "X4clusters"
+for(c in seq_along(X4clusters)){
+        subset_object <- subset(RNA_velocyto, idents = X4clusters[c])
+        Idents(subset_object) = "orig.ident"
+        subset_object %<>% sortIdent()
+        ident.colors = ExtractMetaColor(subset_object)
+        cell.colors <- ident.colors[droplevels(subset_object@meta.data[,"orig.ident"])]
+        names(x = cell.colors) <- colnames(x = subset_object)
+        RNA_velocyto %<>% prepare.velocity.on.embedding.cor(n = 200, reduction = "tsne",scale = "sqrt")
+        jpeg(paste0(save.path.sub,"velocity_",X4clusters[c],"_",file_name,".jpeg"), units="in", width=8, height=8,res=600)
+        show.velocity.on.embedding.cor.1(emb = Embeddings(object = subset_object, reduction = "tsne"), 
+                                       vel = Tool(object = subset_object, slot = "RunVelocity"), n = 200, scale = "sqrt", 
+                                       cell.colors = ac(x = cell.colors, alpha = 0.8), 
+                                       cex = 1.2, arrow.scale = 3, show.grid.flow = TRUE, min.grid.cell.mass = 0.5, 
+                                       grid.n = 40, arrow.lwd = 0.8, arrow.colors = "grey40",
+                                       do.par = FALSE, cell.border.alpha = 0.5)
+        dev.off()
+        Progress(c, length(X4clusters))
+}
+
 
 path <- "Yang/20200325_Velocity/"
 (samples = list.files(path))
@@ -127,4 +199,19 @@ path <- "Yang/20200325_monocle2/"
 (samples = list.files(path))
 for(s in seq_along(samples)){
         file.remove(paste0(path,samples[s],"/monocle2_",samples[s],"_DE.rds"))
+}
+
+# The colors assigned to the clusters look great.  
+# But using the same colors for different samples becomes confusing.   
+# Can you  please use a different set of 4 colors for SB1, C24, C25, C25-AMB for Pt25?   
+(n <- length(unique(object$orig.ident)))
+object = readRDS(paste0("Yang/20200421_Velocity/",groups[arg],"-original/velocity.rds"))
+Idents(object) = "orig.ident"
+object %<>% sortIdent()
+for(i in 1:100){
+        colors = sample(Singler.colors[1:18], n)
+        object %<>% AddMetaColor(label= "orig.ident", colors = colors)
+        TSNEPlot.1(object, title = paste(c("Colors:",colors), collapse = ", "),
+                   do.print = T, save.path = paste0(path,i,"-"))
+        Progress(i, 100)
 }

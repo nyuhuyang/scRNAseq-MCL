@@ -3,10 +3,12 @@ invisible(lapply(c("Seurat","monocle","dplyr",
                            suppressPackageStartupMessages(library(x,character.only = T))
                    }))
 source("../R/Seurat3_functions.R")
-path <- "Yang/20200413_monocle2/"
+#path <- "Yang/20200413_monocle2/"
+path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #SBATCH --mem=32G
 # SLURM_ARRAY_TASK_ID
+set.seed(101)
 slurm_arrayid <- Sys.getenv('SLURM_ARRAY_TASK_ID')
 if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 # coerce the value to an integer
@@ -92,6 +94,8 @@ if(run_differentialGeneTest){
         
 } else clustering_DEG_genes = readRDS(paste0(save.path,"monocle2_",paste(sample, collapse = "-"),"_DE.rds"))
 
+#monocle.path ="Yang/20200413_monocle2/Pt25_SB1-Pt25_24-Pt25_25Pd-Pt25_AMB25Pd/"
+#cds = readRDS(paste0(monocle.path,"monocle2_Pt25_SB1-Pt25_24-Pt25_25Pd-Pt25_AMB25Pd_cds.rds"))
 
 cds_ordering_genes <-row.names(clustering_DEG_genes)[order(clustering_DEG_genes$qval)][
         1:min(nrow(clustering_DEG_genes),1000)]
@@ -104,6 +108,7 @@ for(k in seq_along(group_by)){
         jpeg(paste0(save.path,"trajectory_",paste(sample, collapse = "-"),"_",group_by[k],".jpeg"),
              units="in", width=7, height=7,res=600)
         g <- plot_cell_trajectory(cds, color_by = group_by[k],show_branch_points = FALSE)
+        if(group_by[k] == "orig.ident") g = g + scale_color_manual(values=Singler.colors[2:5])
         if(group_by[k] == "X4_orig.ident") g = g + scale_color_manual(values=Singler.colors)
         if(group_by[k] == "X4clusters") g = g + scale_color_manual(values=X4clusters_color)
         if(group_by[k] == "cell.types") g = g + 
@@ -177,3 +182,19 @@ plot_genes_branched_pseudotime(cds[my_gene,],color_by = "orig.ident",
                                branch_point = 1,
                                ncol = 1)
 dev.off()
+
+# test different color scheme
+group_by <- c("X4_orig.ident", "orig.ident","X4clusters", "Pseudotime","cell.types")
+for(k in seq_along(group_by)){
+        jpeg(paste0(save.path,"trajectory_",paste(sample, collapse = "-"),"_",group_by[k],".jpeg"),
+             units="in", width=7, height=7,res=600)
+        g <- plot_cell_trajectory(cds, color_by = group_by[k],show_branch_points = FALSE)
+        if(group_by[k] == "orig.ident") g = g + scale_color_manual(values=gg_color_hue(4))
+        if(group_by[k] == "X4_orig.ident") g = g + scale_color_manual(values=Singler.colors)
+        if(group_by[k] == "X4clusters") g = g + scale_color_manual(values=X4clusters_color)
+        if(group_by[k] == "cell.types") g = g + 
+                scale_color_manual(values=sort(unique(cds$cell.types.colors),decreasing = T))
+        
+        print(g)
+        dev.off()
+}

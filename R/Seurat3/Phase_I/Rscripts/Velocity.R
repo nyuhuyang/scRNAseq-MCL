@@ -68,8 +68,7 @@ for(reduction in reductions){
                 Idents(RNA_velocyto) = ident
                 RNA_velocyto %<>% sortIdent()
                 ident.colors = ExtractMetaColor(RNA_velocyto)
-                names(x = ident.colors) <- levels(x = RNA_velocyto)
-                cell.colors <- ident.colors[Idents(object = RNA_velocyto)]
+                cell.colors <- ident.colors[RNA_velocyto@meta.data[,g]]
                 names(x = cell.colors) <- colnames(x = RNA_velocyto)
                 RNA_velocyto %<>% prepare.velocity.on.embedding.cor(n = 200, reduction = reduction,scale = "sqrt")
                 jpeg(paste0(path, sample,"/velocity_",sample,"_",reduction,"_", ident,".jpeg"), units="in", width=10, height=7,res=600)

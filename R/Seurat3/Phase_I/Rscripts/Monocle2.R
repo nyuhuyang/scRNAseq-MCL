@@ -3,7 +3,7 @@ invisible(lapply(c("Seurat","monocle","dplyr",
                            suppressPackageStartupMessages(library(x,character.only = T))
                    }))
 source("../R/Seurat3_functions.R")
-path <- "Yang/20200413_monocle2/"
+path <- "Yang/20200426_monocle2/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #SBATCH --mem=32G
 # SLURM_ARRAY_TASK_ID
@@ -12,10 +12,9 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 # coerce the value to an integer
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
-run_differentialGeneTest = FALSE        
+run_differentialGeneTest = TRUE        
 # load data
 object = readRDS(file = "data/MCL_41_B_20200225.rds")
-Idents(object) = "orig.ident"
 object %<>% AddMetaColor(label= "X4clusters", colors = gg_color_hue(4))
 object$X4_orig.ident = paste(object$orig.ident,
                              object$X4clusters, sep = "_")
@@ -26,7 +25,9 @@ sample_pairs = list(c("N01","N02","N03","N04"),
                     c("Pt11_1","Pt11_14","Pt11_28"),
                     c("Pt11_14","Pt11_28"),
                     c("Pt17_LN1","Pt17_2","Pt17_7","Pt17_12","Pt17_31"),#7
-                    c("Pt17_LN1","Pt17_2","Pt17_12")#8
+                    c("Pt17_LN1","Pt17_2","Pt17_12"),#8
+                    c("Pt17_LN1","Pt17_2","Pt17_7"),#9
+                    c("Pt17_LN1","Pt17_2","Pt17_7"),
                     c("Pt17_LN1","Pt17_2"),
                     c("Pt17_2","Pt17_7"),
                     c("Pt17_2","Pt17_12"),
@@ -34,17 +35,17 @@ sample_pairs = list(c("N01","N02","N03","N04"),
                     c("Pt17_2","Pt17_7","Pt17_12"),
                     c("Pt17_7","Pt17_12","Pt17_31"),
                     c("Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),
-                    c("Pt25_SB1","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#16
-                    c("Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#17
-                    c("Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#18
+                    c("Pt25_SB1","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#18
+                    c("Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#19
+                    c("Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#20
                     c("Pt25_SB1","Pt25_1"), 
                     c("Pt25_1","Pt25_1_8"),
                     c("Pt25_1_8","Pt25_24"),
                     c("Pt25_24","Pt25_25Pd"),
-                    c("Pt25_24","Pt25_AMB25Pd"),#23
+                    c("Pt25_24","Pt25_AMB25Pd"),#25
                     c("Pt25_25Pd","Pt25_AMB25Pd"),
                     c("Pt25_SB1","Pt25_AMB25Pd"),
-                    c("Pt25_SB1","Pt25_24"),#26
+                    c("Pt25_SB1","Pt25_24"),#28
                     c("Pt27_1","Pt27_1_8","Pt27_12"),
                     c("Pt27_1","Pt27_1_8"),
                     c("Pt27_1","Pt27_12"),
@@ -59,6 +60,7 @@ sample_pairs = list(c("N01","N02","N03","N04"),
                     c("Pt28_4","Pt28_28"),
                     c("Pt28_LN1","Pt28_28"))
 (sample = sample_pairs[[i]])
+Idents(object) = "orig.ident"
 object %<>% subset(idents = sample)
 GC()
 save.path = paste0(path, paste(sample, collapse = "-"),"/")
@@ -102,13 +104,18 @@ cds %<>% reduceDimension(method = 'DDRTree')
 cds %<>% orderCells()
 
 saveRDS(cds, paste0(save.path,"monocle2_",paste(sample, collapse = "-"),"_cds.rds"))
+cds = readRDS(paste0(save.path,"monocle2_",paste(sample, collapse = "-"),"_cds.rds"))
 #Trajectory step 2: generate Trajectory plot for all samples
-group_by <- c("X4_orig.ident", "orig.ident","X4clusters", "Pseudotime","cell.types")
+group_by <- c("orig.ident","X4clusters", "Pseudotime","cell.types")
+if(length(unique(cds$orig.ident)) == 4) orig.ident_color <- c("#6A3D9A","#BEAED4","#B2DF8A","#BF5B17")
+if(length(unique(cds$orig.ident)) == 3) orig.ident_color <- c("#6A3D9A","#B2DF8A","#BF5B17")
+
 for(k in seq_along(group_by)){
         jpeg(paste0(save.path,"trajectory_",paste(sample, collapse = "-"),"_",group_by[k],".jpeg"),
              units="in", width=7, height=7,res=600)
-        g <- plot_cell_trajectory(cds, color_by = group_by[k],show_branch_points = FALSE)
-        if(group_by[k] == "X4_orig.ident") g = g + scale_color_manual(values=Singler.colors)
+        g <- plot_cell_trajectory(cds, color_by = group_by[k],cell_size = 3,
+                                  show_branch_points = FALSE)
+        if(group_by[k] == "orig.ident") g = g + scale_color_manual(values=orig.ident_color)
         if(group_by[k] == "X4clusters") g = g + scale_color_manual(values=X4clusters_color)
         if(group_by[k] == "cell.types") g = g + 
                 scale_color_manual(values=sort(unique(cds$cell.types.colors),decreasing = T))
@@ -117,6 +124,7 @@ for(k in seq_along(group_by)){
         dev.off()
         Progress(k, length(group_by))
 }
+
 
 #Trajectory step 2: generate Trajectory plot by each sample
 save.path.sub = paste0(save.path, "subset/")
@@ -132,7 +140,8 @@ for(s in seq_along(samples)){
         for(k in seq_along(group_by)){
                 jpeg(paste0(save.path.sub,"trajectory_",samples[s],"_",group_by[k],".jpeg"),
                      units="in", width=7, height=7,res=600)
-                g <- plot_cell_trajectory(subset_cds, color_by = group_by[k],show_branch_points = FALSE)
+                g <- plot_cell_trajectory(subset_cds, cell_size = 3,
+                                          color_by = group_by[k],show_branch_points = FALSE)
                 if(group_by[k] == "X4clusters") g = g + scale_color_manual(values=X4clusters_color)
                 if(group_by[k] == "cell.types") g = g + 
                         scale_color_manual(values=sort(unique(cds$cell.types.colors),decreasing = T))
@@ -154,9 +163,20 @@ for(c in seq_along(X4clusters)){
         subset_cds@reducedDimS <- subset_cds@reducedDimS[,valid_cells]
         jpeg(paste0(save.path.sub,"trajectory_",X4clusters[c],"_",file_name,".jpeg"),
              units="in", width=7, height=7,res=600)
-        g <- plot_cell_trajectory(subset_cds, color_by = "orig.ident",show_branch_points = FALSE)
+        g <- plot_cell_trajectory(subset_cds, cell_size = 3,
+                                  color_by = "orig.ident",show_branch_points = FALSE)
+        g = g + scale_color_manual(values=orig.ident_color)
         g = g + ggtitle(paste(X4clusters[c], "in", sample_name)) + TitleCenter()
         print(g)
         dev.off()
         Progress(c, length(group_by))
 }
+
+my_gene = c("CCND1","CDK4","MCM7","EZH2","EZH1")
+
+# plot genes that are expressed in a branch dependent manner ===============
+jpeg(paste0(path,file_name,"_branched_pseudotime.jpeg"),
+     units="in", width=7, height=7,res=600)
+plot_cell_trajectory(cds["CCND1",], color_by = "CellType") +
+        theme(legend.position = "right")
+dev.off()

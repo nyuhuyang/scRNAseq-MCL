@@ -35,16 +35,15 @@ RemoveDup <- function(mat){
 }
 MCL_B_bulk <- inner_join(B_bulk, MCL_bulk, by = "X")
 MCL_B_bulk <- RemoveDup(MCL_B_bulk);dim(MCL_B_bulk)
+colnames(MCL_B_bulk) %<>% gsub("X","Pt",.)
 
-meta.data["progress",] %<>% gsub("MCL:","",.)
-pt_names <- as.character(meta.data["sample",7:ncol(meta.data)])
-meta.data["sample",7:ncol(meta.data)] = paste0("Pt",pt_names)
-meta.data["patient",] = gsub(" .*","",meta.data["sample",])
-
+colnames(meta.data) %<>% gsub("X","Pt",.)
+meta.data["patient",] = gsub("\\..*","", colnames(meta.data))
+meta.data %<>% t %>% as.data.frame()
 genes.sd = genefilter::rowSds(MCL_B_bulk)
 variable.genes = head(genes.sd[order(genes.sd,decreasing = T)], 4000)
 
-labels = c("sample","progress","patient")
+labels = c("specimens","progress","patient")
 for(i in seq_along(labels)){
         y = MCL_B_bulk[names(variable.genes),]
         colnames(y) %<>% plyr::mapvalues(from = colnames(y), 
@@ -64,4 +63,17 @@ for(i in seq_along(labels)){
         dev.off()
         Progress(i, length(labels))
 }
+
+bulk <- CreateSeuratObject(counts = MCL_B_bulk, meta.data = meta.data)
+bulk <- NormalizeData(bulk, normalization.method = "LogNormalize", scale.factor = 10000)
+bulk <- FindVariableFeatures(bulk, selection.method = "vst", nfeatures = 2000)
+bulk <- ScaleData(bulk)
+bulk <- RunPCA(bulk, features = VariableFeatures(object = bulk))
+
+# These are now standard steps in the Seurat workflow for visualization and clustering
+bulk <- RunUMAP(bulk, dims = 1:5, verbose = FALSE)
+bulk <- FindNeighbors(bulk, dims = 1:5, verbose = FALSE)
+bulk <- FindClusters(bulk, verbose = FALSE)
+DimPlot(bulk, reduction = "umap", group.by = "RNA_snn_res.0.8")
+length(unique(bulk$patient))
 

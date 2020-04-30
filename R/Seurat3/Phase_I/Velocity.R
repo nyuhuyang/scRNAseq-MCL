@@ -42,10 +42,10 @@ for(f in folder_list) {
 object = readRDS(file = "data/MCL_41_B_20200225.rds")
 Idents(object) = "orig.ident"
 
-arg =2
+arg =1
 groups = c("Pt-17","Pt-25")
 
-sample_pairs = list(c("Pt17_LN1","Pt17_2","Pt17_7","Pt17_12","Pt17_31"),#7
+sample_pairs = list(c("Pt17_LN1","Pt17_2","Pt17_7"),#7
                     c("Pt25_SB1","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"))
 (sample = sample_pairs[[arg]])
 object %<>% subset(idents = sample)
@@ -53,7 +53,7 @@ ldat <- ReadVelocity(file = paste0("data/velocyto/",groups[arg],"_merged.loom"))
 
 RNA_velocyto <- as.Seurat(x = ldat)
 rm(ldat)
-save.path = paste0(path, groups[arg],"/")
+save.path = paste0(path, paste(sample, collapse = "-"),"/")
 if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
 # rename and subset Seurat
 Barcode = colnames(object)
@@ -90,7 +90,7 @@ if(choose == "redo"){
 # inherit ddtree from monocle
 if(choose == "monocle2"){
         RNA_velocyto@assays$SCT = object@assays$SCT
-        monocle.path = paste0("Yang/20200413_monocle2/",paste(sample, collapse = "-"),"/")
+        monocle.path = paste0("Yang/20200426_monocle2/",paste(sample, collapse = "-"),"/")
         cds = readRDS(paste0(monocle.path,"monocle2_",paste(sample, collapse = "-"),"_cds.rds"))
         object@reductions$tsne@cell.embeddings = t(cds@reducedDimS)
         colnames(object@reductions$tsne@cell.embeddings) = paste0("tSNE_",1:2)
@@ -102,9 +102,11 @@ if(choose == "monocle2"){
         RNA_velocyto@meta.data %<>% cbind(object@meta.data)
         RNA_velocyto[["Pseudotime"]] = cds$Pseudotime
 }
+if(length(unique(cds$orig.ident)) == 4) orig.ident_color <- c("#6A3D9A","#BEAED4","#B2DF8A","#BF5B17")
+if(length(unique(cds$orig.ident)) == 3) orig.ident_color <- c("#6A3D9A","#B2DF8A","#BF5B17")
 group_by <- c("orig.ident","X4clusters","cell.types","Pseudotime")[1:3]
 RNA_velocyto %<>% AddMetaColor(label= "X4clusters", colors = gg_color_hue(length(unique(RNA_velocyto$X4clusters))))
-RNA_velocyto %<>% AddMetaColor(label= "orig.ident", colors = gg_color_hue(length(unique(RNA_velocyto$orig.ident))))
+RNA_velocyto %<>% AddMetaColor(label= "orig.ident", colors = orig.ident_color[1:(length(unique(RNA_velocyto$orig.ident)))])
 
 for(g in group_by) {
         Idents(RNA_velocyto) = g
@@ -122,18 +124,19 @@ for(g in group_by){
         cell.colors <- ident.colors[RNA_velocyto@meta.data[,g]]
         names(x = cell.colors) <- colnames(x = RNA_velocyto)
         RNA_velocyto %<>% prepare.velocity.on.embedding.cor(n = 200, reduction = "tsne",scale = "sqrt")
-        jpeg(paste0(path,groups[arg], "/","velocity_",groups[arg],"_",g,".jpeg"), units="in", width=8, height=8,res=600)
+        jpeg(paste0(save.path, "/","velocity_",groups[arg],"_",g,".jpeg"), units="in", width=8, height=8,res=600)
         show.velocity.on.embedding.cor.1(emb = Embeddings(object = RNA_velocyto, reduction = "tsne"), 
                                        vel = Tool(object = RNA_velocyto, slot = "RunVelocity"), n = 200, scale = "sqrt", 
                                        cell.colors = ac(x = cell.colors, alpha = 0.8), 
                                        cex = 1.2, arrow.scale = 3, show.grid.flow = TRUE, min.grid.cell.mass = 0.5, 
                                        grid.n = 40, arrow.lwd = 0.8, arrow.colors = "grey40",
                                        do.par = FALSE, cell.border.alpha = 0.5)
-        dev.off()  
+        dev.off()
+        Progress(which(g %in% group_by), length(group_by))
 }
 
-saveRDS(RNA_velocyto, paste0(path,groups[arg],"/velocity",groups[arg],".rds"))
-#RNA_velocyto = readRDS(paste0(path,groups[arg],"/velocity",groups[arg],".rds"))
+saveRDS(RNA_velocyto, paste0(save.path,"/velocity",groups[arg],".rds"))
+#RNA_velocyto = readRDS(paste0(save.path,"/velocity",groups[arg],".rds"))
 #Trajectory step 2: generate RNA velocyto on Trajectory plot by each sample
 save.path.sub = paste0(save.path, "subset/")
 if(!dir.exists(save.path.sub)) dir.create(save.path.sub, recursive = T)

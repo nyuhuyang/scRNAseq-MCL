@@ -20,14 +20,14 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
 
-step = 3 
+step = 4 
 # choose == "X4clusters"
 if(step == 1){ # need 32 GB
-        args = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 4),
+        opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 4),
                           logfc =  rep(c(0.25, 0.1, 0.05, 0), each = 4),
                           ident.1 = rep(paste0("C",1:4),      time = 4))
         
-        (arg = args[i,])
+        (opt = opts[i,])
         object = readRDS(file = "data/MCL_41_B_20200225.rds")
         DefaultAssay(object)  = "SCT"
         Idents(object) = "orig.ident"
@@ -36,21 +36,21 @@ if(step == 1){ # need 32 GB
         object <- subset(object, idents= "MCL") 
         Idents(object) = "X4clusters"
         system.time(MCL_markers <- FindMarkers.UMI(object, 
-                                                   ident.1 = as.character(arg$ident.1),
+                                                   ident.1 = as.character(opt$ident.1),
                                                    ident.2 = NULL,
-                                                   logfc.threshold = arg$logfc, 
-                                                   only.pos = arg$only.pos,
+                                                   logfc.threshold = opt$logfc, 
+                                                   only.pos = opt$only.pos,
                                                    test.use = "MAST",
                                                    latent.vars = "nCount_SCT"))
-        write.csv(MCL_markers,paste0(path,"MCL_only_41-FC",arg$logfc,"_",arg$ident.1,".csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_only_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
 }
 # choose == "X4clusters_vs_Normal"
 if(step == 2){ # need 32 GB
-        args = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 5),
+        opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 5),
                           logfc =  rep(c(0.25, 0.1, 0.05, 0), each = 5),
                           ident.1 = rep(c("B_cells",paste0("C",1:4)),      time = 4))
         
-        (arg = args[i,])
+        (opt = opts[i,])
         object = readRDS(file = "data/MCL_41_B_20200225.rds")
         DefaultAssay(object)  = "SCT"
         Idents(object) = "orig.ident"
@@ -66,21 +66,21 @@ if(step == 2){ # need 32 GB
         object %<>% sortIdent()
         table(Idents(object))
         system.time(MCL_markers <- FindMarkers.UMI(object, 
-                                                   ident.1 = as.character(arg$ident.1),
+                                                   ident.1 = as.character(opt$ident.1),
                                                    ident.2 = "Normal",
-                                                   logfc.threshold = arg$logfc, 
-                                                   only.pos = arg$only.pos,
+                                                   logfc.threshold = opt$logfc, 
+                                                   only.pos = opt$only.pos,
                                                    test.use = "MAST",
                                                    latent.vars = "nCount_SCT"))
-        write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC",arg$logfc,"_",arg$ident.1,".csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
 }
 # choose == "X4clusters_vs_B_cells"
 if(step == 3){ # need 32 GB
-        args = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 4),
+        opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 4),
                           logfc =  rep(c(0.25, 0.1, 0.05, 0), each = 4),
                           ident.1 = rep(paste0("C",1:4),      time = 4))
         
-        (arg = args[i,])
+        (opt = opts[i,])
         object = readRDS(file = "data/MCL_41_B_20200225.rds")
         DefaultAssay(object)  = "SCT"
         Idents(object) = "orig.ident"
@@ -93,11 +93,64 @@ if(step == 3){ # need 32 GB
         object %<>% sortIdent()
         table(Idents(object))
         system.time(MCL_markers <- FindMarkers.UMI(object, 
-                                                   ident.1 = as.character(arg$ident.1),
+                                                   ident.1 = as.character(opt$ident.1),
                                                    ident.2 = "B_cells",
-                                                   logfc.threshold = arg$logfc, 
-                                                   only.pos = arg$only.pos,
+                                                   logfc.threshold = opt$logfc, 
+                                                   only.pos = opt$only.pos,
                                                    test.use = "MAST",
                                                    latent.vars = "nCount_SCT"))
-        write.csv(MCL_markers,paste0(path,"MCL_B_41-FC",arg$logfc,"_",arg$ident.1,".csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_B_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
+}
+
+# choose == "B_cells_vs_B_cells"
+if(step == 4){ # need 32 GB
+        opts = list(list(TRUE, 0.25, "N01"),
+                   list(TRUE, 0.25, "N02"),
+                   list(TRUE, 0.25, "N03"),
+                   list(TRUE, 0.25, "N04"),
+                   list(TRUE, 0.25, c("N01","N02","N04")),
+                   list(TRUE, 0.25, c("N01","N02","N04","N04")),
+                   list(TRUE, 0.25, " Pt25_1"),
+                   list(TRUE, 0.25, "Pt25_24"),
+                   list(TRUE, 0.25, "Pt25_25Pd"),
+                   list(TRUE, 0.25, c("Pt25_24", "Pt25_1")),
+                   list(FALSE, 0, "N01"),
+                   list(FALSE, 0, "N02"),
+                   list(FALSE, 0, "N03"),
+                   list(FALSE, 0, "N04"),
+                   list(FALSE, 0, c("N01","N02","N04")),
+                   list(FALSE, 0, c("N01","N02","N04","N04")),
+                   list(FALSE, 0, " Pt25_1"),
+                   list(FALSE, 0, "Pt25_24"),
+                   list(FALSE, 0, "Pt25_25Pd"),
+                   list(FALSE, 0, c("Pt25_24", "Pt25_1")))
+        
+        (opt = opts[[i]])
+        names(opt) = c("only.pos","logfc","specimens")
+        object = readRDS(file = "data/MCL_41_B_20200225.rds")
+        DefaultAssay(object)  = "SCT"
+        Idents(object) = "orig.ident"
+        object %<>% subset(idents = opt$specimens)
+        Idents(object) = "cell.types"
+        object %<>% subset(idents = "B_cells")
+        Idents(object) = "X4clusters"
+        table(Idents(object))
+        if(!identical(opt$specimens, c("Pt25_24", "Pt25_1"))) {
+                ident.1 ="C1"
+                ident.2 = "C2"
+        } else {
+                object$X4clusters_orig.ident = paste0(object$X4clusters,"_",
+                                                      object$orig.ident)
+                ident.1 ="C2_Pt25_24"
+                ident.2 = "C2_Pt25_1"
+        }
+        system.time(B_markers <- FindMarkers.UMI(object, 
+                                                   ident.1 = ident.1,
+                                                   ident.2 = ident.2,
+                                                   logfc.threshold = opt$logfc, 
+                                                   only.pos = opt$only.pos,
+                                                   test.use = "MAST",
+                                                   latent.vars = "nCount_SCT"))
+        write.csv(B_markers,paste0(path,"B_41-FC",opt$logfc,"_",
+                                   paste(opt$specimens,collapse = "-"),".csv"))
 }

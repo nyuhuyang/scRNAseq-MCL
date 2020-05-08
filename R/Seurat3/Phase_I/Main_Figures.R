@@ -13,6 +13,7 @@ library(fgsea)
 library(tibble)
 library(ggsci)
 library(fgsea)
+library(openxlsx)
 source("../R/Seurat3_functions.R")
 
 # load data
@@ -35,7 +36,7 @@ object %<>% subset(idents = c("HSC/progenitors","Nonhematopoietic cells"), inver
 table(Idents(object))
 
 #==== Figure 3-A ===========
-path <- "Yang/Figure 3/Figure Sources/"
+path <- "Yang/PALIBR Figures legends methods/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 object$cell.types <- plyr::mapvalues(object@meta.data$cell.types,from = c("B_cells","MCL",
@@ -74,7 +75,7 @@ file.rename(paste0(path,"FeaturePlot__object_cell.types_CD19-CCND1-SOX11-CD3D-CD
             paste0(path,"FeaturePlot_nolabel.jpeg"))
 
 #==== Figure 3-C ===========
-path <- "Yang/Figure 3/Figure Sources/"
+path <- "Yang/PALIBR Figures legends methods/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
@@ -216,7 +217,7 @@ if(choose == "X4cluster_vs_B"){
 }
 #==== Figure 3-D ===========
 choose <- c("X4clusters","X4cluster_vs_Normal")[2]
-res = read.csv(file = paste0("Yang/Figure 3/Figure Sources/",
+res = read.csv(file = paste0("Yang/PALIBR Figures legends methods/Figure 3/Figure Sources/",
                              choose,"/",choose,"_41-FC0.csv"),
                row.names = 1, stringsAsFactors=F)
 table(res$cluster)
@@ -468,8 +469,41 @@ for(i in 1:10){ #1:10
                          title = paste0("40 DEGs in ",samples1,"_",samples2),
                          save.path = paste0(path,choose,"/"))
 }
+###############################
+#### Fig 4
+###############################
+path = "Yang/PALIBR Figures legends methods/Figure 4/"
+(load(file="data/MCL_41_harmony_20200225.Rda"))
+Idents(object) = "Doublets"
+object %<>% subset(idents = "Singlet")
+Idents(object) = "cell.types"
+object %<>% subset(idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
+table(Idents(object))
 
-#### Fig 4E ########################################################################
+meta.data = object@meta.data[,c("orig.ident", "cell.types")]
+(mytable <- table(meta.data$orig.ident,meta.data$cell.types))
+df <- prop.table(mytable, 1) %>% as.data.frame.matrix
+cell_list <- list(as.data.frame.matrix(mytable),df*100)
+names(cell_list) = c("cell number", "percentage % in each specimen")
+write.xlsx(cell_list, file = paste0(path,"cell.types-orig.ident.xlsx"),rowNames =TRUE,
+           colNames = TRUE, borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+# subset
+Idents(object) = "cell.types"
+cell_types <- c("T_cells:CD4+", "T_cells:CD8+","NK_cells","Myeloid cells")
+exp <- list()
+for(i in seq_along(cell_types)) {
+        sub_object <- subset(object, idents = cell_types[i])
+        Idents(sub_object) = "orig.ident"
+        exp[[i]] = AverageExpression(sub_object, assays = "SCT")
+        exp[[i]] = exp[[i]]$SCT
+}
+names(exp) = gsub(":","_",cell_types)
+write.xlsx(exp, file = paste0(path,"UMI-cell.types-orig.ident.xlsx"),rowNames =TRUE,
+           colNames = TRUE, borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+
+###############################
+#### Fig 4E #####
+###############################
 path <- "Yang/Figure 4/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
@@ -522,7 +556,7 @@ for(i in seq_along(Clusters)){
         
         
 ### Fig. 7C ==========
-path <- "Yang/Figure 7/Figure Sources/"
+path <- "Yang/PALIBR Figures legends methods/Figure 7/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
 

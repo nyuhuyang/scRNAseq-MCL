@@ -248,3 +248,57 @@ eulerr(gde.all,shape =  "ellipse",key = c("C1","C2","C3","C4"),
              cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,
        save.path = paste0(path, "C1_C2_C3_C4"))
 
+# load data
+path <- "Yang/Normal_B/"
+object = readRDS(file = "data/MCL_41_B_20200225.rds")
+Idents(object) = "orig.ident"
+object <- BuildClusterTree(object)
+jpeg(paste0(path,"PlotClusterTree_all_B_MCL.jpeg"), units="in", width=10, height=10,res=600)
+PlotClusterTree(object)
+dev.off()
+
+Normal <- c("N01","N02","N03","N04","Pt25_1","Pt25_24","Pt25_25Pd")
+Normal <- subset(object, idents = Normal)
+Normal$X4clusters_orig.ident = paste0(Normal$X4clusters,"_",Normal$orig.ident) 
+Idents(Normal) = "X4clusters_orig.ident"
+table(Idents(Normal))
+Normal %<>% BuildClusterTree
+jpeg(paste0(path,"PlotClusterTree_B.jpeg"), units="in", width=10, height=10,res=600)
+PlotClusterTree(Normal)
+dev.off()
+
+Idents(Normal) = "X4clusters"
+Normal %<>% subset(idents = c("C1","C2"))
+Idents(Normal) = "X4clusters_orig.ident"
+table(Idents(Normal))
+Normal %<>% BuildClusterTree
+jpeg(paste0(path,"PlotClusterTree_B_C1_2.jpeg"), units="in", width=10, height=10,res=600)
+PlotClusterTree(Normal)
+dev.off()
+
+# volcano plots =======================
+path <- "Yang/Normal_B/"
+save.path <- paste(path, "VolcanoPlots/p_val/")
+if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
+
+DE_files = c("N01-N02-N03-N04","N01", "N02","N03","N04","Pt25_1","Pt25_24-Pt25_1",
+             "Pt25_24","Pt25_25Pd")
+for(i in seq_along(DE_files)){
+        B_markers = read.csv(paste0(path,"DE files/B_41-FC0_",DE_files[i],".csv"),row.names = 1)
+        if(DE_files[i] != "Pt25_24-Pt25_1") B_markers = B_markers[B_markers$cluster %in% "C2",]
+        if(DE_files[i] == "Pt25_24-Pt25_1") B_markers = B_markers[B_markers$cluster %in% "C2_Pt25_24",]
+        
+        write.csv(B_markers,paste0(path,"DE files/B_41-FC0_",DE_files[i],".csv"))
+        
+        g <- VolcanoPlots(B_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0,top = 20,
+                                 cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
+                                 legend.size = 12)+ theme(legend.position="bottom")
+        if(DE_files[i] != "Pt25_24-Pt25_1") g = g + ggtitle(paste("Cluster 2 / cluster 1 in", DE_files[i]))
+        if(DE_files[i] == "Pt25_24-Pt25_1") g = g + ggtitle("Cluster 2 of Pt25_C24 / cluster 2 of Pt25_C1")
+        g = g + TitleCenter()#+theme_bw()
+        
+        jpeg(paste0(save.path,"VolcanoPlots_",DE_files[i],".jpeg"), units="in", width=10, height=10,res=600)
+        print(g)
+        dev.off()
+        Progress(i, length(DE_files))
+}

@@ -104,23 +104,12 @@ if(step == 3){ # need 32 GB
 
 # choose == "B_cells_vs_B_cells"
 if(step == 4){ # need 32 GB
-        opts = list(list(TRUE, 0.25, "N01"),
-                   list(TRUE, 0.25, "N02"),
-                   list(TRUE, 0.25, "N03"),
-                   list(TRUE, 0.25, "N04"),
-                   list(TRUE, 0.25, c("N01","N02","N04")),
-                   list(TRUE, 0.25, c("N01","N02","N04","N04")),
-                   list(TRUE, 0.25, " Pt25_1"),
-                   list(TRUE, 0.25, "Pt25_24"),
-                   list(TRUE, 0.25, "Pt25_25Pd"),
-                   list(TRUE, 0.25, c("Pt25_24", "Pt25_1")),
-                   list(FALSE, 0, "N01"),
+        opts = list(list(FALSE, 0, "N01"),
                    list(FALSE, 0, "N02"),
                    list(FALSE, 0, "N03"),
                    list(FALSE, 0, "N04"),
-                   list(FALSE, 0, c("N01","N02","N04")),
-                   list(FALSE, 0, c("N01","N02","N04","N04")),
-                   list(FALSE, 0, " Pt25_1"),
+                   list(FALSE, 0, c("N01","N02","N03","N04")), 
+                   list(FALSE, 0, "Pt25_1"),
                    list(FALSE, 0, "Pt25_24"),
                    list(FALSE, 0, "Pt25_25Pd"),
                    list(FALSE, 0, c("Pt25_24", "Pt25_1")))
@@ -136,20 +125,22 @@ if(step == 4){ # need 32 GB
         Idents(object) = "X4clusters"
         table(Idents(object))
         if(!identical(opt$specimens, c("Pt25_24", "Pt25_1"))) {
-                ident.1 ="C1"
+                ident.1 = "C1"
                 ident.2 = "C2"
+                object %<>% subset(idents = c(ident.1,ident.2))
         } else {
                 object$X4clusters_orig.ident = paste0(object$X4clusters,"_",
                                                       object$orig.ident)
+                Idents(object) = "X4clusters_orig.ident"
                 ident.1 ="C2_Pt25_24"
                 ident.2 = "C2_Pt25_1"
+                object %<>% subset(idents = c(ident.1,ident.2))
         }
-        system.time(B_markers <- FindMarkers.UMI(object, 
-                                                   ident.1 = ident.1,
-                                                   ident.2 = ident.2,
+        system.time(B_markers <- FindAllMarkers.UMI(object, 
                                                    logfc.threshold = opt$logfc, 
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
+                                                   return.thresh = 1, 
                                                    latent.vars = "nCount_SCT"))
         write.csv(B_markers,paste0(path,"B_41-FC",opt$logfc,"_",
                                    paste(opt$specimens,collapse = "-"),".csv"))

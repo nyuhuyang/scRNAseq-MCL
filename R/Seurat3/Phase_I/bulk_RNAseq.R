@@ -77,3 +77,4 @@ bulk <- FindClusters(bulk, verbose = FALSE)
 DimPlot(bulk, reduction = "umap", group.by = "RNA_snn_res.0.8")
 length(unique(bulk$patient))
 
+

@@ -20,7 +20,29 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
 
-step = 4 
+# choose == "MCL_vs_B_cells"
+step = 0 
+if(step == 0){ # need 16 GB
+        opts = data.frame(ident.1 = c("PtU01","PtU02","PtU03","PtU04"),
+                          ident.2 = c("N01", "N01", "N01","N01"),
+                          stringsAsFactors = F)
+        (opt = opts[i,])
+        
+        # load data
+        object = readRDS(file = "data/MCL_41_B_20200225.rds")
+        DefaultAssay(object) = "SCT"
+        Idents(object) = "orig.ident"
+        object %<>% subset(idents = c(opt$ident.1,opt$ident.2))
+        
+        MCL_markers <- FindAllMarkers.UMI(object, 
+                                        logfc.threshold = 0, 
+                                        only.pos = T,
+                                        return.thresh = 1,
+                                        test.use = "MAST",
+                                        latent.vars = "nCount_SCT")
+        
+        write.csv(MCL_markers,paste0(path,"MCL_B_",opt$ident.1, "-",opt$ident.2,".csv"))
+}
 # choose == "X4clusters"
 if(step == 1){ # need 32 GB
         opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 4),

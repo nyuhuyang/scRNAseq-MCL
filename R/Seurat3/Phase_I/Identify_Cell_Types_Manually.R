@@ -32,3 +32,5 @@ FeaturePlot.1(object,features = QC, pt.size = 0.005,
               unique.name = "cell.types",label = F,
               threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
               units = "in",width=9, height=4, no.legend = T)
+
+

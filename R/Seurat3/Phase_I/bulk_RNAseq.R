@@ -77,4 +77,9 @@ bulk <- FindClusters(bulk, verbose = FALSE)
 DimPlot(bulk, reduction = "umap", group.by = "RNA_snn_res.0.8")
 length(unique(bulk$patient))
 
-
+sample_list <- list("bulk-seq" = sort(as.character(meta.data[2,])),
+                    "scRNA-seq" = sort(as.character(unique(object$orig.ident))))
+df <- list2df(sample_list)
+write.xlsx(df, asTable = F,
+           file = paste0(path,"scRNA_bulk_samples.xlsx"),
+           borders = "surrounding")

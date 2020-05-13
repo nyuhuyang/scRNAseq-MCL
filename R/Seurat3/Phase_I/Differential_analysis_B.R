@@ -11,9 +11,11 @@ library(kableExtra)
 library(magrittr)
 library(gplots)
 library(cowplot)
+library(eulerr)
+library(openxlsx)
 source("../R/Seurat3_functions.R")
 
-path <- "Yang/Figure 2/Figure Sources/"
+path <- "Yang/PALIBR Figures legends methods/Figure 2/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #============= after running Differential_analysis.R Rsscript ===========
 # X4clusters =====
@@ -302,3 +304,32 @@ for(i in seq_along(DE_files)){
         dev.off()
         Progress(i, length(DE_files))
 }
+
+# venn diagram gene list 20200512 =======================
+path <- "Yang/PALIBR Figures legends methods/Figure 2/"
+choose = "X4clusters"
+save.path <- paste0(path, "Figure Sources/",choose,"/")
+if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
+B_markers <- read.csv(paste0(save.path, "X4clusters_41-FC0.csv"))
+B_markers <- B_markers[B_markers$avg_logFC > 0 ,]
+eulerr(B_markers,shape =  "circle",key = c("C1","C2","C3","C4"),
+       cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,return.raw = F,do.return = T,
+       save.path = save.path)
+       
+pos_genes <- eulerr(B_markers,shape =  "circle", key = c("C1","C2","C3","C4"),
+       cut_off = "p_val_adj", cut_off_value = 0.01,do.print = F,return.raw = T,
+       save.path = save.path)
+euler_df <- eulerr::euler(pos_genes,shape = "circle")
+pos_genes_list <- as.list(euler_df$original.values)
+names(pos_genes_list) %<>% paste("=",pos_genes_list)
+id <- eulerr:::bit_indexr(4)
+
+for (i in nrow(id):1) {
+        pos_genes_list[[i]] = Reduce(intersect, pos_genes[id[i,]])  %>% 
+                setdiff(Reduce(union, pos_genes[!id[i,]]))
+}
+pos_genes_df <- list2df(pos_genes_list)
+write.xlsx(pos_genes_df, asTable = F,
+           file = paste0(save.path,"postive_shared_gene_list_",choose,".xlsx"),
+           borders = "surrounding")
+

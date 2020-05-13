@@ -489,7 +489,7 @@ write.xlsx(cell_list, file = paste0(path,"cell.types-orig.ident.xlsx"),rowNames 
            colNames = TRUE, borders = "surrounding",colWidths = c(NA, "auto", "auto"))
 # subset
 Idents(object) = "cell.types"
-cell_types <- c("T_cells:CD4+", "T_cells:CD8+","NK_cells","Myeloid cells")
+cell_types <- c("T_cells:CD4+", "T_cels:CD8+","NK_cells","Myeloid cells")
 exp <- list()
 for(i in seq_along(cell_types)) {
         sub_object <- subset(object, idents = cell_types[i])

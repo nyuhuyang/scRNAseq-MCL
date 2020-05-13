@@ -19,11 +19,13 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
 
-opts = data.frame(cell.types = rep(c("T_cells:CD8+","T_cells:CD4+"),  each = 11),
+opts = data.frame(cell.types = rep(c("T_cells:CD8+","T_cells:CD4+"),  each = 15),
                   ident.1 = rep(c("Pt17_7","Pt17_12","Pt17_31","Pt28_4","Pt28_28","Pt25_1",
-                              "Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_25Pd","Pt11_28"),2),
+                              "Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_25Pd","Pt11_28",
+                              "PtU01","PtU02","PtU03","PtU04"),2),
                   ident.2 = rep(c("Pt17_2","Pt17_2","Pt17_2","Pt28_1","Pt28_1","N01",
-                              "Pt25_1","Pt25_1","Pt25_1","Pt25_24","Pt11_14"),2),
+                              "Pt25_1","Pt25_1","Pt25_1","Pt25_24","Pt11_14",
+                              "N01", "N01", "N01","N01"),2),
                   stringsAsFactors = F)
 (opt = opts[i,])
 # load data
@@ -36,13 +38,11 @@ object %<>% subset(idents = opt$cell.types)
 Idents(object) = "orig.ident"
 object %<>% subset(idents = c(opt$ident.1,opt$ident.2))
 
-T_markers <- FindMarkers.UMI(object, 
+T_markers <- FindAllMarkers.UMI(object, 
                             logfc.threshold = 0, 
-                            ident.1 = opt$ident.1,
-                            ident.2 = opt$ident.2,
-                            only.pos = F,
+                            only.pos = T,
+                            return.thresh = 1,
                             test.use = "MAST",
-                            return.thresh = 1, 
                             latent.vars = "nCount_SCT")
-T_markers$cluster = paste0(opt$ident.1, " \\ ",opt$ident.2)
+
 write.csv(T_markers,paste0(path,sub(":","_",opt$cell.types),opt$ident.1, "\\",opt$ident.2,".csv"))

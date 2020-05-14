@@ -22,20 +22,22 @@ object %<>% subset(idents = "Singlet")
 Idents(object) = "cell.types"
 
 # select pair
-opts = data.frame(cell.types = rep(c("T_cells:CD8+","T_cells:CD4+"),  each = 11),
+opts = data.frame(cell.types = rep(c("T_cells:CD8+","T_cells:CD4+"),  each = 15),
                   ident.1 = rep(c("Pt17_7","Pt17_12","Pt17_31","Pt28_4","Pt28_28","Pt25_1",
-                                  "Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_25Pd","Pt11_28"),2),
+                                  "Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_25Pd","Pt11_28",
+                                  "PtU01","PtU02","PtU03","PtU04"),2),
                   ident.2 = rep(c("Pt17_2","Pt17_2","Pt17_2","Pt28_1","Pt28_1","N01",
-                                  "Pt25_1","Pt25_1","Pt25_1","Pt25_24","Pt11_14"),2),
+                                  "Pt25_1","Pt25_1","Pt25_1","Pt25_24","Pt11_14",
+                                  "N01", "N01", "N01","N01"),2),
                   stringsAsFactors = F)
-for(i in 1:nrow(opts)){
+for(i in c(12:15,27,28,30)){
         (opt = opts[i,])
         sub_object <- subset(object, idents = opt$cell.types)
         Idents(sub_object) = "orig.ident"
         sub_object %<>% subset(idents = c(opt$ident.1,opt$ident.2))
         save.path = paste0(path,sub(":","_",opt$cell.types), opt$ident.1, "-",opt$ident.2,"/")
         if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
-        file.copy(from=paste0(path,sub(":","_",opt$cell.types), opt$ident.1, "\\",opt$ident.2,".csv"),
+        file.copy(from=paste0(path,sub(":","_",opt$cell.types), opt$ident.1, "-",opt$ident.2,".csv"),
                   to=paste0(save.path,basename(save.path),".csv"))
         
         T_markers = read.csv(file= paste0(save.path,basename(save.path),".csv"),
@@ -94,7 +96,9 @@ for(i in 1:nrow(opts)){
                          unique.name = "cell.types",
                          save.path = paste0(save.path,"Heatmap_top40_",sub(":","_",opt$cell.types),
                                             opt$ident.1, "-",opt$ident.2,"_scale"))
-        T_markers = T_markers[T_markers$cluster %in% opt$ident.1,]
+        #T_markers = T_markers[T_markers$cluster %in% opt$ident.1,]
+        avg_logFC = T_markers[T_markers$cluster %in% opt$ident.2,"avg_logFC"]
+        T_markers[T_markers$cluster %in% opt$ident.2,"avg_logFC"] = avg_logFC * -1
         p <- VolcanoPlots(data = T_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,
                           top = 20, cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
                           legend.size = 12)+

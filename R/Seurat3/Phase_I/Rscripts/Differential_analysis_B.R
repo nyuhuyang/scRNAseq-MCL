@@ -22,9 +22,10 @@ print(paste0("slurm_arrayid=",i))
 
 # choose == "MCL_vs_B_cells"
 step = 0 
-if(step == 0){ # need 16 GB
-        opts = data.frame(ident.1 = c("PtU01","PtU02","PtU03","PtU04"),
-                          ident.2 = c("N01", "N01", "N01","N01"),
+if(step == 0){  # need 32 GB
+        samples = as.character(unique(object$orig.ident))
+        opts = data.frame(ident.1 = as.character(unique(object$orig.ident))[2:length(samples)],
+                          ident.2 = rep("N01", length(samples)-1),
                           stringsAsFactors = F)
         (opt = opts[i,])
         
@@ -32,16 +33,16 @@ if(step == 0){ # need 16 GB
         object = readRDS(file = "data/MCL_41_B_20200225.rds")
         DefaultAssay(object) = "SCT"
         Idents(object) = "orig.ident"
-        object %<>% subset(idents = c(opt$ident.1,opt$ident.2))
+        object %<>% subset(idents = c(opt$ident.1,"N01"))
         
         MCL_markers <- FindAllMarkers.UMI(object, 
                                         logfc.threshold = 0, 
-                                        only.pos = T,
+                                        only.pos = F,
                                         return.thresh = 1,
                                         test.use = "MAST",
                                         latent.vars = "nCount_SCT")
         
-        write.csv(MCL_markers,paste0(path,"MCL_B_",opt$ident.1, "-",opt$ident.2,".csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_B_",opt$ident.1, "-N01.csv"))
 }
 # choose == "X4clusters"
 if(step == 1){ # need 32 GB

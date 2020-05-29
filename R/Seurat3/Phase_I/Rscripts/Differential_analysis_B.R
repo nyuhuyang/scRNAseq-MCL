@@ -23,15 +23,15 @@ print(paste0("slurm_arrayid=",i))
 # choose == "MCL_vs_B_cells"
 step = 0 
 if(step == 0){  # need 32 GB
+        # load data
+        object = readRDS(file = "data/MCL_41_B_20200225.rds")
+        DefaultAssay(object) = "SCT"
         samples = as.character(unique(object$orig.ident))
-        opts = data.frame(ident.1 = as.character(unique(object$orig.ident))[2:length(samples)],
+        opts = data.frame(ident.1 = samples[2:length(samples)],
                           ident.2 = rep("N01", length(samples)-1),
                           stringsAsFactors = F)
         (opt = opts[i,])
         
-        # load data
-        object = readRDS(file = "data/MCL_41_B_20200225.rds")
-        DefaultAssay(object) = "SCT"
         Idents(object) = "orig.ident"
         object %<>% subset(idents = c(opt$ident.1,"N01"))
         

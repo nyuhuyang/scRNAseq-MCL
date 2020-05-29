@@ -14,7 +14,8 @@ library(tibble)
 library(ggsci)
 library(fgsea)
 library(openxlsx)
-source("../R/Seurat3_functions.R")
+library(gplots)
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 
 # load data
 (load(file="data/MCL_41_harmony_20200225.Rda"))
@@ -500,6 +501,58 @@ for(i in seq_along(cell_types)) {
 names(exp) = gsub(":","_",cell_types)
 write.xlsx(exp, file = paste0(path,"UMI-cell.types-orig.ident.xlsx"),rowNames =TRUE,
            colNames = TRUE, borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+#### Heatmap T ===========
+# select pair
+opts = data.frame(cell.types = rep(c("T_cells:CD8+","T_cells:CD4+"),  each = 23),
+                  ident.1 = rep(c("Pt17_7","Pt17_12","Pt17_31","Pt28_4","Pt28_28",
+                                  "Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_25Pd","Pt11_28",
+                                  "Pt25_1","PtU01","PtU02","PtU03","PtU04",
+                                  "Pt17_LN1","Pt17_2","Pt17_7","Pt17_12","Pt17_31",
+                                  "PtB13_Ibp","PtB13_Ib1","PtB13_IbR"),2),
+                  ident.2 = rep(c("Pt17_2","Pt17_2","Pt17_2","Pt28_1","Pt28_1",
+                                  "Pt25_1","Pt25_1","Pt25_1","Pt25_24","Pt11_14",
+                                  rep("N01",13)),2),
+                  stringsAsFactors = F)
+(samples <- sort(unique(c(opts$ident.1,opts$ident.2))))
+samples = c("N01","PtU01","PtU02","PtU03","PtU04",
+            "Pt17_LN1","Pt17_2","Pt17_7","Pt17_31",
+            "Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd",
+            "Pt28_LN1","Pt28_1","Pt28_4","Pt28_28",
+            "Pt11_LN1", "Pt11_1","Pt11_14","Pt11_28",
+            "PtB13_Ibp","PtB13_Ib1","PtB13_IbR")
+Idents(object) = "cell.types"
+
+T_cells <- c("CD8+","CD4+")
+for(i in seq_along(T_cells)){
+        df <- readxl::read_excel(paste0(path, "200514_DE genes CD8_CD4 T cell.xlsx"),sheet = T_cells[i])
+        features <- unique(df$Up, df$Down) %>% na.omit
+
+        sub_object <- subset(object, idents = paste0("T_cells:",T_cells[i]))
+        Idents(sub_object) = "orig.ident"
+        sub_object %<>% subset(idents = samples[samples %in% Idents(sub_object)])
+        sub_object %<>% ScaleData(features = features)
+        exp = AverageExpression(sub_object[features,], 
+                                      assays = "SCT") %>% .$SCT
+        #if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
+
+        samples = samples[samples %in% colnames(exp)]
+        jpeg(paste0(path,"heatmap2_",T_cells[i],"_short.jpeg"), units="in", width=10, height=7,res=600)
+        heatmap.2(as.matrix(exp[,samples]), 
+                  breaks = seq(-3,3,length.out = 300),
+                  cexRow = 0.5,
+                  #col = sns.RdBu_r, 
+                  dendrogram = "both",
+                  margins = c(5,5),
+                  col = bluered(299),
+                  key.xlab = "scale log nUMI",
+                  Colv = F, 
+                  Rowv = T,
+                  scale= "row",
+                  trace = "none", 
+                  density.info="none",
+                  main = paste(T_cells[i],"T cells DE genes in MCL and normal blood"))
+        dev.off()
+}
 
 ###############################
 #### Fig 4E #####

@@ -13,7 +13,7 @@ library(gplots)
 library(cowplot)
 library(eulerr)
 library(openxlsx)
-source("../R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 
 path <- "Yang/PALIBR Figures legends methods/Figure 2/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
@@ -340,10 +340,11 @@ if(!dir.exists(path))dir.create(path, recursive = T)
 object = readRDS(file = "data/MCL_41_B_20200225.rds")
 DefaultAssay(object) = "SCT"
 Idents(object) = "orig.ident"
-opts = data.frame(ident.1 = c("PtU01","PtU02","PtU03","PtU04"),
-                  ident.2 = c("N01", "N01", "N01","N01"),
+samples = as.character(unique(object$orig.ident))
+opts = data.frame(ident.1 = samples[2:length(samples)],
+                  ident.2 = rep("N01", length(samples)-1),
                   stringsAsFactors = F)
-for(i in 1:nrow(opts)){
+for(i in 16:nrow(opts)){
         (opt = opts[i,])
         sub_object <- subset(object,idents = c(opt$ident.1,opt$ident.2))
         save.path = paste0(path, "MCL_B_", opt$ident.1, "-",opt$ident.2,"/")
@@ -407,9 +408,9 @@ for(i in 1:nrow(opts)){
                          unique.name = "cell.types",
                          save.path = paste0(save.path,"Heatmap_top40_","MCL_B_",
                                             opt$ident.1, "-",opt$ident.2,"_scale"))
-        #MCL_markers = MCL_markers[MCL_markers$cluster %in% opt$ident.1,]
-        avg_logFC = MCL_markers[MCL_markers$cluster %in% opt$ident.2,"avg_logFC"]
-        MCL_markers[MCL_markers$cluster %in% opt$ident.2,"avg_logFC"] = avg_logFC * -1
+        MCL_markers = MCL_markers[MCL_markers$cluster %in% opt$ident.1,]
+        #avg_logFC = MCL_markers[MCL_markers$cluster %in% opt$ident.2,"avg_logFC"]
+        #MCL_markers[MCL_markers$cluster %in% opt$ident.2,"avg_logFC"] = avg_logFC * -1
         p <- VolcanoPlots(data = MCL_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,
                           top = 20, cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
                           legend.size = 12)+

@@ -6,8 +6,8 @@ library(SingleR)
 library(genefilter)
 library(dplyr)
 library(magrittr)
-source("../R/Seurat3_functions.R")
-source("../R/SingleR_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/SingleR_functions.R")
 source("R/util.R")
 path <- paste0("./output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
@@ -49,19 +49,19 @@ head(colSums(blueprint_encode$data))
 #boxplot(blueprint_encode$data, main="blueprint_encode")#slow!
 #boxplot(blueprint_encode$data[,1:100])#slow!
 # remove low quanlity blueprint_encode data
-par(mfrow=c(2,1))
-hist(colMeans(blueprint_encode$data),breaks=ncol(blueprint_encode$data))
+#par(mfrow=c(2,1))
+#hist(colMeans(blueprint_encode$data),breaks=ncol(blueprint_encode$data))
 quantile_75 <- apply(blueprint_encode$data,2,function(x) quantile(x,probs =0.75))
-hist(quantile_75, breaks=ncol(blueprint_encode$data))
+#hist(quantile_75, breaks=ncol(blueprint_encode$data))
 rm_samples <- names(quantile_75)[quantile_75<1]
 (rm_index <- which(colnames(blueprint_encode$data) %in% rm_samples))
 blueprint_encode_rm <- blueprint_encode$data[,-rm_index]
 quantile_75_new <- apply(blueprint_encode_rm,2,function(x) quantile(x,probs =0.75))
-hist(quantile_75, breaks=ncol(blueprint_encode$data))
-hist(quantile_75_new, breaks=ncol(blueprint_encode_rm),xlim = c(0,4.1))
-par(mfrow=c(1,1))
+#hist(quantile_75, breaks=ncol(blueprint_encode$data))
+#hist(quantile_75_new, breaks=ncol(blueprint_encode_rm),xlim = c(0,4.1))
+#par(mfrow=c(1,1))
 #boxplot(blueprint_encode_rm)#slow!
-title(main="blueprint_encode_rm")
+#title(main="blueprint_encode_rm")
 
 
 sort(unique(blueprint_encode$main_types))
@@ -86,7 +86,18 @@ B_MCL_bulk <- RemoveDup(B_MCL_bulk)
 head(B_MCL_bulk);dim(B_MCL_bulk)
 
 B_MCL_bulk <- log1p(B_MCL_bulk)
+# 2. check and prepare MCL data==============================
+library("GEOquery")
+getGEOSuppFiles("GSE107011",baseDir = "data/RNAseq/") #it takes some time
+gse <- getGEO('GSE107011') %>% .[[1]]
 
+data = read.table(gzfile("data/RNAseq/GSE107011/GSE107011_Processed_data_TPM.txt.gz"),
+                  header = T)
+GSE107011_types <- colnames(data)
+GSE107011_types %<>% substring(6) %<>% gsub("^_","",.)
+table(GSE107011_types)
+
+Metadata = gse@phenoData@data
 # 3. merge MCL and Blueprint_encode =====================
 (load(file='../SingleR/data/Blueprint_encode.RData'))
 dim(Blueprint_encode$data)

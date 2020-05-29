@@ -13,7 +13,7 @@ library(fgsea)
 library(tibble)
 library(ggsci)
 library(ggpubr)
-source("../R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 path <- "Yang/Figure 2S/Supplementary Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 

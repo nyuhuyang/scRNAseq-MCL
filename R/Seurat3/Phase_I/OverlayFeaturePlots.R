@@ -3,7 +3,7 @@ library(dplyr)
 library(tidyr)
 library(kableExtra)
 library(magrittr)
-source("../R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 save.path <- "Yang/Figure 4 Xiangao/"
 if(!dir.exists(save.path))dir.create(save.path, recursive = T)
 

@@ -12,7 +12,7 @@ library(cowplot)
 library(fgsea)
 library(tibble)
 library(ggsci)
-source("../R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 
 # load data
 choose = c("All_samples","B")[1]

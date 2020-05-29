@@ -8,7 +8,7 @@ invisible(lapply(c("Seurat","dplyr","kableExtra","ggplot2","cowplot","sctransfor
                    "harmony"), function(x) {
     suppressPackageStartupMessages(library(x,character.only = T))
 }))
-source("../R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #======3.1 subset B and MCL =========================
@@ -34,7 +34,7 @@ object %<>% subset(subset = UMAP_1 > 0 & UMAP_2 < 2, invert = T)
 
 TSNEPlot.1(object, group.by = "cell.types",
    cols = c("#E6AB02","#2055da"),
-   unique.name = "cell.types",do.print = T, 
+   unique.name = "cell.types",do.print = F, 
    do.return = F)
 lapply(c("groups","orig.ident","conditions","tissues"), function(group.by)
     TSNEPlot.1(object, group.by=group.by,pt.size = 0.5,label = F,

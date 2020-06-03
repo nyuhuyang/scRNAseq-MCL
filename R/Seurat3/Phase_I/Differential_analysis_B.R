@@ -27,7 +27,6 @@ for(i in seq_along(idents.all)){
         genes.de[[i]] <- read.csv(paste0("output/20200225/",de_file_names[i]),
                                   stringsAsFactors = F,row.names = 1)
         genes.de[[i]] <- genes.de[[i]][order(genes.de[[i]]$p_val, -genes.de[[i]][, 2]), ]
-        
         genes.de[[i]]$cluster <- idents.all[i]
         genes.de[[i]]$gene <- rownames(x = genes.de[[i]])
 }

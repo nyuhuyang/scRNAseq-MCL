@@ -24,7 +24,7 @@ object = readRDS(file = "data/MCL_41_B_20200225.rds")
 DefaultAssay(object) = "SCT"
 Idents(object) = "orig.ident"
 
-step = 5
+step = 6
 # choose == "MCL_vs_B_cells"
 if(step == 0){  # need 32 GB
         # load data
@@ -190,4 +190,81 @@ if(step == 5){ # need 32 GB
         jpeg(paste0(save.path,"VolcanoPlots_",s,"-Normal",".jpeg"), units="in", width=10, height=10,res=600)
         print(g)
         dev.off()
+}
+# choose == "orig.ident_X4clusters_vs_orig.ident_X4clusters"
+if(step == 6){ # need 32 GB
+        opts = list(c("Pt11_LN1","Pt11_1"),
+                    c("Pt11_LN1","Pt11_14"),
+                    c("Pt11_LN1","Pt11_28"),
+                    c("Pt11_1","Pt11_14"),
+                    c("Pt11_1","Pt11_28"),
+                    c("Pt11_14","Pt11_28"),
+                    c("Pt17_LN1","Pt17_2"),
+                    c("Pt17_LN1","Pt17_7"),
+                    c("Pt17_LN1","Pt17_12"),
+                    c("Pt17_2","Pt17_7"),
+                    c("Pt17_2","Pt17_12"),
+                    c("Pt17_7","Pt17_12"),
+                    c("Pt25_SB1","Pt25_AMB25Pd"),
+                    c("Pt25_1","Pt25_1_8"),
+                    c("Pt25_1","Pt25_24"),
+                    c("Pt25_1","Pt25_25Pd"),
+                    c("Pt25_1","Pt25_AMB25Pd"),
+                    c("Pt25_1_8","Pt25_24"),
+                    c("Pt25_1_8","Pt25_25Pd"),
+                    c("Pt25_1_8","Pt25_AMB25Pd"),
+                    c("Pt25_24","Pt25_25Pd"),
+                    c("Pt25_24","Pt25_AMB25Pd"),
+                    c("Pt25_25Pd","Pt25_AMB25Pd"),
+                    c("Pt27_1","Pt27_1_8"),
+                    c("Pt27_1","Pt27_12"),
+                    c("Pt27_1_8","Pt27_12"),
+                    c("PtB13_Ibp","PtB13_Ib1"),
+                    c("PtB13_Ibp","PtB13_IbR"),
+                    c("PtB13_Ib1","PtB13_IbR"),
+                    c("Pt28_LN1","Pt28_1"),
+                    c("Pt28_1","Pt28_4"),
+                    c("Pt28_1","Pt28_28"),
+                    c("Pt28_4","Pt28_28")
+                    )
+        print(opt <- opts[[i]])
+        object %<>% subset(idents = opt)
+        object$orig.ident_X4clusters = paste0(object$orig.ident,"_",object$X4clusters)
+        # remove cluster with less than 3 cells======
+        table_subset.MCL <- table(object$orig.ident_X4clusters) %>% as.data.frame.table
+        (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character())
+        (X4_cluster <- keep.MCL %>% unique %>% 
+                        gsub('.*_C',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)])
+        
+        print(ident.2 <- paste(opt[1], X4_cluster, sep="_C"))
+        print(ident.1 <- paste(opt[2], X4_cluster, sep="_C"))
+        
+        Idents(object) = "orig.ident_X4clusters"
+        object %<>% subset(idents = c(ident.1, ident.2))
+
+        save.path = paste0(path,"X4clusters_vs_X4clusters/",gsub("_.*","",opt[1]),"/")
+        if(!dir.exists(save.path))dir.create(save.path, recursive = T)
+        system.time(B_markers <- FindPairMarkers(object,
+                                                 ident.1 = ident.1, 
+                                                 ident.2 = ident.2,
+                                                 logfc.threshold = 0, 
+                                                 only.pos = F,
+                                                 test.use = "MAST",
+                                                 return.thresh = 1, 
+                                                 latent.vars = "nCount_SCT"))
+        write.csv(B_markers, paste0(save.path,"DE_FC0_",opt[2],"_",opt[1],".csv"))
+        clusters = unique(B_markers$cluster1.vs.cluster2)
+        for(c in clusters){
+                cluster_markers  <- B_markers[B_markers$cluster1.vs.cluster2 %in% c,]
+                g <- VolcanoPlots(cluster_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,top = 20,
+                                  cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
+                                  legend.size = 12)+ theme(legend.position="bottom")
+                g = g + ggtitle(paste(opt[2],"/",opt[1],"in B and MCL"))
+                g = g + TitleCenter()#+theme_bw()
+                
+                jpeg(paste0(save.path,"VolcanoPlots_",opt[2],"_",opt[1],"_",gsub(".*_C","C",c),".jpeg"),
+                     units="in", width=10, height=10,res=600)
+                print(g)
+                dev.off()
+        }
 }

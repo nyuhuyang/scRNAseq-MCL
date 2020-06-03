@@ -24,7 +24,7 @@ object = readRDS(file = "data/MCL_41_B_20200225.rds")
 DefaultAssay(object) = "SCT"
 Idents(object) = "orig.ident"
 
-step = 6
+step = 5
 # choose == "MCL_vs_B_cells"
 if(step == 0){  # need 32 GB
         # load data
@@ -167,7 +167,7 @@ if(step == 5){ # need 32 GB
         Idents(object) = "orig.ident_X4clusters"
         object %<>% subset(idents = keep)
         orig.ident_X4clusters = keep[-grepl("Normal",keep)]
-        s = orig.ident_X4clusters[i]
+        print(s <- orig.ident_X4clusters[i]) #127
         object %<>% subset(idents = c("Normal",s))
         
         save.path = paste0(path,"X4clusters_vs_Normal/",gsub("_.*","",s),"/")
@@ -181,6 +181,10 @@ if(step == 5){ # need 32 GB
         write.csv(B_markers, paste0(save.path,"DE_FC0_",s,"-Normal",".csv"))
         normal = B_markers$cluster %in% "Normal"
         B_markers$avg_logFC[normal] = -1*B_markers$avg_logFC[normal]
+        # remove MT-
+        MT <- grepl("^MT-",B_markers$gene)
+        if(any(MT)) B_markers = B_markers[!MT,]
+        
         g <- VolcanoPlots(B_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,top = 20,
                           cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
                           legend.size = 12)+ theme(legend.position="bottom")
@@ -226,7 +230,7 @@ if(step == 6){ # need 32 GB
                     c("Pt28_1","Pt28_4"),
                     c("Pt28_1","Pt28_28"),
                     c("Pt28_4","Pt28_28")
-                    )
+                    ) #33
         print(opt <- opts[[i]])
         object %<>% subset(idents = opt)
         object$orig.ident_X4clusters = paste0(object$orig.ident,"_",object$X4clusters)
@@ -253,13 +257,17 @@ if(step == 6){ # need 32 GB
                                                  return.thresh = 1, 
                                                  latent.vars = "nCount_SCT"))
         write.csv(B_markers, paste0(save.path,"DE_FC0_",opt[2],"_",opt[1],".csv"))
+        # remove MT-
+        MT <- grepl("^MT-",B_markers$gene)
+        if(any(MT)) B_markers = B_markers[!MT,]
+        
         clusters = unique(B_markers$cluster1.vs.cluster2)
         for(c in clusters){
                 cluster_markers  <- B_markers[B_markers$cluster1.vs.cluster2 %in% c,]
                 g <- VolcanoPlots(cluster_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,top = 20,
                                   cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
                                   legend.size = 12)+ theme(legend.position="bottom")
-                g = g + ggtitle(paste(opt[2],"/",opt[1],"in B and MCL"))
+                g = g + ggtitle(paste(clusters,"in B and MCL"))
                 g = g + TitleCenter()#+theme_bw()
                 
                 jpeg(paste0(save.path,"VolcanoPlots_",opt[2],"_",opt[1],"_",gsub(".*_C","C",c),".jpeg"),

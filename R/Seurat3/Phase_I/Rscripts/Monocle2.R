@@ -2,7 +2,7 @@ invisible(lapply(c("Seurat","monocle","dplyr",
                    "magrittr"), function(x) {
                            suppressPackageStartupMessages(library(x,character.only = T))
                    }))
-source("../R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 path <- "Yang/20200426_monocle2/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #SBATCH --mem=32G

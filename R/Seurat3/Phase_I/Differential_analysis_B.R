@@ -19,9 +19,8 @@ path <- "Yang/PALIBR Figures legends methods/Figure 2/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #============= after running Differential_analysis.R Rsscript ===========
 # X4clusters =====
-
 choose = "X4clusters"
-(de_file_names = list.files("output/20200225",pattern = "MCL_only_41-FC0_"))
+(de_file_names = list.files("output/20200225",pattern = "MCL_only_41-FC0.1_"))
 idents.all = paste0("C",1:4)
 genes.de <- list()
 for(i in seq_along(idents.all)){
@@ -34,10 +33,10 @@ for(i in seq_along(idents.all)){
 }
 gde.all <- bind_rows(genes.de)
 rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$gene))
-write.csv(gde.all, file = paste0(path,choose,"/",choose,"_41-FC0.csv"))
+write.csv(gde.all, file = paste0(path,"Figure Sources/",choose,"/",choose,"_41-FC0.1.csv"))
 #============
 choose = "X4cluster_vs_Normal"
-(de_file_names = list.files("output/20200226",pattern = "MCL_B_41-FC0_"))
+(de_file_names = list.files("output/20200226",pattern = "MCL_B_41-FC0.25_"))
 idents.all = c("B_cells",paste0("C",1:4))
 genes.de <- list()
 for(i in seq_along(idents.all)){
@@ -50,7 +49,7 @@ for(i in seq_along(idents.all)){
 }
 gde.all <- bind_rows(genes.de)
 rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$gene))
-write.csv(gde.all, file = paste0(path,choose,"/",choose,"_41-FC0.csv"))
+write.csv(gde.all, file = paste0(path,"Figure Sources/",choose,"/",choose,"_41-FC0.25.csv"))
 #============
 choose = "X4cluster_vs_B"
 (de_file_names = list.files("output/20200227",pattern = "MCL_B_41-FC0_"))
@@ -209,35 +208,43 @@ for(i in 1:length(groups)){
 }
 
 # venn diagram
-path <- paste0("output/",gsub("-","",Sys.Date()),"/")
-if(!dir.exists(path)) dir.create(path, recursive = T)
-save.path <- "Yang/Figure 2/Figure Sources/"
-choose = "X4cluster_vs_Normal"
-gde.all <- read.csv(file = paste0(save.path,choose,"/",choose,"_41-FC0.csv"))
-gde.all <- gde.all[gde.all$avg_logFC > 0 ,]
-eulerr(gde.all,shape =  "ellipse",key = c("C1","C2","C3","C4","B_cells"),
-       cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,
-       save.path = paste0(path, "All_"))
+path <- "Yang/PALIBR Figures legends methods/Figure S3/"
+read.path <- "Yang/PALIBR Figures legends methods/Figure 2/Figure Sources/"
+save.path <- paste0(path,"VennDiagram/")
+if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
 
-B_markers <- gde.all[gde.all$cluster %in% "B_cells",]
-gde.all <- gde.all[!(gde.all$gene %in% B_markers$gene),]
-gde.all %<>% rbind(B_markers)
-pos.share_genes <- eulerr(gde.all,shape =  "ellipse",key = c("C1","C2","C3","C4","B_cells"),
-       cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,
-       save.path = paste0(path, "B_exclusive"), return.raw = T)
-core_MCL_genes <- Reduce(intersect, pos.share_genes[2:4])
-write.csv(core_MCL_genes, paste0(path, "core_MCL_genes.csv"))
+opts <- data.frame("choose" = rep(c("X4clusters","X4cluster_vs_Normal"), each = 2),
+                  "LogFC" = c(0,0.1,0,0.25), stringsAsFactors = F)
 
-core_MCL_genes_df <- gde.all[gde.all$gene %in% core_MCL_genes,] %>% group_by(cluster) %>%
-        top_n(20, avg_logFC) %>%
-        arrange(p_val_adj, 
-                desc(avg_UMI.1)
-        )
-write.csv(core_MCL_genes_df, paste0(path, "core_MCL_genes_table.csv"))
+for(i in 1:4){
+        choose = opts$choose[i]
+        value = opts$LogFC[i]
+        gde.all <- read.csv(file = paste0(read.path,choose,"/",choose,"_41-FC",value,".csv"))
+        gde.all <- gde.all[gde.all$avg_logFC > 0 ,]
+        pos_genes <- eulerr(gde.all,shape =  "circle",#key = c("C1","C2","C3","C4","B_cells"),
+               cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,return.raw = T,
+               save.path = paste0(save.path, choose,"_FC",value,"_"))
+        
+}
+
+euler_df <- eulerr::euler(pos_genes,shape = "circle")
+pos_genes_list <- as.list(euler_df$original.values)
+names(pos_genes_list) %<>% paste("=",pos_genes_list)
+id <- eulerr:::bit_indexr(4)
+
+for (i in nrow(id):1) {
+        pos_genes_list[[i]] = Reduce(intersect, pos_genes[id[i,]])  %>% 
+                setdiff(Reduce(union, pos_genes[!id[i,]]))
+}
+pos_genes_df <- list2df(pos_genes_list)
+write.xlsx(pos_genes_df, asTable = F,
+           file = paste0(save.path,"postive_shared_gene_list_",choose,"-FC",value,".xlsx"),
+           borders = "surrounding")
+
 
 #==============
 choose = "X4clustes"
-gde.all <- read.csv(file = paste0(save.path,choose,"/",choose,"_41-FC0.csv"))
+gde.all <- read.csv(file = paste0(read.path,choose,"/",choose,"_41-FC0.csv"))
 gde.all <- gde.all[gde.all$avg_logFC > 0 ,]
 
 eulerr(gde.all,shape =  "ellipse",key = c("C1","C2"),
@@ -306,15 +313,19 @@ for(i in seq_along(DE_files)){
 }
 
 # venn diagram gene list 20200512 =======================
+set.seed(101)
 path <- "Yang/PALIBR Figures legends methods/Figure 2/"
-choose = "X4clusters"
-save.path <- paste0(path, "Figure Sources/",choose,"/")
+save.path <- "Yang/PALIBR Figures legends methods/Figure S3/"
 if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
-B_markers <- read.csv(paste0(save.path, "X4clusters_41-FC0.csv"))
+
+choose = "X4clusters"
+read.path <- paste0(path, "Figure Sources/",choose,"/")
+
+B_markers <- read.csv(paste0(read.path, "X4clusters_41-FC0.1.csv"))
 B_markers <- B_markers[B_markers$avg_logFC > 0 ,]
 eulerr(B_markers,shape =  "circle",key = c("C1","C2","C3","C4"),
        cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,return.raw = F,do.return = T,
-       save.path = save.path)
+       save.path = paste0(save.path, choose,"_"))
        
 pos_genes <- eulerr(B_markers,shape =  "circle", key = c("C1","C2","C3","C4"),
        cut_off = "p_val_adj", cut_off_value = 0.01,do.print = F,return.raw = T,

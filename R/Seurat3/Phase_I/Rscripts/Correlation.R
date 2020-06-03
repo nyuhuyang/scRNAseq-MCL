@@ -30,7 +30,7 @@ samples <- c("All_samples","Normal","N04","PtU01","PtU02","PtU03","PtU04",
              "Pt28_28")
 
 test_genes <- c("EZH2","EZH1","CCND1","E2F1","PCNA","IRF4","PIK3IP1","HLA-DPA1","MCM7",
-                   "HLA-DPB1","HLA-A","HLA-B","BCL6","MYC","MEF2B","CDKN1A","NFKB2","MAP3K8",
+                   "HLA-DPB1","HLA-DRA","HLA-A","HLA-B","BCL6","MYC","MEF2B","CDKN1A","NFKB2","MAP3K8",
                    "FOXM1","RELB","POLR2M","CRBN","IKZF1","IKZF3","MBOAT7")
 test_genes = test_genes[test_genes %in% rownames(sub_object)]
 

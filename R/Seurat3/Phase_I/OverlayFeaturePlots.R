@@ -14,7 +14,10 @@ Idents(B_cells_MCL) = "orig.ident"
 samples = c("Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd",
             "Pt10_LN2Pd","All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR","Normal",
             "Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
-features.list = lapply(list(c("EZH2","EZH1"),
+features.list = lapply(list(c("HLA-DRA", "E2F1"),
+                            c("HLA-DRA", "EZH1"),
+                            c("HLA-DRA", "EZH2"),
+                            c("EZH2","EZH1"),
                             c("EZH1","CCND1"),
                             c("EZH2","CCND1"),
                             c("EZH1","E2F1"),
@@ -61,17 +64,15 @@ ScatterPlot = F
 #max_UMI = B_cells_MCL[["SCT"]]@data %>% .[features_list,] %>% apply(1,max)
 
 breaks = 0  
-save.path <- paste0(path,"/global_max_1_",breaks,"/")
-if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
 
-for(s in 10){ #length(samples)
+for(s in 1:6){ #length(samples)
         sample = samples[s]
         s_path <- paste0(save.path,sample,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
         if(sample == "All_samples") {
                 subset_object = B_cells_MCL
         } else subset_object = subset(B_cells_MCL, idents = sample)
-        for(i in 5){ #5:
+        for(i in 3){ #5:
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],
                                    do.return = T, 
@@ -143,7 +144,7 @@ for(s in 10){ #length(samples)
                         print(g)
                         dev.off()                                                                                                                                                        
                 }
-        Progress(s,length(samples))}
+        Progress(s,6)}
 }
 
 Idents(B_cells_MCL) = "orig.ident"

@@ -88,12 +88,14 @@ head(B_MCL_bulk);dim(B_MCL_bulk)
 B_MCL_bulk <- log1p(B_MCL_bulk)
 # 2. check and prepare MCL data==============================
 library("GEOquery")
-getGEOSuppFiles("GSE107011",baseDir = "data/RNAseq/") #it takes some time
-gse <- getGEO('GSE107011') %>% .[[1]]
 
+getGEOSuppFiles("GSE107011",baseDir = "data/RNAseq/") # get TPM, it takes some time
 data = read.table(gzfile("data/RNAseq/GSE107011/GSE107011_Processed_data_TPM.txt.gz"),
                   header = T)
+gse <- getGEO('GSE107011') %>% .[[1]] # get cell types
 GSE107011_types <- colnames(data)
+
+
 GSE107011_types %<>% substring(6) %<>% gsub("^_","",.)
 table(GSE107011_types)
 

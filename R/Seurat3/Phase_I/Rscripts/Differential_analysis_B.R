@@ -8,7 +8,7 @@ invisible(lapply(c("Seurat","dplyr","magrittr","tidyr",
                    "MAST","future","gplots"), function(x) {
         suppressPackageStartupMessages(library(x,character.only = T))
 }))
-source("../R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path))dir.create(path, recursive = T)
 
@@ -20,19 +20,19 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
 
+object = readRDS(file = "data/MCL_41_B_20200225.rds")
+DefaultAssay(object) = "SCT"
+Idents(object) = "orig.ident"
+
+step = 5
 # choose == "MCL_vs_B_cells"
-step = 0 
 if(step == 0){  # need 32 GB
         # load data
-        object = readRDS(file = "data/MCL_41_B_20200225.rds")
-        DefaultAssay(object) = "SCT"
         samples = as.character(unique(object$orig.ident))
         opts = data.frame(ident.1 = samples[2:length(samples)],
                           ident.2 = rep("N01", length(samples)-1),
                           stringsAsFactors = F)
         (opt = opts[i,])
-        
-        Idents(object) = "orig.ident"
         object %<>% subset(idents = c(opt$ident.1,"N01"))
         
         MCL_markers <- FindAllMarkers.UMI(object, 
@@ -51,9 +51,6 @@ if(step == 1){ # need 32 GB
                           ident.1 = rep(paste0("C",1:4),      time = 4))
         
         (opt = opts[i,])
-        object = readRDS(file = "data/MCL_41_B_20200225.rds")
-        DefaultAssay(object)  = "SCT"
-        Idents(object) = "orig.ident"
         object %<>% subset(idents = "Pt2_30Pd",invert = T)
         Idents(object) = "cell.types"
         object <- subset(object, idents= "MCL") 
@@ -74,9 +71,6 @@ if(step == 2){ # need 32 GB
                           ident.1 = rep(c("B_cells",paste0("C",1:4)),      time = 4))
         
         (opt = opts[i,])
-        object = readRDS(file = "data/MCL_41_B_20200225.rds")
-        DefaultAssay(object)  = "SCT"
-        Idents(object) = "orig.ident"
         object %<>% subset(idents = "Pt2_30Pd",invert = T)
         object$X4clusters_normal = as.character(object$X4clusters)
         object$X4clusters_normal %<>% paste(object$cell.types, sep = "_")
@@ -104,9 +98,6 @@ if(step == 3){ # need 32 GB
                           ident.1 = rep(paste0("C",1:4),      time = 4))
         
         (opt = opts[i,])
-        object = readRDS(file = "data/MCL_41_B_20200225.rds")
-        DefaultAssay(object)  = "SCT"
-        Idents(object) = "orig.ident"
         object %<>% subset(idents = c("Pt2_30Pd","N01","N02","N03"),invert = T)
         object$X4clusters_B = as.character(object$X4clusters)
         object$X4clusters_B %<>% paste(object$cell.types, sep = "_")
@@ -139,9 +130,6 @@ if(step == 4){ # need 32 GB
         
         (opt = opts[[i]])
         names(opt) = c("only.pos","logfc","specimens")
-        object = readRDS(file = "data/MCL_41_B_20200225.rds")
-        DefaultAssay(object)  = "SCT"
-        Idents(object) = "orig.ident"
         object %<>% subset(idents = opt$specimens)
         Idents(object) = "cell.types"
         object %<>% subset(idents = "B_cells")
@@ -167,4 +155,39 @@ if(step == 4){ # need 32 GB
                                                    latent.vars = "nCount_SCT"))
         write.csv(B_markers,paste0(path,"B_41-FC",opt$logfc,"_",
                                    paste(opt$specimens,collapse = "-"),".csv"))
+}
+# choose == "orig.ident_X4clusters_vs_Normal"
+if(step == 5){ # need 32 GB
+        object$orig.ident %<>% gsub("N02|N01|N03","Normal",.)
+        object %<>% subset(idents = "N04", invert = T)
+        object$orig.ident_X4clusters = paste0(object$orig.ident,"_",object$X4clusters)
+        object$orig.ident_X4clusters %<>% gsub("Normal_.*","Normal",.)
+        df = table(object$orig.ident_X4clusters) %>% as.data.frame.table 
+        keep = df$Var1[df$Freq >= 3] %>% as.character()
+        Idents(object) = "orig.ident_X4clusters"
+        object %<>% subset(idents = keep)
+        orig.ident_X4clusters = keep[-grepl("Normal",keep)]
+        s = orig.ident_X4clusters[i]
+        object %<>% subset(idents = c("Normal",s))
+        
+        save.path = paste0(path,"X4clusters_vs_Normal/",gsub("_.*","",s),"/")
+        if(!dir.exists(save.path))dir.create(save.path, recursive = T)
+        system.time(B_markers <- FindAllMarkers.UMI(object, 
+                                                    logfc.threshold = 0, 
+                                                    only.pos = T,
+                                                    test.use = "MAST",
+                                                    return.thresh = 1, 
+                                                    latent.vars = "nCount_SCT"))
+        write.csv(B_markers, paste0(save.path,"DE_FC0_",s,"-Normal",".csv"))
+        normal = B_markers$cluster %in% "Normal"
+        B_markers$avg_logFC[normal] = -1*B_markers$avg_logFC[normal]
+        g <- VolcanoPlots(B_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,top = 20,
+                          cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
+                          legend.size = 12)+ theme(legend.position="bottom")
+        g = g + ggtitle(paste(s, "/ Normal in B and MCL"))
+        g = g + TitleCenter()#+theme_bw()
+        
+        jpeg(paste0(save.path,"VolcanoPlots_",s,"-Normal",".jpeg"), units="in", width=10, height=10,res=600)
+        print(g)
+        dev.off()
 }

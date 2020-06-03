@@ -10,7 +10,7 @@ library(cowplot)
 library(magrittr)
 library(DoubletFinder)
 library(kableExtra)
-source("../R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 source("R/util.R")
 
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")

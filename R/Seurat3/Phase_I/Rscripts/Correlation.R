@@ -73,9 +73,12 @@ cor_res$r[is.na(cor_res$r)] = 0
 save.path <- paste0(path,file,"-Correlation-pvalues/", s,"/")
 if(!dir.exists(save.path))dir.create(save.path, recursive = T)
 
+saveRDS(cor_res, file = paste0(path,file,"-Correlation-pvalues/",
+                               args,"-",file,"-",s,".rds"))
 jpeg(paste0(save.path,"heatmap-cor-",file,"-",s,".jpeg"), units="in", width=10, height=7,res=600)
 heatmap.2(cor_res$r,trace="none")
 dev.off()
+
 df_list <- list()
 for(i in seq_along(test_genes)){
         gene <- test_genes[i]
@@ -87,15 +90,16 @@ for(i in seq_along(test_genes)){
         df = df[order(df$correlation),]
         df[,"genes"] = rownames(df)
         n = 10
-        low_cor <- head(df$correlation,n)[n]
-        high_cor <- tail(df$correlation,n)[1]
+        #low_cor <- head(df$correlation,n)[n]
+        #high_cor <- tail(df$correlation,n)[1]
         jpeg(paste0(save.path,"cor-pvalue-",gene,"-",s,".jpeg"), units="in", width=10, height=7,res=600)
         g <- ggline(df, x = "correlation", y = "log10.p.value",
                     numeric.x.axis = TRUE,
                     ylab = "-log10(p-value)",
                     xlab = "Spearman Correlation",
+                    font.label = list(size = 25, face = "plain"),
                     label = "genes",             # Add point labels
-                    label.select = list(criteria = paste("`x` <=",low_cor,"| `x` >=",high_cor)),           # show only labels for the top 2 points
+                    label.select = c(head(df$genes,n),tail(df$genes,n)),
                     repel = TRUE, 
                     title = paste("Genes correlated with",gene,"in",s,cell.type))+
                 theme_minimal() + TitleCenter()

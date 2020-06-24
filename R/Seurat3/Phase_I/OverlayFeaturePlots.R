@@ -14,7 +14,8 @@ Idents(B_cells_MCL) = "orig.ident"
 samples = c("Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd",
             "Pt10_LN2Pd","All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR","Normal",
             "Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
-features.list = lapply(list(c("HLA-DRA", "E2F1"),
+features.list = lapply(list(c("PIK3IP1", "EZH1"),
+                            c("HLA-DRA", "E2F1"),
                             c("HLA-DRA", "EZH1"),
                             c("HLA-DRA", "EZH2"),
                             c("EZH2","EZH1"),
@@ -63,27 +64,27 @@ ScatterPlot = F
 #features_list <- unlist(features.list) %>% unique()
 #max_UMI = B_cells_MCL[["SCT"]]@data %>% .[features_list,] %>% apply(1,max)
 
-breaks = 0  
+breaks = 0
 
-for(s in 1:6){ #length(samples)
+for(s in 6){ #length(samples)
         sample = samples[s]
         s_path <- paste0(save.path,sample,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
         if(sample == "All_samples") {
                 subset_object = B_cells_MCL
         } else subset_object = subset(B_cells_MCL, idents = sample)
-        for(i in 3){ #5:
+        for(i in 1){ #5:
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],
-                                   do.return = T, 
-                                   overlay = T,cols.use = c("#d8d8d8","#b88801","#2c568c", "#E31A1C"), 
+                                   do.return = T,
+                                   overlay = T,cols.use = c("#d8d8d8","#b88801","#2c568c", "#E31A1C"),
                                    pt.size = 3, alpha = 1, breaks = breaks)
-                jpeg(paste0(s_path,sample,"_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
+                jpeg(paste0(s_path,sample,"_",paste(features.list[[i]],collapse = "_"),".jpeg"),
                      units="in", width=7, height=7,res=600)
                 g = g+theme(plot.title = element_text(hjust = 0.5,size = 20),
                             legend.position="bottom",
                             legend.text=element_text(size=15))+
-                        guides(colour = guide_legend(override.aes = list(size=5)), 
+                        guides(colour = guide_legend(override.aes = list(size=5)),
                                shape = guide_legend(override.aes = list(size=5)))
                 print(g)
                 dev.off()
@@ -98,16 +99,16 @@ for(s in 1:6){ #length(samples)
                         if(nrow(df) == 1) next # if only one expression
                         FISH <- fisher.test(df,workspace = 2000000)
                         df$p_value = FISH$p.value
-                        df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni", 
+                        df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni",
                                                 n = nrow(df))
                         df[2,c("p_value","p_val_adj")] = ""
-                        rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
+                        rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE),
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
                         write.csv(df,file = paste0(s_path,sample,"_",paste(features.list[[i]],
                                                                       collapse = "_"),".csv"))
                         if(ScatterPlot){
-                                jpeg(paste0(s_path,sample,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
+                                jpeg(paste0(s_path,sample,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),".jpeg"),
                                      units="in", width=7, height=7,res=600)
                                 g <- FeatureScatter(subset_object, feature1 = features.list[[i]][1],
                                                     group.by = "orig.ident",
@@ -127,22 +128,22 @@ for(s in 1:6){ #length(samples)
                         if(nrow(df) == 1) next # if only one expression
                         FISH <- fisher.test(df,workspace = 2000000)
                         df$p_value = FISH$p.value
-                        df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni", 
+                        df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni",
                                                 n = nrow(df))
                         df[2,c("p_value","p_val_adj")] = ""
-                        rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
+                        rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE),
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
                         write.csv(df,file = paste0(s_path,sample,"_",paste(features.list[[i]],
                                                                       collapse = "_"),"_cluster_",k,".csv"))
-                        
-                        jpeg(paste0(s_path,sample,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),"_cluster_",k,".jpeg"), 
+
+                        jpeg(paste0(s_path,sample,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),"_cluster_",k,".jpeg"),
                              units="in", width=7, height=7,res=600)
                         g <- FeatureScatter(subset_object_n, feature1 = features.list[[i]][1],
                                             pt.size = 3,
                                             feature2 = features.list[[i]][2],slot = "data")+ NoLegend()
                         print(g)
-                        dev.off()                                                                                                                                                        
+                        dev.off()
                 }
         Progress(s,6)}
 }
@@ -160,12 +161,12 @@ for(N in c("B_cells", "MCL")){
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],do.return = T,
                                    overlay = T,cols = c("#d8d8d8","#b88801","#2c568c", "#E31A1C"),
                                    pt.size = 4, alpha = 0.75, breaks =8)
-                jpeg(paste0(s_path,N,"_",paste(features.list[[i]],collapse = "_"),".jpeg"), 
+                jpeg(paste0(s_path,N,"_",paste(features.list[[i]],collapse = "_"),".jpeg"),
                      units="in", width=7, height=7,res=600)
                 g = g+theme(plot.title = element_text(hjust = 0.5,size = 20),
                             legend.position="bottom",
                             legend.text=element_text(size=15))+
-                        guides(colour = guide_legend(override.aes = list(size=5)), 
+                        guides(colour = guide_legend(override.aes = list(size=5)),
                                shape = guide_legend(override.aes = list(size=5)))
                 print(g)
                 dev.off()
@@ -185,18 +186,18 @@ for(N in c("B_cells", "MCL")){
                                 FISH <- fisher.test(conting,workspace = 2000000)
                                 (p_value[m] = FISH$p.value)
                                 #CHI = chisq.test(conting, correct = T)
-                                #chisq_p_value[i] = CHI$p.value             
+                                #chisq_p_value[i] = CHI$p.value
                         }
                         df$p_value = p_value
-                        df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni", 
+                        df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni",
                                                 n = nrow(df))
-                        rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE), 
+                        rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE),
                                                       paste(features.list[[i]][1],c("== 0","> 0")))
                         colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
                         write.csv(df,file = paste0(s_path,N,"_",paste(features.list[[i]],
                                                                       collapse = "_"),"_cluster_",k,".csv"))
-                        
-                        jpeg(paste0(s_path,N,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),"_cluster_",k,".jpeg"), 
+
+                        jpeg(paste0(s_path,N,"_ScatterPlot_",paste(features.list[[i]],collapse = "_"),"_cluster_",k,".jpeg"),
                              units="in", width=7, height=7,res=600)
                         g <- FeatureScatter(subset_object_n, feature1 = features.list[[i]][1],
                                             pt.size = 4,

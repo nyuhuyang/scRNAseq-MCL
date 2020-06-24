@@ -33,8 +33,10 @@ opts = data.frame("cell.types" = rep(cell.types, each = length(Samples)),
 print(cell.type <- opts$cell.types[args])
 print(s <- opts$samples[args])
 print(file <- opts$file.names[args])
+heatmap = FALSE
+jpg = FALSE
 # need 128 GB memory
-if(cell.type == "B and MCL cells"){ 
+if(cell.type == "B and MCL cells"){
         sub_object = readRDS(file = "data/MCL_41_B_20200225.rds")
         sub_object$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
 } else {
@@ -49,17 +51,15 @@ if(cell.type == "B and MCL cells"){
 }
 Idents(sub_object) = "orig.ident"
 
-test_genes <- c("IL32", "CD52", "LTB", "TXNIP", "PIK3R1", "TNFAIP3","IL10", "IL10RA", "IL10RB",
-                "EZH2","EZH1","CCND1","E2F1","PCNA","IRF4","PIK3IP1","HLA-DPA1","MCM7",
-                "HLA-DPB1","HLA-DRA","HLA-A","HLA-B","BCL6","MYC","MEF2B","CDKN1A","NFKB2","MAP3K8",
-                "FOXM1","RELB","POLR2M","CRBN","IKZF1","IKZF3","MBOAT7")
+test_genes <- read.csv("output/20200623/test_genes.csv",header = F,stringsAsFactors = F)
+test_genes = test_genes$V1
 test_genes = test_genes[test_genes %in% rownames(sub_object)]
 
 if(s != "All_samples") sub_object <- subset(sub_object, idents = s)
 ## Column clustering (adjust here distance/linkage methods to what you need!)
 sub_object <- FindVariableFeatures(object = sub_object, selection.method = "vst",
                                num.bin = 20,nfeatures = 3000,
-                               mean.cutoff = c(0.1, 8), 
+                               mean.cutoff = c(0.1, 8),
                                dispersion.cutoff = c(1, Inf))
 v_genes <- unique(c(VariableFeatures(sub_object),test_genes))
 # remove MT-
@@ -75,40 +75,43 @@ if(!dir.exists(save.path))dir.create(save.path, recursive = T)
 
 saveRDS(cor_res, file = paste0(path,file,"-Correlation-pvalues/",
                                args,"-",file,"-",s,".rds"))
-jpeg(paste0(save.path,"heatmap-cor-",file,"-",s,".jpeg"), units="in", width=10, height=7,res=600)
-heatmap.2(cor_res$r,trace="none")
-dev.off()
 
-df_list <- list()
-for(i in seq_along(test_genes)){
-        gene <- test_genes[i]
-        df <- data.frame("correlation" = cor_res$r[gene,],
-                         "p.value" = cor_res$P[gene,])
-        df = df[!is.na(df$correlation),]
-        df = df[(rownames(df) != gene),]
-        df[,"log10.p.value"] = -log10(df$`p.value`)
-        df = df[order(df$correlation),]
-        df[,"genes"] = rownames(df)
-        n = 10
-        #low_cor <- head(df$correlation,n)[n]
-        #high_cor <- tail(df$correlation,n)[1]
-        jpeg(paste0(save.path,"cor-pvalue-",gene,"-",s,".jpeg"), units="in", width=10, height=7,res=600)
-        g <- ggline(df, x = "correlation", y = "log10.p.value",
-                    numeric.x.axis = TRUE,
-                    ylab = "-log10(p-value)",
-                    xlab = "Spearman Correlation",
-                    font.label = list(size = 25, face = "plain"),
-                    label = "genes",             # Add point labels
-                    label.select = c(head(df$genes,n),tail(df$genes,n)),
-                    repel = TRUE, 
-                    title = paste("Genes correlated with",gene,"in",s,cell.type))+
-                theme_minimal() + TitleCenter()
-        print(g)
+if(heatmap){
+        jpeg(paste0(save.path,"heatmap-cor-",file,"-",s,".jpeg"), units="in", width=10, height=7,res=600)
+        heatmap.2(cor_res$r,trace="none")
         dev.off()
-        colnames(df)[3] = " -log10(p-value)"
-        df_list[[i]] = df
-        Progress(i,length(test_genes))
 }
-names(df_list) = test_genes
-write.xlsx(df_list, file = paste0(save.path,"cor-pvalue-summary-",s,".xlsx"),
-           colNames = TRUE, borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+
+if(jpg){
+        df_list <- list()
+        for(i in seq_along(test_genes)){
+                gene <- test_genes[i]
+                df <- data.frame("correlation" = cor_res$r[gene,],
+                                 "p.value" = cor_res$P[gene,])
+                df = df[!is.na(df$correlation),]
+                df = df[(rownames(df) != gene),]
+                df[,"log10.p.value"] = -log10(df$`p.value`)
+                df = df[order(df$correlation),]
+                df[,"genes"] = rownames(df)
+                n = 10
+                jpeg(paste0(save.path,"cor-pvalue-",gene,"-",s,".jpeg"), units="in", width=10, height=7,res=600)
+                g <- ggline(df, x = "correlation", y = "log10.p.value",
+                            numeric.x.axis = TRUE,
+                            ylab = "-log10(p-value)",
+                            xlab = "Spearman Correlation",
+                            font.label = list(size = 25, face = "plain"),
+                            label = "genes",             # Add point labels
+                            label.select = c(head(df$genes,n),tail(df$genes,n)),
+                            repel = TRUE,
+                            title = paste("Genes correlated with",gene,"in",s,cell.type))+
+                        theme_minimal() + TitleCenter()
+                print(g)
+                dev.off()
+                colnames(df)[3] = " -log10(p-value)"
+                df_list[[i]] = df
+                Progress(i,length(test_genes))
+        }
+        names(df_list) = test_genes
+        write.xlsx(df_list, file = paste0(save.path,"cor-pvalue-summary-",s,".xlsx"),
+                   colNames = TRUE, borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+}

@@ -14,8 +14,8 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 args <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",args))
 
-cell.types = c("B and MCL cells","T_cells:CD8+", "T_cells:CD4+","Monocytes","Myeloid cells")
-file.names =c("B", "CD8T", "CD4T","Monocytes","Myeloid")
+cell.types = c("B and MCL cells","T_cells:CD8+", "T_cells:CD4+","Monocytes","NK_cells","Myeloid cells")
+file.names =c("B", "CD8T", "CD4T","Monocytes","NK","Myeloid")
 Samples <- c("All_samples","Normal","N04","PtU01","PtU02","PtU03","PtU04",
              "Pt2_30Pd","Pt10_LN2Pd","Pt11_LN1","Pt11_1",
              "Pt11_14","Pt11_28","Pt13_BMA1","Pt13_1a",

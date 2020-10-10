@@ -6,15 +6,24 @@ library(magrittr)
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 save.path <- "Yang/Figure 4 Xiangao/"
 if(!dir.exists(save.path))dir.create(save.path, recursive = T)
-
 #=============== multiple color in the single Featureplot===================================
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 B_cells_MCL$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
 Idents(B_cells_MCL) = "orig.ident"
-samples = c("Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd",
-            "Pt10_LN2Pd","All_samples","PtB13_Ibp","PtB13_Ib1","PtB13_IbR","Normal",
+samples = c("PtB13_Ibp","PtB13_Ib1","PtB13_IbR",
+            "Pt25_SB1","Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd",
+            "Pt10_LN2Pd","All_samples","Normal",
             "Pt11_LN1", "Pt17_LN1","PtU01","PtU02","PtU03","PtU04")
-features.list = lapply(list(c("PIK3IP1", "EZH1"),
+features.list = lapply(list(c("EZH2", "SUZ12"),
+                            c("EZH2", "EED"),
+                            c("EZH1", "SUZ12"),
+                            c("EZH1", "EED"),
+                            c("IRF4", "CYTIP"),
+                            c("IRF4", "CD40"),
+                            c("IRF4", "MAP3K8"),
+                            c("MAP3K8", "RELB"),
+                            c("CD40", "MAP3K8"),
+                            c("PIK3IP1", "EZH1"),
                             c("HLA-DRA", "E2F1"),
                             c("HLA-DRA", "EZH1"),
                             c("HLA-DRA", "EZH2"),
@@ -66,14 +75,14 @@ ScatterPlot = F
 
 breaks = 0
 
-for(s in 6){ #length(samples)
+for(s in 1:length(samples)){ #
         sample = samples[s]
         s_path <- paste0(save.path,sample,"/")
         if(!dir.exists(s_path)) dir.create(s_path, recursive = T)
         if(sample == "All_samples") {
                 subset_object = B_cells_MCL
         } else subset_object = subset(B_cells_MCL, idents = sample)
-        for(i in 1){ #5:
+        for(i in 1:length(features.list)){ #5:
                 # FeaturePlot.2
                 g <- FeaturePlot.2(object = subset_object, features = features.list[[i]],
                                    do.return = T,
@@ -92,7 +101,7 @@ for(s in 6){ #length(samples)
                 Idents(subset_object) = "X4clusters"
                 if(!cluster) {
                         features_var <- FetchData(subset_object,features.list[[i]])
-                        df1 <- table(features_var[,1]>0,features_var[,2]>0) %>% #prop.table(margin = NULL) %>%
+                        df1 <- table(features_var[,1]==0,features_var[,2]==0) %>% #prop.table(margin = NULL) %>%
                                 as.data.frame() %>% spread(Var2,Freq)
                         df = df1[,-1]
                         if(class(df) == "integer") next # if no expression
@@ -102,9 +111,8 @@ for(s in 6){ #length(samples)
                         df$p_val_adj = p.adjust(p = df$p_value, method = "bonferroni",
                                                 n = nrow(df))
                         df[2,c("p_value","p_val_adj")] = ""
-                        rownames(df)= plyr::mapvalues(df1$Var1, c(FALSE, TRUE),
-                                                      paste(features.list[[i]][1],c("== 0","> 0")))
-                        colnames(df)[1:2] = paste(features.list[[i]][2],c("== 0","> 0"))
+                        rownames(df)= paste(features.list[[i]][2],c("> 0","== 0"))
+                        colnames(df)[1:2] = paste(features.list[[i]][2],c("> 0","== 0"))
                         write.csv(df,file = paste0(s_path,sample,"_",paste(features.list[[i]],
                                                                       collapse = "_"),".csv"))
                         if(ScatterPlot){
@@ -145,7 +153,7 @@ for(s in 6){ #length(samples)
                         print(g)
                         dev.off()
                 }
-        Progress(s,6)}
+        Progress(s,length(samples))}
 }
 
 Idents(B_cells_MCL) = "orig.ident"

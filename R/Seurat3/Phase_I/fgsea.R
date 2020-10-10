@@ -12,7 +12,6 @@ library(cowplot)
 library(fgsea)
 library(tibble)
 library(ggsci)
-library(fgsea)
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 path <- "Yang/Figure 2/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)

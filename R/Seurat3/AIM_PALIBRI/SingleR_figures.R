@@ -16,8 +16,8 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 ##############################
 # create singleR data frame
 ###############################
-pred = readRDS("output/20201008_MCL_AIM_27_singleR_pred.rds")
-(load(file = "data/MCL_AIM_27_20201008.Rda"))
+pred = readRDS("output/20201010_MCL_AIM_58_singleR_pred.rds")
+(load(file = "data/MCL_AIM_58_20201009.Rda"))
 
 singlerDF = data.frame("label.fine" = pred$pruned.labels,
                        "label.main" = gsub(",.*","",pred$pruned.labels))

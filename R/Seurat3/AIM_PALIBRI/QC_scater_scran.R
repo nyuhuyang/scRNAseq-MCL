@@ -13,6 +13,7 @@ path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 if(!dir.exists("data")) dir.create("data")
 if(!dir.exists("doc")) dir.create("doc")
+save.path = "Yang/PALIBR_phasI_AIM/QC/"
 ########################################################################
 #
 #  1 Data preprocessing
@@ -46,6 +47,7 @@ for(i in seq_along(df_samples$sample)){
                                                      df_samples$read.path[i]))
         colnames(Seurat_raw[[i]]) = paste0(df_samples$sample[i],"_",colnames(Seurat_raw[[i]]))
         Seurat_list[[i]] <- CreateSeuratObject(Seurat_raw[[i]],
+                                               project = df_samples$`sample name`[i],
                                                  min.cells = 0,
                                                min.features = 0)
         Seurat_list[[i]]@meta.data$tests <- df_samples$tests[i]
@@ -63,13 +65,14 @@ message("mito.genes:")
 
 (mito.features <- grep(pattern = mito, x = rownames(object), value = TRUE))
 object[["percent.mt"]] <- PercentageFeatureSet(object = object, pattern = mito)
-Idents(object) = factor(Idents(object),levels = df_samples$sample)
+Idents(object) = "orig.ident"
+Idents(object) %<>% factor(levels = df_samples$`sample name`)
 g1 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
-        VlnPlot(object = object, features = features, ncol = 3, pt.size = 0.01)+
-                theme(axis.text.x = element_text(size=10),legend.position="none")
+        VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
+                theme(axis.text.x = element_text(size=10,angle = 90),legend.position="none")
 })
 save(g1,file= paste0(path,"g1","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
-
+#load(paste0(save.path,"g1_58_20201009.Rda"))
 #============1.2 scatter ======================
 Seurat_list <- SplitObject(object, split.by = "orig.ident")
 remove(object);GC()
@@ -91,13 +94,16 @@ remove(Seurat_list);GC()
 
 object %<>% subset(subset = nFeature_RNA > 200 & nCount_RNA > 1000 & percent.mt < 50)
 # FilterCellsgenerate Vlnplot before and after filteration
-Idents(object) = factor(Idents(object),levels = df_samples$sample)
+Idents(object) = "orig.ident"
+Idents(object) %<>% factor(levels = df_samples$`sample name`)
 
 g2 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
-        VlnPlot(object = object, features = features, ncol = 3, pt.size = 0.01)+
-                theme(axis.text.x = element_text(size=10),legend.position="none")
+        VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
+                theme(axis.text.x = element_text(size=10,angle = 90),legend.position="none")
 })
 save(g2,file= paste0(path,"g2","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
+#load(paste0(save.path,"g2_58_20201009.Rda"))
+
 jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nFeature_RNA before filteration")+
                         scale_y_log10(limits = c(100,10000))+

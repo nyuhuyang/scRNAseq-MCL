@@ -1,7 +1,7 @@
 ########################################################################
 #
 #  0 setup environment, install libraries if necessary, load libraries
-# 
+#
 # ######################################################################
 library(Seurat)
 library(dplyr)
@@ -37,7 +37,7 @@ object %<>% subset(idents = c("HSC/progenitors","Nonhematopoietic cells"), inver
 table(Idents(object))
 
 #==== Figure 3-A ===========
-path <- "Yang/PALIBR Figures legends methods/Figure 3/Figure Sources/"
+path <- "Yang/PALIBR/Archive/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 object$cell.types <- plyr::mapvalues(object@meta.data$cell.types,from = c("B_cells","MCL",
@@ -64,30 +64,30 @@ features <- FilterGenes(object,c("CD19","CCND1","SOX11",
                                  "GNLY","KLRC1","NCAM1"))
 FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
               alpha = 1,reduction = "tsne",
-              threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 3, 
+              threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 3,
               units = "in",width=9, height=12, no.legend = T, save.path = path)
 file.rename(paste0(path,"FeaturePlot__object_cell.types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
             paste0(path,"FeaturePlot_label.jpeg"))
 FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
               alpha = 1,reduction = "tsne",
-              threshold = 1, text.size = 0, border = T,do.print = T, do.return = F,ncol = 3, 
+              threshold = 1, text.size = 0, border = T,do.print = T, do.return = F,ncol = 3,
               units = "in",width=9, height=12, no.legend = T, save.path = path)
 file.rename(paste0(path,"FeaturePlot__object_cell.types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
             paste0(path,"FeaturePlot_nolabel.jpeg"))
 
 #==== Figure 3-C ===========
-path <- "Yang/PALIBR Figures legends methods/Figure 3/Figure Sources/"
+path <- "Yang/PALIBR/Archive/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
-Idents(B_cells_MCL) = "orig.ident" 
+Idents(B_cells_MCL) = "orig.ident"
 B_cells_MCL %<>% subset(idents = "Pt2_30Pd", invert = T)
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
-choose = c("X4clusters","X4cluster_vs_Normal","X4cluster_vs_B")[1]
+choose = c("X4clusters","X4cluster_vs_Normal","X4cluster_vs_B")[2]
 if(choose == "X4clusters"){
         Idents(B_cells_MCL) = "X4clusters"
-        
+
         B_cells_MCL %<>% sortIdent()
         Idents(B_cells_MCL) %<>% factor(levels = paste0("C",1:4))
         table(Idents(B_cells_MCL))
@@ -111,18 +111,19 @@ if(choose == "X4clusters"){
         B_cells_MCL %<>% ScaleData(features=features)
         featuresNum <- make.unique(features, sep = ".")
         B_cells_MCL %<>% MakeUniqueGenes(features = features)
-        
+
         DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-                    do.print=T, angle = 0, group.bar = T, 
+                    do.print=T, angle = 0, group.bar = T,
                     group.colors = group.colors,
                     title.size = 0, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0.02, label=T, cex.row= 2, legend.size = 0,width=10, height=6.5,
+                    group.bar.height = 0.02, label=T, cex.row= 5, legend.size = 0,
+                    width=7, height=14,
                     pal_gsea = FALSE,
                     unique.name = "cell.types",
                     title = "Top 40 DE genes in 4 B/MCL clusters",
                     save.path = paste0(path,choose,"/"))
-        file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_",cell.types,"_X4clusters_Legend.jpeg"),
-                    paste0(path,choose,"/Heatmap_top40_",cell.types,"_X4clusters.jpeg"))
+        file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_B_cells_MCL_X4clusters_Legend.jpeg"),
+                    paste0(path,choose,"/Fig3D_4clusters.jpeg"))
 }
 
 
@@ -155,15 +156,16 @@ if(choose == "X4cluster_vs_Normal"){
         B_cells_MCL %<>% ScaleData(features=features)
         featuresNum <- make.unique(features, sep = ".")
         B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
-        
+
         Idents(B_cells_MCL) = "X4clusters_normal"
         Idents(B_cells_MCL) %<>% factor(levels = c("Normal", paste0("C",1:4)))
         table(Idents(B_cells_MCL))
         DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-                    do.print=T, angle = 0, group.bar = T, 
+                    do.print=T, angle = 0, group.bar = T,
                     group.colors = c("#B3DE69",group.colors),
                     title.size = 0, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0.02, label=T, cex.row= 2, legend.size = 0,width=10, height=6.5,
+                    group.bar.height = 0.02, label=T, cex.row= 5, legend.size = 0,
+                    width=7, height=14,
                     pal_gsea = FALSE,
                     unique.name = "cell.types",
                     title = "Cluster",
@@ -182,7 +184,7 @@ if(choose == "X4cluster_vs_B"){
         Idents(B_cells_MCL) = "X4clusters_B"
         B_cells_MCL %<>% sortIdent()
         table(Idents(B_cells_MCL))
-        
+
         X4clusters_markers = read.csv(file=paste0(path,choose,"/",choose,"_41-FC0.csv"),
                                       row.names = 1, stringsAsFactors=F)
         table(X4clusters_markers$cluster)
@@ -193,28 +195,29 @@ if(choose == "X4cluster_vs_B"){
         top = X4clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
         table(top$cluster)
         top = top[top$cluster %in% c("C1","C2","C3","C4"),]
-        write.csv(top,paste0(path,choose,"/top40_4clusters_over_normal_genes_heatmap.csv"))
+        write.csv(top,paste0(path,choose,"/Fig3D_4clusters_over_normal_genes_heatmap.csv"))
         features = c(as.character(top$gene),
                      tail(VariableFeatures(object = B_cells_MCL), 2),
                      markers)
         B_cells_MCL %<>% ScaleData(features=features)
         featuresNum <- make.unique(features, sep = ".")
         B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
-        
+
         Idents(B_cells_MCL) = "X4clusters_B"
         Idents(B_cells_MCL) %<>% factor(levels = c("B_cells", paste0("C",1:4)))
         table(Idents(B_cells_MCL))
         DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-                    do.print=T, angle = 0, group.bar = T, 
+                    do.print=T, angle = 0, group.bar = T,
                     group.colors = c("#31aa3a",group.colors),
                     title.size = 0, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0.02, label=T, cex.row= 2, legend.size = 0,width=10, height=6.5,
+                    group.bar.height = 0.02, label=T, cex.row= 5, legend.size = 0,
+                    width=7, height=14,
                     pal_gsea = FALSE,
                     unique.name = "cell.types",
                     title = "Clusters",
                     save.path = paste0(path,choose,"/"))
         file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_B_cells_MCL_X4clusters_B_Legend.jpeg"),
-                    paste0(path,choose,"/Heatmap_top40_X4clusters_vs_B.jpeg"))
+                    paste0(path,choose,"/Fig3D_4clusters_MCL_vs_B.jpeg"))
 }
 #==== Figure 3-D ===========
 choose <- c("X4clusters","X4cluster_vs_Normal")[2]
@@ -229,7 +232,7 @@ head(res, 20)
 hallmark <- fgsea::gmtPathways("../seurat_resources/msigdb/h.all.v6.2.symbols.gmt")
 names(hallmark) = gsub("HALLMARK_","",names(hallmark))
 names(hallmark) = gsub("\\_"," ",names(hallmark))
-hallmark$`NF-kB signaling` =  read.delim("data/200222 NFKB pathway gene list.txt") %>% 
+hallmark$`NF-kB signaling` =  read.delim("data/200222 NFKB pathway gene list.txt") %>%
         pull %>% as.character()
 hallmark$`MYC TARGETS` = c(hallmark$`MYC TARGETS V1`,hallmark$`MYC TARGETS V2`)
 select = c("TNFA SIGNALING VIA NFKB","MYC TARGETS","E2F TARGETS","OXIDATIVE PHOSPHORYLATION",
@@ -286,7 +289,7 @@ Idents(sub_object) = "orig.ident"
 table(Idents(sub_object))
 
 Idents(sub_object) = "cell.types"
-TSNEPlot.1(sub_object, pt.size =0.3, 
+TSNEPlot.1(sub_object, pt.size =0.3,
            text.size = 14,no.legend = T,
            group.by = "cell.types",split.by = "orig.ident",legend.size = 0,
            cols = ExtractMetaColor(sub_object), ncol = length(unique(sub_object$orig.ident)),
@@ -316,7 +319,7 @@ list_samples <- lapply(list_samples[c("MCL","MCL.1","MCL.2")],
                        function(x) plyr::mapvalues(x,
                                                from = scRNAseq_info$sample,
                                                to = scRNAseq_info$`sample name`))
-all(list_samples %>% unlist %>% as.vector %>% unique %in% 
+all(list_samples %>% unlist %>% as.vector %>% unique %in%
             B_cells_MCL$orig.ident)
 Idents(B_cells_MCL) = "orig.ident"
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
@@ -325,54 +328,54 @@ markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SO
 choose = c("X4cluster_vs_Normal","X4clusters")[1]
 for(sample in list_samples$MCL[6]){
         subset.MCL <- subset(B_cells_MCL, idents = c("Normal",sample))
-        
+
         # SplitTSNEPlot======
         Idents(subset.MCL) = "X4_orig.ident"
         subset.MCL %<>% sortIdent()
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,
                    do.print = F, unique.name = T)
-        
+
         # remove cluster with less than 3 cells======
         table_subset.MCL <- table(subset.MCL$X4_orig.ident) %>% as.data.frame
         keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character()
-        
-        (X4_cluster <- keep.MCL %>% unique %>% 
-                        gsub('.*\\_C',"",.) %>% 
-                        sub("Normal","",.) %>% 
+
+        (X4_cluster <- keep.MCL %>% unique %>%
+                        gsub('.*\\_C',"",.) %>%
+                        sub("Normal","",.) %>%
                         as.numeric %>% sort )
-        
+
         print(ident.1 <- rep("Normal",length(X4_cluster)))
         print(ident.2 <- paste(sample,X4_cluster,sep="_C"))
         subset.MCL <- subset(subset.MCL, idents = c(ident.1,ident.2))
-        
+
         # FindAllMarkers.UMI======
-        
+
         gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
                                        ident.2 = c(ident.2,ident.1), only.pos = T,
                                        logfc.threshold = 0.1,min.cells.group =3,
                                        min.pct = 0.1,return.thresh = 0.05,
                                        latent.vars = "nCount_SCT")
         write.csv(gde.markers, paste0(path,"DE_analysis_files/",sample,"_vs_Normal.csv"))
-        
+
         gde.markers = read.csv(paste0(path,"DE_analysis_files/",sample,"_vs_Normal.csv"),row.names = 1)
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
         GC()
         #DoHeatmap.1======
         Top_n = 40
-        top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>% 
+        top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>%
                 top_n(Top_n, avg_logFC) %>% as.data.frame()
         write.csv(top, paste0(path,"DE_analysis_files/","top40_",sample,"_vs_Normal.csv"))
         features = c(as.character(top$gene),
                      tail(VariableFeatures(object = B_cells_MCL), 2),
                      markers)
         featuresNum <- make.unique(features, sep = ".")
-        exp = AverageExpression(subset.MCL[features,], 
+        exp = AverageExpression(subset.MCL[features,],
                                 assays = "SCT") %>% .$SCT
         exp = MakeUniqueGenes(object = exp, features = features)
         exp[tail(VariableFeatures(object = B_cells_MCL), 2),] =0
         scale_exp <- exp %>% t %>% scale %>% t
-        colnames(scale_exp) 
+        colnames(scale_exp)
         group.by = factor(c("Normal",ident.2), levels = c("Normal",ident.2))
         DoHeatmap.matrix(scale_exp, features = featuresNum,
                          group.by = group.by,size = 6,angle =90,
@@ -396,7 +399,7 @@ list_samples <- lapply(list_samples[c("MCL","MCL.1","MCL.2")],
                        function(x) plyr::mapvalues(x,
                                                    from = scRNAseq_info$sample,
                                                    to = scRNAseq_info$`sample name`))
-all(list_samples %>% unlist %>% as.vector %>% unique %in% 
+all(list_samples %>% unlist %>% as.vector %>% unique %in%
             B_cells_MCL$orig.ident)
 (block <- VariableFeatures(B_cells_MCL) %>% tail(2))
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
@@ -405,30 +408,30 @@ Idents(B_cells_MCL) = "orig.ident"
 choose = c("X4cluster_vs_Normal","X4clusters")[2]
 run_DE = FALSE
 for(i in 1:10){ #1:10
-        
+
         (samples1 = list_samples$MCL.1[i])
         (samples2 = list_samples$MCL.2[i])
-        
+
         subset.MCL <- subset(B_cells_MCL, idents = c(samples1,samples2))
         subset.MCL@meta.data$orig.ident %<>% factor(levels = c(samples1,samples2))
         # remove cluster with less than 3 cells======
-        
+
         table_subset.MCL <- table(subset.MCL@meta.data$X4_orig.ident) %>% as.data.frame
         (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 3,"Var1"] %>% as.character())
-        (X4_cluster <- keep.MCL %>% unique %>% 
+        (X4_cluster <- keep.MCL %>% unique %>%
                         gsub('.*\\_C',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)])
-        
+
         print(ident.1 <- paste(samples1,X4_cluster,sep="_C"))
         print(ident.2 <- paste(samples2,X4_cluster,sep="_C"))
-        
+
         #---SplitTSNEPlot----
         Idents(subset.MCL) = "X4_orig.ident"
         subset.MCL <- subset(subset.MCL, idents = c(ident.1,ident.2))
-        
+
         Idents(subset.MCL) %<>% factor(levels = c(ident.1,ident.2))
         TSNEPlot.1(subset.MCL, split.by = "orig.ident",pt.size = 1,label = F,
                    do.return = F,do.print = F, unique.name = T)
-        
+
         if(run_DE) {
                 gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
                                        ident.2 = c(ident.2,ident.1), only.pos = T,
@@ -444,19 +447,19 @@ for(i in 1:10){ #1:10
         GC()
         #DoHeatmap.1======
         Top_n = 40
-        top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>% 
+        top <-  gde.markers %>% group_by(cluster1.vs.cluster2) %>%
                 top_n(Top_n, avg_logFC) %>% as.data.frame()
         write.csv(top, paste0(path,"DE_analysis_files/","top40_",samples1,"_vs_",samples2,".csv"))
         features = c(as.character(top$gene),
                      tail(VariableFeatures(object = B_cells_MCL), 2),
                      markers)
         featuresNum <- make.unique(features, sep = ".")
-        exp = AverageExpression(subset.MCL[features,], 
+        exp = AverageExpression(subset.MCL[features,],
                                 assays = "SCT") %>% .$SCT
         exp = MakeUniqueGenes(object = exp, features = features)
         exp[tail(VariableFeatures(object = B_cells_MCL), 2),] =0
         scale_exp <- exp %>% t %>% scale %>% t
-        colnames(scale_exp) 
+        colnames(scale_exp)
         (group.by = c(ident.1, ident.2))
         DoHeatmap.matrix(scale_exp, features = featuresNum,
                          group.by = group.by,size = 6,angle =90,
@@ -531,24 +534,24 @@ for(i in seq_along(T_cells)){
         Idents(sub_object) = "orig.ident"
         sub_object %<>% subset(idents = samples[samples %in% Idents(sub_object)])
         sub_object %<>% ScaleData(features = features)
-        exp = AverageExpression(sub_object[features,], 
+        exp = AverageExpression(sub_object[features,],
                                       assays = "SCT") %>% .$SCT
         #if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
 
         samples = samples[samples %in% colnames(exp)]
         jpeg(paste0(path,"heatmap2_",T_cells[i],"_short.jpeg"), units="in", width=10, height=7,res=600)
-        heatmap.2(as.matrix(exp[,samples]), 
+        heatmap.2(as.matrix(exp[,samples]),
                   breaks = seq(-3,3,length.out = 300),
                   cexRow = 0.5,
-                  #col = sns.RdBu_r, 
+                  #col = sns.RdBu_r,
                   dendrogram = "both",
                   margins = c(5,5),
                   col = bluered(299),
                   key.xlab = "scale log nUMI",
-                  Colv = F, 
+                  Colv = F,
                   Rowv = T,
                   scale= "row",
-                  trace = "none", 
+                  trace = "none",
                   density.info="none",
                   main = paste(T_cells[i],"T cells DE genes in MCL and normal blood"))
         dev.off()
@@ -606,8 +609,8 @@ for(i in seq_along(Clusters)){
         dev.off()
 }
 
-        
-        
+
+
 ### Fig. 7C ==========
 path <- "Yang/PALIBR Figures legends methods/Figure 7/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
@@ -623,7 +626,7 @@ if(choose == "X4clusters"){
         Idents(B_cells_MCL) = "X4clusters"
         B_cells_MCL %<>% sortIdent()
         table(Idents(B_cells_MCL))
-        system.time(MCL_markers <- FindAllMarkers.UMI(B_cells_MCL, 
+        system.time(MCL_markers <- FindAllMarkers.UMI(B_cells_MCL,
                                                       only.pos = T,
                                                       test.use = "MAST",
                                                       logfc.threshold = 0.05,
@@ -648,12 +651,12 @@ if(choose == "X4clusters"){
                      markers)
         #DoHeatmap.1======
         featuresNum <- make.unique(features, sep = ".")
-        exp = AverageExpression(B_cells_MCL[features,], 
+        exp = AverageExpression(B_cells_MCL[features,],
                                 assays = "SCT") %>% .$SCT
         exp = MakeUniqueGenes(object = exp, features = features)
         exp[tail(VariableFeatures(object = B_cells_MCL), 2),] =0
         scale_exp <- exp %>% t %>% scale %>% t
-        colnames(scale_exp) 
+        colnames(scale_exp)
         (group.by = unique(top$cluster))
         DoHeatmap.matrix(scale_exp, features = featuresNum,
                          group.by = 1:4,size = 6,angle = 0,
@@ -676,7 +679,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # load data
 (load(file="data/MCL_41_harmony_20191231.Rda"))
-# reduce normal sample 
+# reduce normal sample
 object$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
 all_normal = which(object$orig.ident %in% "Normal")
 rm_normal = sample(all_normal,size = length(all_normal)/3*2, replace = F)
@@ -731,7 +734,7 @@ Idents(object) = "groups"
 for(i in 1:length(groups)){
         sub_object <- subset(object, idents = c("Normal",groups[i]))
         Idents(sub_object) = "cell.types"
-        TSNEPlot.1(object = sub_object, label = F, label.repel = F, 
+        TSNEPlot.1(object = sub_object, label = F, label.repel = F,
                    group.by = "cell.types",split.by = "orig.ident",
                    cols = ExtractMetaColor(sub_object),no.legend = T,border = T,
                    pt.size = 0.2, do.print = T,do.return = F,legend.size = 12,

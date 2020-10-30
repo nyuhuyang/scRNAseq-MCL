@@ -37,3 +37,38 @@ FeaturePlot.1(object,features = cc, pt.size = 0.005,
               threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 2,
               units = "in",width=9, height=9, no.legend = T)
 
+write.csv(as.data.frame.table(table(object$label.fine)),file = paste0(path,"label.fine.csv"))
+object$label = object$label.fine
+object$label %<>% gsub("T cells, CD4+.*","T cells, CD4+",.)
+object$label %<>% gsub("T cells, CD8+.*","T cells, CD8+",.)
+object$label %<>% gsub("Monocytes.*","Monocytes",.)
+object$label %<>% gsub("B cells,.*","B cells",.)
+write.csv(as.data.frame.table(table(object$label)),file = paste0(path,"label.csv"))
+
+labels = c("T cells, CD4+","T cells, CD8+","NK cells","B cells","MCL","Monocytes")
+Idents(object) = "label"
+
+exp_list <- vector("list", length = length(labels))
+names(exp_list) = labels
+for(i in seq_along(labels)){
+    sub_object <- subset(object, idents = labels[i])
+    Idents(sub_object) = "orig.ident"
+    cell.number.df <- as.data.frame.table(table(sub_object$orig.ident))
+    cell.number = cell.number.df$Freq
+    names(cell.number) = cell.number.df$Var1
+    exp = AverageExpression(sub_object, assays = "SCT")
+    exp_list[[labels[i]]] = rbind("cell.number" = cell.number, exp$SCT)
+    svMisc::progress(i/length(exp_list)*100)
+
+}
+
+openxlsx::write.xlsx(exp_list,
+                     file = paste0(path,"Expression_Cell.types.xlsx"),
+                     colNames = TRUE, rowNames = TRUE,
+                     borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+
+for(i in seq_along(exp_list)){
+    write.table(exp_list[[i]],file = paste0(path,"Expression_",names(exp_list)[i],".txt"),
+                sep = "\t",row.names = TRUE)
+    svMisc::progress(i/length(exp_list)*100)
+}

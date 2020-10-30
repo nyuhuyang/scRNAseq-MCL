@@ -1,7 +1,7 @@
 ########################################################################
 #
 #  0 setup environment, install libraries if necessary, load libraries
-# 
+#
 # ######################################################################
 
 library(Seurat)
@@ -42,7 +42,7 @@ for(i in seq_along(idents.all)){
         genes.de[[i]] <- read.csv(paste0("output/20200226/",de_file_names[i]),
                                   stringsAsFactors = F,row.names = 1)
         genes.de[[i]] <- genes.de[[i]][order(genes.de[[i]]$p_val, -genes.de[[i]][, 2]), ]
-        
+
         genes.de[[i]]$cluster <- idents.all[i]
         genes.de[[i]]$gene <- rownames(x = genes.de[[i]])
 }
@@ -58,7 +58,7 @@ for(i in seq_along(idents.all)){
         genes.de[[i]] <- read.csv(paste0("output/20200227/",de_file_names[i]),
                                   stringsAsFactors = F,row.names = 1)
         genes.de[[i]] <- genes.de[[i]][order(genes.de[[i]]$p_val, -genes.de[[i]][, 2]), ]
-        
+
         genes.de[[i]]$cluster <- idents.all[i]
         genes.de[[i]]$gene <- rownames(x = genes.de[[i]])
 }
@@ -85,7 +85,7 @@ B_cells_MCL_exp <- AverageExpression(B_cells_MCL,assays = "SCT")
 exp = (log2(B_cells_MCL_exp$SCT + 1))
 write.csv(exp,paste0(path,"B_MCL_log2UMI.csv"))
 
-B_cells_MCL_number = table(B_cells_MCL@meta.data$X4_orig.ident) %>% 
+B_cells_MCL_number = table(B_cells_MCL@meta.data$X4_orig.ident) %>%
         as.data.frame() %>% t
 rownames(B_cells_MCL_number) = c("samples","cell.number")
 write.csv(B_cells_MCL_number,paste0(path,"B_MCL_cells_number.csv"))
@@ -112,15 +112,15 @@ Idents(B_cells_MCL) = "groups"
 clusters =  3:4
 groups = c("Untreated","Pt-17","Pt-25")
 for(i in 2:3){
-        
+
         subset_MCL <- subset(B_cells_MCL, idents = groups[i])
         Idents(subset_MCL) = "X5clusters"
         for(k in clusters){
                 subset.MCL <- subset(subset_MCL,idents = k)
-                
+
                 print(samples <- unique(subset.MCL$orig.ident))
                 df <- df_samples[df_samples$publication.id %in% samples,]
-                subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident, 
+                subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident,
                                                          levels = rev(df$publication.id))
                 Idents(subset.MCL) = "orig.ident"
                 gde.markers <- FindAllMarkers.UMI(subset.MCL,logfc.threshold = 0.3, only.pos = T,
@@ -130,10 +130,10 @@ for(i in 2:3){
                 (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
                 if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
                 GC()
-                #DoHeatmap.1======                
+                #DoHeatmap.1======
                 Top_n = 40
                 top = gde.markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
-                
+
                 features = c(as.character(top$gene),
                              tail(VariableFeatures(object = subset.MCL), 2),
                              markers)
@@ -146,7 +146,7 @@ for(i in 2:3){
                             pal_gsea = FALSE,
                             title = paste("Top",Top_n,"DE genes in longitudinal",groups[i],
                                           "B/MCL cells cluster",k))
-                
+
                 # rename file
                 v <- UniqueName(object = subset.MCL, fileName = "subset.MCL",unique.name = T)
                 v = paste0(v,"_",FindIdentLabel(object))
@@ -169,12 +169,12 @@ Idents(B_cells_MCL) = "groups"
 #groups = c("Untreated","Pt-11","Pt-17","AFT-03","AFT-04","Pt-AA13","Pt-25","Pt-27")
 groups = c("Untreated","Pt-17","Pt-25")
 for(i in 1:length(groups)){
-        
+
         subset.MCL <- subset(B_cells_MCL, idents = c("Normal",groups[i]))
-        
+
         (samples = unique(subset.MCL$orig.ident))
         df = df_samples[df_samples$sample %in% samples,]
-        subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident, 
+        subset.MCL@meta.data$orig.ident = factor(subset.MCL@meta.data$orig.ident,
                                                  levels = df$sample[order(df$tsne)])
         Idents(subset.MCL) %<>% factor()
         Idents(subset.MCL) = "orig.ident"
@@ -191,7 +191,7 @@ for(i in 1:length(groups)){
         }
         gde.markers <- do.call(rbind, gde.markers_list)
         write.csv(gde.markers,paste0(path,"B/B_MCL_DE/B_",groups[i],".csv"))
-        
+
         gde.markers = read.csv(file = paste0("output/20190622/B/B_MCL_DE/B_",groups[i],".csv"))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
         if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
@@ -223,7 +223,7 @@ for(i in 1:4){
         pos_genes <- eulerr(gde.all,shape =  "circle",#key = c("C1","C2","C3","C4","B_cells"),
                cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,return.raw = T,
                save.path = paste0(save.path, choose,"_FC",value,"_"))
-        
+
 }
 
 euler_df <- eulerr::euler(pos_genes,shape = "circle")
@@ -232,7 +232,7 @@ names(pos_genes_list) %<>% paste("=",pos_genes_list)
 id <- eulerr:::bit_indexr(4)
 
 for (i in nrow(id):1) {
-        pos_genes_list[[i]] = Reduce(intersect, pos_genes[id[i,]])  %>% 
+        pos_genes_list[[i]] = Reduce(intersect, pos_genes[id[i,]])  %>%
                 setdiff(Reduce(union, pos_genes[!id[i,]]))
 }
 pos_genes_df <- list2df(pos_genes_list)
@@ -267,7 +267,7 @@ dev.off()
 
 Normal <- c("N01","N02","N03","N04","Pt25_1","Pt25_24","Pt25_25Pd")
 Normal <- subset(object, idents = Normal)
-Normal$X4clusters_orig.ident = paste0(Normal$X4clusters,"_",Normal$orig.ident) 
+Normal$X4clusters_orig.ident = paste0(Normal$X4clusters,"_",Normal$orig.ident)
 Idents(Normal) = "X4clusters_orig.ident"
 table(Idents(Normal))
 Normal %<>% BuildClusterTree
@@ -295,16 +295,16 @@ for(i in seq_along(DE_files)){
         B_markers = read.csv(paste0(path,"DE files/B_41-FC0_",DE_files[i],".csv"),row.names = 1)
         if(DE_files[i] != "Pt25_24-Pt25_1") B_markers = B_markers[B_markers$cluster %in% "C2",]
         if(DE_files[i] == "Pt25_24-Pt25_1") B_markers = B_markers[B_markers$cluster %in% "C2_Pt25_24",]
-        
+
         write.csv(B_markers,paste0(path,"DE files/B_41-FC0_",DE_files[i],".csv"))
-        
+
         g <- VolcanoPlots(B_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0,top = 20,
                                  cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
                                  legend.size = 12)+ theme(legend.position="bottom")
         if(DE_files[i] != "Pt25_24-Pt25_1") g = g + ggtitle(paste("Cluster 2 / cluster 1 in", DE_files[i]))
         if(DE_files[i] == "Pt25_24-Pt25_1") g = g + ggtitle("Cluster 2 of Pt25_C24 / cluster 2 of Pt25_C1")
         g = g + TitleCenter()#+theme_bw()
-        
+
         jpeg(paste0(save.path,"VolcanoPlots_",DE_files[i],".jpeg"), units="in", width=10, height=10,res=600)
         print(g)
         dev.off()
@@ -325,7 +325,7 @@ B_markers <- B_markers[B_markers$avg_logFC > 0 ,]
 eulerr(B_markers,shape =  "circle",key = c("C1","C2","C3","C4"),
        cut_off = "p_val_adj", cut_off_value = 0.01,do.print = T,return.raw = F,do.return = T,
        save.path = paste0(save.path, choose,"_"))
-       
+
 pos_genes <- eulerr(B_markers,shape =  "circle", key = c("C1","C2","C3","C4"),
        cut_off = "p_val_adj", cut_off_value = 0.01,do.print = F,return.raw = T,
        save.path = save.path)
@@ -335,7 +335,7 @@ names(pos_genes_list) %<>% paste("=",pos_genes_list)
 id <- eulerr:::bit_indexr(4)
 
 for (i in nrow(id):1) {
-        pos_genes_list[[i]] = Reduce(intersect, pos_genes[id[i,]])  %>% 
+        pos_genes_list[[i]] = Reduce(intersect, pos_genes[id[i,]])  %>%
                 setdiff(Reduce(union, pos_genes[!id[i,]]))
 }
 pos_genes_df <- list2df(pos_genes_list)
@@ -361,7 +361,7 @@ for(i in 16:nrow(opts)){
         if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
         file.copy(from = paste0(path,"MCL_B_",opt$ident.1, "-",opt$ident.2,".csv"),
                   to = paste0(save.path,basename(save.path),".csv"))
-        
+
         MCL_markers = read.csv(file= paste0(save.path,basename(save.path),".csv"),
                              row.names = 1, stringsAsFactors=F)
         table(MCL_markers$cluster)
@@ -369,7 +369,7 @@ for(i in 16:nrow(opts)){
         (MT_gene <- grep("^MT-",MCL_markers$gene))
         if(length(MT_gene) >0 ) MCL_markers = MCL_markers[-MT_gene,]
         Top_n = 40
-        
+
         top = MCL_markers %>% group_by(cluster) %>%
                 top_n(40, avg_logFC)
         unique(top$cluster)
@@ -382,11 +382,11 @@ for(i in 16:nrow(opts)){
         #DoHeatmap.1======
         # raw heatmap
         featuresNum <- make.unique(features, sep = ".")
-        exp = AverageExpression(sub_object[features,], 
+        exp = AverageExpression(sub_object[features,],
                                 assays = "SCT") %>% .$SCT
         exp %<>% MakeUniqueGenes(features = features)
         exp[tail(VariableFeatures(object = sub_object), 2),] =0
-        
+
         (group.by = c(opt$ident.2, opt$ident.1))
         DoHeatmap.matrix(exp, features = featuresNum,
                          group.by = group.by,
@@ -402,7 +402,7 @@ for(i in 16:nrow(opts)){
                                             opt$ident.1, "-",opt$ident.2,"_raw"))
         # scale heatmap
         sub_object %<>% ScaleData(features = features)
-        scale_exp = AverageExpression(sub_object[features,], 
+        scale_exp = AverageExpression(sub_object[features,],
                                       assays = "SCT", slot = "scale.data") %>% .$SCT
         scale_exp %<>% MakeUniqueGenes(features = features)
         scale_exp[tail(VariableFeatures(object = sub_object), 2),] =0
@@ -433,3 +433,15 @@ for(i in 16:nrow(opts)){
         dev.off()
         Progress(i, nrow(opts))
 }
+
+(load(file = "data/B_cells_MCL_43_20190917.Rda"))
+Idents(B_cells_MCL) = "orig.ident"
+
+sub_object = subset(B_cells_MCL, idents = c(grep("Pt-25",unique(Idents(B_cells_MCL)),value = T)))
+sub_object = subset(B_cells_MCL, idents = "Pt-25-C25")
+
+Idents(sub_object) = "manual"
+TSNEPlot.1(sub_object,split.by ="orig.ident")
+
+
+monocle2_Pt25_25Pd = readRDS(file = "data/monocle2_Pt25_25Pd_DE.rds")

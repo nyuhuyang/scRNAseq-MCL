@@ -12,7 +12,7 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 # coerce the value to an integer
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
-run_differentialGeneTest = TRUE        
+run_differentialGeneTest = TRUE
 # load data
 object = readRDS(file = "data/MCL_41_B_20200225.rds")
 object %<>% AddMetaColor(label= "X4clusters", colors = gg_color_hue(4))
@@ -38,7 +38,7 @@ sample_pairs = list(c("N01","N02","N03","N04"),
                     c("Pt25_SB1","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#18
                     c("Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#19
                     c("Pt25_1","Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_AMB25Pd"),#20
-                    c("Pt25_SB1","Pt25_1"), 
+                    c("Pt25_SB1","Pt25_1"),
                     c("Pt25_1","Pt25_1_8"),
                     c("Pt25_1_8","Pt25_24"),
                     c("Pt25_24","Pt25_25Pd"),
@@ -58,7 +58,8 @@ sample_pairs = list(c("N01","N02","N03","N04"),
                     c("Pt28_LN1","Pt28_1"),
                     c("Pt28_1","Pt28_4"),
                     c("Pt28_4","Pt28_28"),
-                    c("Pt28_LN1","Pt28_28"))
+                    c("Pt28_LN1","Pt28_28"),
+                    c("Pt25_25Pd"))
 (sample = sample_pairs[[i]])
 Idents(object) = "orig.ident"
 object %<>% subset(idents = sample)
@@ -93,7 +94,7 @@ if(run_differentialGeneTest){
                                                      fullModelFormulaStr = "~X4_orig.ident",
                                                      cores = detectCores()/2)
         saveRDS(clustering_DEG_genes, paste0(save.path,"monocle2_",paste(sample, collapse = "-"),"_DE.rds"))
-        
+
 } else clustering_DEG_genes = readRDS(paste0(save.path,"monocle2_",paste(sample, collapse = "-"),"_DE.rds"))
 
 print("clustering_DEG_genes")
@@ -113,14 +114,14 @@ if(length(unique(cds$orig.ident)) == 3) orig.ident_color <- c("#6A3D9A","#B2DF8A
 for(k in seq_along(group_by)){
         jpeg(paste0(save.path,"trajectory_",paste(sample, collapse = "-"),"_",group_by[k],".jpeg"),
              units="in", width=7, height=7,res=600)
-        g <- plot_cell_trajectory(cds, color_by = group_by[k],cell_size = 3,
+        g <- plot_cell_trajectory(cds, color_by = group_by[k],cell_size = 1,
                                   show_branch_points = FALSE)
-        if(group_by[k] == "orig.ident") g = g + scale_color_manual(values=orig.ident_color)
+        #if(group_by[k] == "orig.ident") g = g + scale_color_manual(values=orig.ident_color)
         if(group_by[k] == "X4clusters") g = g + scale_color_manual(values=X4clusters_color)
-        if(group_by[k] == "cell.types") g = g + 
+        if(group_by[k] == "cell.types") g = g +
                 scale_color_manual(values=sort(unique(cds$cell.types.colors),decreasing = T))
-        
-        print(g)
+
+        print(g + ggtitle("Pt-25-C25"))+TitleCenter()
         dev.off()
         Progress(k, length(group_by))
 }
@@ -143,7 +144,7 @@ for(s in seq_along(samples)){
                 g <- plot_cell_trajectory(subset_cds, cell_size = 3,
                                           color_by = group_by[k],show_branch_points = FALSE)
                 if(group_by[k] == "X4clusters") g = g + scale_color_manual(values=X4clusters_color)
-                if(group_by[k] == "cell.types") g = g + 
+                if(group_by[k] == "cell.types") g = g +
                         scale_color_manual(values=sort(unique(cds$cell.types.colors),decreasing = T))
                 g = g + ggtitle(paste(group_by[k], "in", samples[s])) + TitleCenter()
                 print(g)

@@ -7,7 +7,7 @@ source("R/util.R")
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 
 # ====== load single cell =============
-(load(file = "data/MCL_AIM_27_20201008.Rda"))
+(load(file = "data/MCL_AIM_58_20201009.Rda"))
 
 sce <- SingleCellExperiment(list(logcounts=object[["SCT"]]@data),
                                 colData=DataFrame(object@meta.data))
@@ -49,4 +49,4 @@ system.time(trained <- trainSingleR(ref = combine_ref,
                                     labels=combine_ref$label.fine))
 system.time(pred <- classifySingleR(sce[common,], trained))
 # elapsed 4872.846 sec
-saveRDS(object = pred, file = "output/20201008_MCL_AIM_27_singleR_pred.rds")
+saveRDS(object = pred, file = "output/20201010_MCL_AIM_58_singleR_pred.rds")

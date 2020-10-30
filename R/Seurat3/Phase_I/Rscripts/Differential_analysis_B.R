@@ -1,7 +1,7 @@
 ########################################################################
 #
 #  0 setup environment, install libraries if necessary, load libraries
-# 
+#
 # ######################################################################
 ####################################
 invisible(lapply(c("Seurat","dplyr","magrittr","tidyr",
@@ -23,8 +23,11 @@ print(paste0("slurm_arrayid=",i))
 object = readRDS(file = "data/MCL_41_B_20200225.rds")
 DefaultAssay(object) = "SCT"
 Idents(object) = "orig.ident"
+object$X4clusters %<>% factor(levels=paste0("C",1:4))
+markers <- FilterGenes(object,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 
-step = 5
+
+step = 7
 # choose == "MCL_vs_B_cells"
 if(step == 0){  # need 32 GB
         # load data
@@ -34,14 +37,14 @@ if(step == 0){  # need 32 GB
                           stringsAsFactors = F)
         (opt = opts[i,])
         object %<>% subset(idents = c(opt$ident.1,"N01"))
-        
-        MCL_markers <- FindAllMarkers.UMI(object, 
-                                        logfc.threshold = 0, 
+
+        MCL_markers <- FindAllMarkers.UMI(object,
+                                        logfc.threshold = 0,
                                         only.pos = F,
                                         return.thresh = 1,
                                         test.use = "MAST",
                                         latent.vars = "nCount_SCT")
-        
+
         write.csv(MCL_markers,paste0(path,"MCL_B_",opt$ident.1, "-N01.csv"))
 }
 # choose == "X4clusters"
@@ -49,16 +52,16 @@ if(step == 1){ # need 32 GB
         opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 4),
                           logfc =  rep(c(0.25, 0.1, 0.05, 0), each = 4),
                           ident.1 = rep(paste0("C",1:4),      time = 4))
-        
+
         (opt = opts[i,])
         object %<>% subset(idents = "Pt2_30Pd",invert = T)
         Idents(object) = "cell.types"
-        object <- subset(object, idents= "MCL") 
+        object <- subset(object, idents= "MCL")
         Idents(object) = "X4clusters"
-        system.time(MCL_markers <- FindMarkers.UMI(object, 
+        system.time(MCL_markers <- FindMarkers.UMI(object,
                                                    ident.1 = as.character(opt$ident.1),
                                                    ident.2 = NULL,
-                                                   logfc.threshold = opt$logfc, 
+                                                   logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
                                                    latent.vars = "nCount_SCT"))
@@ -69,7 +72,7 @@ if(step == 2){ # need 32 GB
         opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 5),
                           logfc =  rep(c(0.25, 0.1, 0.05, 0), each = 5),
                           ident.1 = rep(c("B_cells",paste0("C",1:4)),      time = 4))
-        
+
         (opt = opts[i,])
         object %<>% subset(idents = "Pt2_30Pd",invert = T)
         object$X4clusters_normal = as.character(object$X4clusters)
@@ -77,15 +80,15 @@ if(step == 2){ # need 32 GB
         object$X4clusters_normal %<>% gsub(".*_B_cells","B_cells",.)
         object$X4clusters_normal %<>% gsub("_MCL","",.)
         normal <- grepl("N01|N02|N03",object$orig.ident)
-        
+
         object@meta.data[normal,"X4clusters_normal"] = "Normal"
         Idents(object) = "X4clusters_normal"
         object %<>% sortIdent()
         table(Idents(object))
-        system.time(MCL_markers <- FindMarkers.UMI(object, 
+        system.time(MCL_markers <- FindMarkers.UMI(object,
                                                    ident.1 = as.character(opt$ident.1),
                                                    ident.2 = "Normal",
-                                                   logfc.threshold = opt$logfc, 
+                                                   logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
                                                    latent.vars = "nCount_SCT"))
@@ -96,7 +99,7 @@ if(step == 3){ # need 32 GB
         opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 4),
                           logfc =  rep(c(0.25, 0.1, 0.05, 0), each = 4),
                           ident.1 = rep(paste0("C",1:4),      time = 4))
-        
+
         (opt = opts[i,])
         object %<>% subset(idents = c("Pt2_30Pd","N01","N02","N03"),invert = T)
         object$X4clusters_B = as.character(object$X4clusters)
@@ -106,10 +109,10 @@ if(step == 3){ # need 32 GB
         Idents(object) = "X4clusters_B"
         object %<>% sortIdent()
         table(Idents(object))
-        system.time(MCL_markers <- FindMarkers.UMI(object, 
+        system.time(MCL_markers <- FindMarkers.UMI(object,
                                                    ident.1 = as.character(opt$ident.1),
                                                    ident.2 = "B_cells",
-                                                   logfc.threshold = opt$logfc, 
+                                                   logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
                                                    latent.vars = "nCount_SCT"))
@@ -122,12 +125,12 @@ if(step == 4){ # need 32 GB
                    list(FALSE, 0, "N02"),
                    list(FALSE, 0, "N03"),
                    list(FALSE, 0, "N04"),
-                   list(FALSE, 0, c("N01","N02","N03","N04")), 
+                   list(FALSE, 0, c("N01","N02","N03","N04")),
                    list(FALSE, 0, "Pt25_1"),
                    list(FALSE, 0, "Pt25_24"),
                    list(FALSE, 0, "Pt25_25Pd"),
                    list(FALSE, 0, c("Pt25_24", "Pt25_1")))
-        
+
         (opt = opts[[i]])
         names(opt) = c("only.pos","logfc","specimens")
         object %<>% subset(idents = opt$specimens)
@@ -147,11 +150,11 @@ if(step == 4){ # need 32 GB
                 ident.2 = "C2_Pt25_1"
                 object %<>% subset(idents = c(ident.1,ident.2))
         }
-        system.time(B_markers <- FindAllMarkers.UMI(object, 
-                                                   logfc.threshold = opt$logfc, 
+        system.time(B_markers <- FindAllMarkers.UMI(object,
+                                                   logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
-                                                   return.thresh = 1, 
+                                                   return.thresh = 1,
                                                    latent.vars = "nCount_SCT"))
         write.csv(B_markers,paste0(path,"B_41-FC",opt$logfc,"_",
                                    paste(opt$specimens,collapse = "-"),".csv"))
@@ -162,21 +165,21 @@ if(step == 5){ # need 32 GB
         object %<>% subset(idents = "N04", invert = T)
         object$orig.ident_X4clusters = paste0(object$orig.ident,"_",object$X4clusters)
         object$orig.ident_X4clusters %<>% gsub("Normal_.*","Normal",.)
-        df = table(object$orig.ident_X4clusters) %>% as.data.frame.table 
+        df = table(object$orig.ident_X4clusters) %>% as.data.frame.table
         keep = df$Var1[df$Freq >= 3] %>% as.character()
         Idents(object) = "orig.ident_X4clusters"
         object %<>% subset(idents = keep)
         orig.ident_X4clusters = keep[-grepl("Normal",keep)]
         print(s <- orig.ident_X4clusters[i]) #127
         object %<>% subset(idents = c("Normal",s))
-        
+
         save.path = paste0(path,"X4clusters_vs_Normal/",gsub("_.*","",s),"/")
         if(!dir.exists(save.path))dir.create(save.path, recursive = T)
-        system.time(B_markers <- FindAllMarkers.UMI(object, 
-                                                    logfc.threshold = 0, 
+        system.time(B_markers <- FindAllMarkers.UMI(object,
+                                                    logfc.threshold = 0,
                                                     only.pos = T,
                                                     test.use = "MAST",
-                                                    return.thresh = 1, 
+                                                    return.thresh = 1,
                                                     latent.vars = "nCount_SCT"))
         write.csv(B_markers, paste0(save.path,"DE_FC0_",s,"-Normal",".csv"))
         normal = B_markers$cluster %in% "Normal"
@@ -184,13 +187,13 @@ if(step == 5){ # need 32 GB
         # remove MT-
         MT <- grepl("^MT-",B_markers$gene)
         if(any(MT)) B_markers = B_markers[!MT,]
-        
+
         g <- VolcanoPlots(B_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,top = 20,
                           cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
                           legend.size = 12)+ theme(legend.position="bottom")
         g = g + ggtitle(paste(s, "/ Normal in B and MCL"))
         g = g + TitleCenter()#+theme_bw()
-        
+
         jpeg(paste0(save.path,"VolcanoPlots_",s,"-Normal",".jpeg"), units="in", width=10, height=10,res=600)
         print(g)
         dev.off()
@@ -237,30 +240,30 @@ if(step == 6){ # need 32 GB
         # remove cluster with less than 3 cells======
         table_subset.MCL <- table(object$orig.ident_X4clusters) %>% as.data.frame.table
         (keep.MCL <- table_subset.MCL[table_subset.MCL$Freq > 2,"Var1"] %>% as.character())
-        (X4_cluster <- keep.MCL %>% unique %>% 
+        (X4_cluster <- keep.MCL %>% unique %>%
                         gsub('.*_C',"",.) %>% as.numeric %>% sort %>% .[duplicated(.)])
-        
+
         print(ident.2 <- paste(opt[1], X4_cluster, sep="_C"))
         print(ident.1 <- paste(opt[2], X4_cluster, sep="_C"))
-        
+
         Idents(object) = "orig.ident_X4clusters"
         object %<>% subset(idents = c(ident.1, ident.2))
 
         save.path = paste0(path,"X4clusters_vs_X4clusters/",gsub("_.*","",opt[1]),"/")
         if(!dir.exists(save.path))dir.create(save.path, recursive = T)
         system.time(B_markers <- FindPairMarkers(object,
-                                                 ident.1 = ident.1, 
+                                                 ident.1 = ident.1,
                                                  ident.2 = ident.2,
-                                                 logfc.threshold = 0, 
+                                                 logfc.threshold = 0,
                                                  only.pos = F,
                                                  test.use = "MAST",
-                                                 return.thresh = 1, 
+                                                 return.thresh = 1,
                                                  latent.vars = "nCount_SCT"))
         write.csv(B_markers, paste0(save.path,"DE_FC0_",opt[2],"_",opt[1],".csv"))
         # remove MT-
         MT <- grepl("^MT-",B_markers$gene)
         if(any(MT)) B_markers = B_markers[!MT,]
-        
+
         clusters = unique(B_markers$cluster1.vs.cluster2)
         for(c in clusters){
                 cluster_markers  <- B_markers[B_markers$cluster1.vs.cluster2 %in% c,]
@@ -269,10 +272,71 @@ if(step == 6){ # need 32 GB
                                   legend.size = 12)+ theme(legend.position="bottom")
                 g = g + ggtitle(paste(clusters,"in B and MCL"))
                 g = g + TitleCenter()#+theme_bw()
-                
+
                 jpeg(paste0(save.path,"VolcanoPlots_",opt[2],"_",opt[1],"_",gsub(".*_C","C",c),".jpeg"),
                      units="in", width=10, height=10,res=600)
                 print(g)
                 dev.off()
         }
+}
+
+# Doheatmap for MCL longitudinal X4 clusters ================
+if(step == 7){
+        opts = data.frame(group = rep(c("Untreated","Pt11","Pt17","Pt25","Pt27","PtB13"),  each = 4),
+                          cluster = rep(paste0("C",1:4),6),
+                          stringsAsFactors = F)
+        print(opt <- opts[i,])
+
+        Idents(object) = "groups"
+        subset.MCL <- subset(object, idents = opt$group)
+
+        Idents(subset.MCL) = "X4clusters"
+        subset.MCL %<>% subset(idents = opt$cluster)
+
+        # remove low cell sample
+        subset.MCL$orig.ident %<>% droplevels
+        df <- as.data.frame(table(subset.MCL$orig.ident) )
+        if(any(df$Freq < 5)) subset.MCL %<>% subset(idents = df[df$Freq >= 5,"Var1"])
+        Idents(subset.MCL) = "orig.ident"
+
+        gde.markers <- FindAllMarkers.UMI(subset.MCL,
+                                       logfc.threshold = 0.05,
+                                       only.pos = T,
+                                       test.use = "MAST")
+        write.csv(gde.markers,paste0(path,opt$group,"_",opt$cluster,
+                                     "_FC0.05_markers.csv"))
+        (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
+        if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
+        GC()
+        #DoHeatmap.1======
+        Top_n = 40
+        top = gde.markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
+
+        features = c(as.character(top$gene),
+                     tail(VariableFeatures(object = subset.MCL), 2),
+                     markers)
+        subset.MCL %<>% ScaleData(features=features)
+        featuresNum <- make.unique(features, sep = ".")
+        subset.MCL %<>% MakeUniqueGenes(features = features)
+
+        DoHeatmap.1(object =subset.MCL, features = featuresNum, Top_n = Top_n,
+                    do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0, label=F, cex.row= ifelse(i==2,4,2), legend.size = 0,width=10, height=6.5,
+                    pal_gsea = FALSE,
+                    title = paste("Top",Top_n,"DE genes in longitudinal",opt$group,
+                                  "B/MCL cells cluster",opt$cluster))
+
+        # rename file
+        v <- UniqueName(object = subset.MCL, fileName = "subset.MCL",unique.name = T)
+        v = paste0(v,"_",FindIdentLabel(object))
+        old.name = paste0(path,"Heatmap_top",Top_n,"_",v,"_Legend.jpeg")
+        file.rename(old.name, paste0(path,"Heatmap_top",Top_n,"_",opt$group,
+                                     "_Cluster",opt$cluster, ".jpeg"))
+        DoHeatmap.1(object =subset.MCL, features = featuresNum, Top_n = Top_n,
+                    do.print=T, angle = 45, group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0.05, label=T, cex.row= ifelse(i==2,4,2), legend.size = 0,width=10, height=6.5,
+                    pal_gsea = FALSE,
+                    title = paste("Top",Top_n,"DE genes in longitudinal",opt$group,
+                                  "B/MCL cells cluster",opt$cluster))
+
 }

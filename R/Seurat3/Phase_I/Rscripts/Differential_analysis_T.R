@@ -18,7 +18,7 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 # coerce the value to an integer
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
-step <- switch(as.character(which(sapply(list(1:46, 47:198,199:200), function(x) args %in% x))),
+step <- switch(as.character(which(sapply(list(1:46, 47:198,199:200), function(x) i %in% x))),
                "1" = "1. pairwise T cell comparisions",
                "2" = "2. pairwise immune cell comparisions",
                "3" = "3. CD4 T vs CD8 T")

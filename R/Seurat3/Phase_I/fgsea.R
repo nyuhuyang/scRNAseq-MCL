@@ -1,7 +1,7 @@
 ########################################################################
 #
 #  0 setup environment, install libraries if necessary, load libraries
-# 
+#
 # ######################################################################
 library(Seurat)
 library(dplyr)
@@ -27,13 +27,15 @@ if(choose == "X4cluster_vs_Normal"){
         res$cluster1.vs.cluster2 = gsub("Normal vs. ","",res$cluster1.vs.cluster2)
 }
 
-head(res)
 res = res[order(res["p_val_adj"]),]
 head(res, 20)
 (clusters <- unique(res$cluster))
 hallmark <- fgsea::gmtPathways("../seurat_resources/msigdb/h.all.v6.2.symbols.gmt")
 names(hallmark) = gsub("HALLMARK_","",names(hallmark))
 names(hallmark) = gsub("\\_"," ",names(hallmark))
+hallmark$`NF-kB signaling` =  read.delim("data/200222 NFKB pathway gene list.txt") %>%
+    pull %>% as.character()
+hallmark$`MYC TARGETS` = c(hallmark$`MYC TARGETS V1`,hallmark$`MYC TARGETS V2`)
 
 # Now, run the fgsea algorithm with 1000 permutations:
 set.seed(100)

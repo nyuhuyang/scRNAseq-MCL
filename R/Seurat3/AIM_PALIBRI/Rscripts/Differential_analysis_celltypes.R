@@ -70,13 +70,20 @@ if(any(orig.ident.num[,1] < 4)) {
     object %<>% subset(idents = keep)
 }
 GC()
-gde.markers <- FindAllMarkers.UMI(object,
-                                  logfc.threshold = 0.5,
-                                  only.pos = F,
-                                  return.thresh = 1,
-                                  test.use = "MAST",
-                                  latent.vars = "nFeature_SCT")
-write.csv(MCL_markers,paste0(save.path,patient,"_longitudinal_F0_DEGs.csv"))
+run_DE = FALSE
+
+if(!dir.exists(paste0(save.path,"DEGs")))dir.create(paste0(save.path,"DEGs"), recursive = T)
+if(run_DE) {
+    gde.markers <- FindAllMarkers.UMI(object,
+                                      logfc.threshold = 0,
+                                      only.pos = F,
+                                      return.thresh = 1,
+                                      test.use = "MAST",
+                                      latent.vars = "nFeature_SCT")
+    write.csv(gde.markers,paste0(save.path,"DEGs/",patient,"_longitudinal_F0_DEGs.csv"))
+} else gde.markers = read.csv(paste0(save.path,"DEGs/",patient,"_longitudinal_F0_DEGs.csv"),
+                              row.names = 1, stringsAsFactors = F)
+
 
 #DoHeatmap.1======
 (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
@@ -97,14 +104,16 @@ DoHeatmap.1(object =object, features = featuresNum, Top_n = Top_n,
             group.bar.height = 0, label=F, cex.row= 4, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
             title = paste("Top",Top_n,"DE genes in longitudinal",patient,label),
-            file.name = paste0(save.path, patient,"_Heatmap_nolabel.jpeg"))
+            save.path = paste0(save.path,"Heatmaps"),
+            file.name = paste0(patient,"_Heatmap_nolabel.jpeg"))
 
 DoHeatmap.1(object =object, features = featuresNum, Top_n = Top_n,
-            do.print=T, angle = 12, group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
+            do.print=T, angle = 45, group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0.05, label=T, cex.row= 4, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
             title = paste("Top",Top_n,"DE genes in longitudinal",patient,label),
-            file.name = paste0(save.path, patient,"_Heatmap_label.jpeg"))
+            save.path = paste0(save.path,"Heatmaps"),
+            file.name = paste0(patient,"_Heatmap_label.jpeg"))
 # fgsea
 res = gde.markers
 res = res[order(res["p_val_adj"]),]
@@ -117,7 +126,7 @@ names(hallmark) = gsub("\\_"," ",names(hallmark))
 # Now, run the fgsea algorithm with 1000 permutations:
 set.seed(100)
 fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark,
-                        padj = 1,pval = 1,
+                        padj = 0.25,pval = 0.05,
                         order.yaxis.by = c("Normal","NES"),
                         decreasing = F,
                         order.xaxis = rownames(orig.ident.num),
@@ -127,6 +136,7 @@ fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark,
                         title = paste(label, "in", patient),
                         font.xtickslab=12, font.main=12, font.ytickslab = 10,
                         font.legend = list(size = 12),font.label = list(size = 12),
-                        do.return = T,save.path = save.path, do.print = T,
+                        do.return = T,save.path = paste0(save.path,"DEGs"),
+                        do.print = T,
                         width = 7,height = 6,hjust = 0.75)
-write.csv(fgseaRes, file = paste0(save.path,patient,"_FgseaDotPlot_FDR0.25_pval0.05.csv"))
+write.csv(fgseaRes, file = paste0(save.path,"GSEA/",patient,"_FgseaDotPlot_FDR0.25_pval0.05.csv"))

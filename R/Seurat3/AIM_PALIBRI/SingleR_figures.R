@@ -61,3 +61,4 @@ lapply(c("label.fine","label.main"), function(group.by)
                pt.size = 0.1,label.size = ifelse(group.by=="label.fine",3,5),
                do.print = T,do.return = F,
                title = "Cell type labeling by Blueprint + Encode + MCL"))
+save(object, file = "data/MCL_AIM_58_20201009.Rda")

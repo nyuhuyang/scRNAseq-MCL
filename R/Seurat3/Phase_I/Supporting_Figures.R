@@ -1,7 +1,7 @@
 ########################################################################
 #
 #  07 setup environment, install libraries if necessary, load libraries
-# 
+#
 # ######################################################################
 library(Seurat)
 library(dplyr)
@@ -173,3 +173,58 @@ g2[[3]]+ggtitle("Distribution of mitochondrial gene percentage per Cells")+
         ylab("Mitochondrial gene percentage %")+
         theme(plot.title = element_text(face = 'plain'))
 dev.off()
+
+
+#==== Figure ===========
+read.path <- "output/20201030/"
+csv_list <- list.files(paste0(read.path,"3. CD4 T vs CD8 T"),full.names = T)
+res_list = lapply(csv_list, function(fileName) {
+                x = read.csv(file = fileName,row.names = 1, stringsAsFactors=F)
+                x$cluster = sub("-.*","",basename(fileName))
+                x$gene = rownames(x)
+                x
+        })
+res = rbind(res_list[[1]],res_list[[2]])
+table(res$cluster)
+head(res)
+res = res[order(res["p_val_adj"]),]
+head(res, 20)
+(clusters <- unique(res$cluster))
+hallmark <- fgsea::gmtPathways("../seurat_resources/msigdb/h.all.v6.2.symbols.gmt")
+names(hallmark) = gsub("HALLMARK_","",names(hallmark))
+names(hallmark) = gsub("\\_"," ",names(hallmark))
+hallmark$`NF-kB signaling` =  read.delim("data/200222 NFKB pathway gene list.txt") %>%
+        pull %>% as.character()
+hallmark$`MYC TARGETS` = c(hallmark$`MYC TARGETS V1`,hallmark$`MYC TARGETS V2`)
+select = c("TNFA SIGNALING VIA NFKB","MYC TARGETS","E2F TARGETS","OXIDATIVE PHOSPHORYLATION",
+           "G2M CHECKPOINT","DNA REPAIR","REACTIVE OXIGEN SPECIES PATHWAY",
+           "MTORC1 SIGNALING","GLYCOLYSIS","UNFOLDED PROTEIN RESPONSE","FATTY ACID METABOLISM",
+           "CHOLESTEROL HOMEOSTASIS","HYPOXIA", "PI3K AKT MTOR SIGNALING","INTERFERON ALPHA RESPONSE",
+           "TGF BETA SIGNALING","APOPTOSIS","IL6 JAK STAT3 SIGNALING", "INTERFERON GAMMA RESPONSE",
+           "P53 PATHWAY","IL2 STAT5 SIGNALING", "INFLAMMATORY RESPONSE","NF-kB signaling","KRAS SIGNALING DN",
+           "KRAS SIGNALING UP")
+hallmark =  hallmark[select]
+Names = c("TNFa signaling via NF-kB","Myc targets","E2F targets",
+          "Oxidative phosphorylation","G2M checkpoint","DNA repair",
+          "Reactive oxygen species pathway","mTORC1 signaling","Glycolysis",
+          "Unfolded protein response","Fatty acid metabolism","Cholesterol homeostasis",
+          "Hypoxia","PI3K/AKT/mTOR signaling","Interferon alpha response","TFG b signaling",
+          "Apoptosis", "IL-6/JAK/STAT3 signaling", "Interferon gamma response",
+          "p53 pathway","IL-2/STAT5 signaling","Inflammatory response",
+          "NF-kB signaling","KRAS signaling dn","KRAS signaling up")
+names(hallmark) = Names
+# Now, run the fgsea algorithm with 1000 permutations:
+fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark,
+                        padj = 0.25,pval = 0.25,
+                        order.yaxis.by = c("T_cells:CD4+","NES"),
+                        decreasing = F,
+                        Rowv = F,Colv = F,
+                        size = " -log10(pval)", fill = "NES",
+                        pathway.name = "Hallmark",rotate.x.text = T,
+                        title = "Cluster",
+                        font.xtickslab=10, font.main=14, font.ytickslab = 10,
+                        font.legend = list(size = 10),font.label = list(size = 10),
+                        do.return = T, do.print = T,
+                        width = 4.3,height = 4,save.path = paste0(read.path,"/3. CD4 T vs CD8 T/"))
+write.csv(fgseaRes, file = paste0(read.path,"/3. CD4 T vs CD8 T/","Dotplot_FDR1_pval1.csv"))
+

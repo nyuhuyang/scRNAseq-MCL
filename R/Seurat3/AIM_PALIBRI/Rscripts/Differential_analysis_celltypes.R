@@ -35,15 +35,23 @@ object$orig.ident %<>% as.factor %>% factor(levels = unique(orig.ident))
 object$label = object$label.fine
 object$label %<>% gsub("T cells, CD4\\+.*","CD4 T",.)
 object$label %<>% gsub("T cells, CD8\\+.*","CD8 T",.)
+object$label %<>% gsub("Monocytes, CD14\\+.*","CD14 Monocytes",.)
+object$label %<>% gsub("Monocytes, CD16\\+.*","CD16 Monocytes",.)
+object$label %<>% gsub("B cells,.*","B cells",.)
 
 object$patient = gsub("_.*","",object$orig.ident)
 #Idents(object) = "Doublets"
 #object <- subset(object, idents = "Singlet")
 
 opts = data.frame(label = c(rep("CD4 T",10),
-                            rep("CD8 T",10)),
+                            rep("CD8 T",10),
+                            rep("CD14 Monocytes",10),
+                            rep("CD16 Monocytes",10),
+                            rep("NK cells",10),
+                            rep("B cells", 10),
+                            rep("MCL", 10)),
                   patient = rep(c("Pt11","Pt13","Pt17","Pt25","Pt27","Pt28","PtB13",
-                              "AIM13","AIM17","AIM24"),times = 2),
+                              "AIM13","AIM17","AIM24"),times = 7),
                   stringsAsFactors = F)
 set.seed(101)
 print(opt <- opts[args,])

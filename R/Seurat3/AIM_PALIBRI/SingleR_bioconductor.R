@@ -25,13 +25,14 @@ B_MCL_bulk <- RemoveDup(B_MCL_bulk)
 meta.data = data.frame("label.main"= c(rep("B cells",ncol(B_bulk)),
                                        rep("MCL",ncol(MCL_bulk))),
                        "label.fine" = c(rep("B cells, PB",ncol(B_bulk)),
-                                        rep("MCL",ncol(MCL_bulk))))
-B_MCL_sce <- SingleCellExperiment(list(logcounts=B_MCL_bulk),
+                                        rep("MCL",ncol(MCL_bulk))),
+                       "label.ont" = c(colnames(B_bulk),colnames(MCL_bulk)))
+B_MCL_sce <- SummarizedExperiment(list(logcounts=B_MCL_bulk),
                             colData=DataFrame(meta.data))
 
 # ====== load reference =============
 blue_encode <- BlueprintEncodeData()
-remove = grepl("CD4|CD8|Tregs|B-cells",blue_encode$label.fine)
+remove = grepl("CD4|CD8|Tregs|B-cells|Monocytes",blue_encode$label.fine)
 blue_encode = blue_encode[,!remove]
 
 immue_exp <- DatabaseImmuneCellExpressionData()
@@ -49,4 +50,4 @@ system.time(trained <- trainSingleR(ref = combine_ref,
                                     labels=combine_ref$label.fine))
 system.time(pred <- classifySingleR(sce[common,], trained))
 # elapsed 4872.846 sec
-saveRDS(object = pred, file = "output/20201010_MCL_AIM_58_singleR_pred.rds")
+saveRDS(object = pred, file = "output/20201112_MCL_AIM_58_singleR_pred.rds")

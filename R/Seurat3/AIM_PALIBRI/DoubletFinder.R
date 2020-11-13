@@ -3,7 +3,7 @@
 #  0 setup environment, install libraries if necessary, load libraries
 #
 # ######################################################################
-
+# conda activate r3.6.2
 library(Seurat)
 library(dplyr)
 library(cowplot)
@@ -28,7 +28,7 @@ if(!dir.exists(path))dir.create(path, recursive = T)
 object_list <- SplitObject(object,split.by = "orig.ident")
 rm(object);GC()
 ## pK Identification (no ground-truth) ---------------------------------------------------------------------------------------
-npcs =100
+npcs = 85
 sweep.res_list <- list()
 for (i in 1:length(object_list)) {
     sweep.res_list[[i]] <- paramSweep_v4(object_list[[i]], PCs = 1:npcs, sct = T)

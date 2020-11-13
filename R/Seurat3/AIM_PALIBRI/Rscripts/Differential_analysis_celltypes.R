@@ -78,7 +78,7 @@ if(any(orig.ident.num[,1] < 4)) {
     object %<>% subset(idents = keep)
 }
 GC()
-run_DE = FALSE
+run_DE = TRUE
 
 if(!dir.exists(paste0(save.path,"DEGs")))dir.create(paste0(save.path,"DEGs"), recursive = T)
 if(run_DE) {
@@ -99,7 +99,8 @@ if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
 Top_n = 25
 top = gde.markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
 
-markers <- FilterGenes(object,c("CD3D","CD3E","CD3G","CD4","CD8A"))
+markers <- FilterGenes(object,c("CD19","CCND1","CD3D","CD3E","CD4","CD8A",
+                                "NCAM1","NKG7","S100A8","S100A9"))
 
 features = c(as.character(top$gene),
              tail(VariableFeatures(object = object), 2),

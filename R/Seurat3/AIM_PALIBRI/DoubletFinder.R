@@ -11,7 +11,7 @@ library(magrittr)
 library(DoubletFinder)
 library(kableExtra)
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
-
+source("R/util.R")
 
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path))dir.create(path, recursive = T)
@@ -38,7 +38,6 @@ save(sweep.res_list,file = "output/MCL_AIM_58_20201009_sweep.res_list.Rda")
 (load(file = "output/MCL_AIM_58_20201009_sweep.res_list.Rda"))
 sweep_list <- lapply(sweep.res_list, function(x) summarizeSweep(x, GT = FALSE))
 bcmvn_list <- lapply(sweep_list,find.pK)
-
 
 (maximal_pk <- sapply(bcmvn_list,function(x) {
     as.numeric(as.character(x[find.localMaxima(x$BCmetric),"pK"]))

@@ -15,7 +15,7 @@ library(eulerr)
 library(openxlsx)
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 
-path <- "Yang/PALIBR Figures legends methods/Figure 2/"
+path <- "Yang/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #============= after running Differential_analysis.R Rsscript ===========
 # X4clusters =====
@@ -433,6 +433,7 @@ for(i in 16:nrow(opts)){
         dev.off()
         Progress(i, nrow(opts))
 }
+
 
 (load(file = "data/B_cells_MCL_43_20190917.Rda"))
 Idents(B_cells_MCL) = "orig.ident"

@@ -33,15 +33,15 @@ object@meta.data[object$SCT_snn_res.0.8 %in% c(5,16), "cell.types"] = "Monocytes
 Idents(object) = "cell.types"
 
 if(step == "1. pairwise T cell comparisions"){
-        opts = data.frame(cell.types = rep(c("T_cells:CD8+","T_cells:CD4+"),  each = 23),
-                          ident.1 = rep(c("Pt17_7","Pt17_12","Pt17_31","Pt28_4","Pt28_28",
+        opts = data.frame(cell.types = rep(c("T_cells:CD8+","T_cells:CD4+","NK_cells","Monocytes"),  each = 24),
+                          ident.1 = rep(c("Pt17_7","Pt17_12","Pt17_31","Pt17_31","Pt28_4","Pt28_28",
                                           "Pt25_1_8","Pt25_24","Pt25_25Pd","Pt25_25Pd","Pt11_28",
                                           "Pt25_1","PtU01","PtU02","PtU03","PtU04",
                                           "Pt17_LN1","Pt17_2","Pt17_7","Pt17_12","Pt17_31",
-                                          "PtB13_Ibp","PtB13_Ib1","PtB13_IbR"),2),
-                          ident.2 = rep(c("Pt17_2","Pt17_2","Pt17_2","Pt28_1","Pt28_1",
+                                          "PtB13_Ibp","PtB13_Ib1","PtB13_IbR"),4),
+                          ident.2 = rep(c("Pt17_2","Pt17_2","Pt17_2","Pt17_7","Pt28_1","Pt28_1",
                                           "Pt25_1","Pt25_1","Pt25_1","Pt25_24","Pt11_14",
-                                          rep("N01",13)),2),
+                                          rep("N01",13)),4),
                           stringsAsFactors = F)
         (opt = opts[i,])  # need 32 GB
 

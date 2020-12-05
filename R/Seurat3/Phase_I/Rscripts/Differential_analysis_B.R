@@ -27,7 +27,7 @@ object$X4clusters %<>% factor(levels=paste0("C",1:4))
 markers <- FilterGenes(object,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 
 
-step = 7
+step = 8
 # choose == "MCL_vs_B_cells"
 if(step == 0){  # need 32 GB
         # load data
@@ -43,7 +43,7 @@ if(step == 0){  # need 32 GB
                                         only.pos = F,
                                         return.thresh = 1,
                                         test.use = "MAST",
-                                        latent.vars = "nCount_SCT")
+                                        latent.vars = "nFeature_SCT")
 
         write.csv(MCL_markers,paste0(path,"MCL_B_",opt$ident.1, "-N01.csv"))
 }
@@ -64,7 +64,7 @@ if(step == 1){ # need 32 GB
                                                    logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
-                                                   latent.vars = "nCount_SCT"))
+                                                   latent.vars = "nFeature_SCT"))
         write.csv(MCL_markers,paste0(path,"MCL_only_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
 }
 # choose == "X4clusters_vs_Normal"
@@ -91,7 +91,7 @@ if(step == 2){ # need 32 GB
                                                    logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
-                                                   latent.vars = "nCount_SCT"))
+                                                   latent.vars = "nFeature_SCT"))
         write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
 }
 # choose == "X4clusters_vs_B_cells"
@@ -115,7 +115,7 @@ if(step == 3){ # need 32 GB
                                                    logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
-                                                   latent.vars = "nCount_SCT"))
+                                                   latent.vars = "nFeature_SCT"))
         write.csv(MCL_markers,paste0(path,"MCL_B_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
 }
 
@@ -155,7 +155,7 @@ if(step == 4){ # need 32 GB
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
                                                    return.thresh = 1,
-                                                   latent.vars = "nCount_SCT"))
+                                                   latent.vars = "nFeature_SCT"))
         write.csv(B_markers,paste0(path,"B_41-FC",opt$logfc,"_",
                                    paste(opt$specimens,collapse = "-"),".csv"))
 }
@@ -180,7 +180,7 @@ if(step == 5){ # need 32 GB
                                                     only.pos = T,
                                                     test.use = "MAST",
                                                     return.thresh = 1,
-                                                    latent.vars = "nCount_SCT"))
+                                                    latent.vars = "nFeature_SCT"))
         write.csv(B_markers, paste0(save.path,"DE_FC0_",s,"-Normal",".csv"))
         normal = B_markers$cluster %in% "Normal"
         B_markers$avg_logFC[normal] = -1*B_markers$avg_logFC[normal]
@@ -258,7 +258,7 @@ if(step == 6){ # need 32 GB
                                                  only.pos = F,
                                                  test.use = "MAST",
                                                  return.thresh = 1,
-                                                 latent.vars = "nCount_SCT"))
+                                                 latent.vars = "nFeature_SCT"))
         write.csv(B_markers, paste0(save.path,"DE_FC0_",opt[2],"_",opt[1],".csv"))
         # remove MT-
         MT <- grepl("^MT-",B_markers$gene)
@@ -339,4 +339,98 @@ if(step == 7){
                     title = paste("Top",Top_n,"DE genes in longitudinal",opt$group,
                                   "B/MCL cells cluster",opt$cluster))
 
+}
+
+# Dec 4, 2020
+# 2. Volcano plots comparing a) cluster 1 MCL cells with cluster 1 normal B cells,  and b) cluster 2 MCL cells with cluster 2 B cells.
+
+if(step == 8){
+        path <- "Yang/Figure Sources/MCL_vs_B_inX4Clusters/"
+        if(!dir.exists(path))dir.create(path, recursive = T)
+
+        Idents(object) = "X4clusters"
+        X4Clusters = c("C1","C2","C3","C4")
+        X4Cluster = X4Clusters[i]
+        save.path <- paste0(path,X4Cluster,"/")
+        if(!dir.exists(save.path))dir.create(save.path, recursive = T)
+        sub_object <- subset(object,idents = X4Cluster)
+        Idents(sub_object) = "cell.types"
+
+        MCL_markers <- FindAllMarkers.UMI(sub_object,
+                                          logfc.threshold = 0.25,
+                                          return.thresh = 1,
+                                          only.pos = F,
+                                          test.use = "MAST",
+                                          latent.vars = "nFeature_SCT")
+        write.csv(MCL_markers,paste0(save.path,"MCL_vs_B_within_",X4Cluster,
+                                     "_FC0_markers.csv"))
+        table(MCL_markers$cluster)
+        markers <- FilterGenes(object,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
+        (MT_gene <- grep("^MT-",MCL_markers$gene))
+        if(length(MT_gene) >0 ) MCL_markers = MCL_markers[-MT_gene,]
+        Top_n = 40
+
+        top = MCL_markers %>% group_by(cluster) %>%
+                top_n(40, avg_logFC)
+        unique(top$cluster)
+        #top = top[order(top$cluster),]
+        write.csv(top,paste0(save.path,"Top40_","MCL_vs_B_within_",
+                             X4Cluster,".csv"))
+        features = c(as.character(top$gene),
+                     tail(VariableFeatures(object = sub_object), 2),
+                     markers)
+        #DoHeatmap.1======
+        # raw heatmap
+        featuresNum <- make.unique(features, sep = ".")
+        exp = AverageExpression(sub_object[features,],
+                                assays = "SCT") %>% .$SCT
+        exp %<>% MakeUniqueGenes(features = features)
+        exp[tail(VariableFeatures(object = sub_object), 2),] =0
+
+        (group.by = c("B_cells","MCL"))
+        DoHeatmap.matrix(exp, features = featuresNum,
+                         group.by = group.by,
+                         size = 6,angle = 0,label =F,
+                         draw.lines =F, raster = FALSE,
+                         pal_gsea = FALSE,
+                         width=2.5, height=10,res=600,no.legend = F,
+                         cex.row=5,
+                         group.colors = gg_color_hue(2),
+                         do.print = T,
+                         save.path = save.path,
+                         file.name = paste0("Heatmap_top40_MCL_vs_B_within_",
+                                            X4Cluster,"_raw.jpeg")
+        )
+        # scale heatmap
+        sub_object %<>% ScaleData(features = features)
+        scale_exp = AverageExpression(sub_object[features,],
+                                      assays = "SCT", slot = "scale.data") %>% .$SCT
+        scale_exp %<>% MakeUniqueGenes(features = features)
+        scale_exp[tail(VariableFeatures(object = sub_object), 2),] =0
+        DoHeatmap.matrix(scale_exp, features = featuresNum,
+                         group.by = group.by,
+                         size = 6,angle = 0,label =F,
+                         draw.lines =F, raster = FALSE,
+                         pal_gsea = FALSE,
+                         width=2.5, height=10,res=600,no.legend = F,
+                         cex.row=5,
+                         group.colors = gg_color_hue(2),
+                         do.print = T,
+                         save.path = save.path,
+                         file.name = paste0("Heatmap_top40_MCL_vs_B_within_",
+                                            X4Cluster,"_scaled.jpeg")
+        )
+        MCL_markers = MCL_markers[MCL_markers$cluster %in% "MCL",]
+        #avg_logFC = MCL_markers[MCL_markers$cluster %in% opt$ident.2,"avg_logFC"]
+        #MCL_markers[MCL_markers$cluster %in% opt$ident.2,"avg_logFC"] = avg_logFC * -1
+        p <- VolcanoPlots(data = MCL_markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,
+                          top = 20, cols = c("#2a52be","#d2dae2","#d9321f"),alpha=1, size=2,
+                          legend.size = 12)+
+                ggtitle(paste("MCL vs B cells within",X4Cluster,"Cluster"))+
+                theme(plot.title = element_text(hjust = 0.5,size=15,face = "plain"),
+                      legend.position="bottom")
+        jpeg(paste0(save.path,"VolcanoPlots_MCL_vs_B_within_",
+                    X4Cluster,".jpeg"), units="in", width=10, height=7,res=600)
+        print(p)
+        dev.off()
 }

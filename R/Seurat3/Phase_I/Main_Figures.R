@@ -678,7 +678,7 @@ path <- "Yang/Figure Sources/tSNE plots/Groups/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # load data
-(load(file="data/MCL_41_harmony_20191231.Rda"))
+(load(file="data/MCL_41_harmony_20200225.Rda"))
 # reduce normal sample
 object$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
 all_normal = which(object$orig.ident %in% "Normal")
@@ -731,6 +731,27 @@ path <- "Yang/Figure Sources/tSNE plots/Groups_split/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 Idents(object) = "groups"
+for(i in 1:length(groups)){
+        sub_object <- subset(object, idents = c("Normal",groups[i]))
+        Idents(sub_object) = "cell.types"
+        TSNEPlot.1(object = sub_object, label = F, label.repel = F,
+                   group.by = "cell.types",split.by = "orig.ident",
+                   cols = ExtractMetaColor(sub_object),no.legend = T,border = T,
+                   pt.size = 0.2, do.print = T,do.return = F,legend.size = 12,
+                   unique.name = "groups",
+                   title.size = 14,title = paste("tSNE plot of Normal and",groups[i],"samples"),
+                   units= "in",
+                   width=length(unique(sub_object$orig.ident))*2.5,
+                   height = 3,hjust =0.5, save.path = path)
+        Progress(i-2,length(groups)-2)
+}
+
+path <- "Yang/Figure Sources/tSNE plots/B_Groups_split/"
+if(!dir.exists(path)) dir.create(path, recursive = T)
+Idents(object) = "cell.types"
+object <- subset(object, idents = c("B","MCL"))
+Idents(object) = "groups"
+
 for(i in 1:length(groups)){
         sub_object <- subset(object, idents = c("Normal",groups[i]))
         Idents(sub_object) = "cell.types"

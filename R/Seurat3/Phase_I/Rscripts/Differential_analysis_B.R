@@ -357,7 +357,7 @@ if(step == 8){
         Idents(sub_object) = "cell.types"
 
         MCL_markers <- FindAllMarkers.UMI(sub_object,
-                                          logfc.threshold = 0.25,
+                                          logfc.threshold = 0,
                                           return.thresh = 1,
                                           only.pos = F,
                                           test.use = "MAST",

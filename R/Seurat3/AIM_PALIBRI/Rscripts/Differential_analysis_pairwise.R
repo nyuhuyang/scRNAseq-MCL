@@ -30,6 +30,11 @@ DefaultAssay(object) = "SCT"
 Idents(object) = "Doublets"
 object <- subset(object, idents = "Singlet")
 
+orig.ident = levels(object$orig.ident)
+object$orig.ident %<>% gsub("N01|N02|N03|N04","Normal",.)
+orig.ident %<>% gsub("N01|N02|N03|N04","Normal",.)
+object$orig.ident %<>% as.factor %>% factor(levels = unique(orig.ident))
+
 object$label = object$label.fine
 object$label %<>% gsub("T cells, CD4\\+.*","CD4 T",.)
 object$label %<>% gsub("T cells, CD8\\+.*","CD8 T",.)
@@ -37,23 +42,50 @@ object$label %<>% gsub("Monocytes, CD14\\+.*","CD14 Monocytes",.)
 object$label %<>% gsub("Monocytes, CD16\\+.*","CD16 Monocytes",.)
 object$label %<>% gsub("B cells,.*","B cells",.)
 
-opts = data.frame(label = c("CD14 Monocytes","CD16 Monocytes"),
+object$patient = gsub("_.*","",object$orig.ident)
+#Idents(object) = "Doublets"
+#object <- subset(object, idents = "Singlet")
+
+opts = data.frame(label = c(rep("CD4 T",10),
+                            rep("CD8 T",10),
+                            rep("CD14 Monocytes",10),
+                            rep("CD16 Monocytes",10),
+                            rep("NK cells",10),
+                            rep("B cells", 10),
+                            rep("MCL", 10)),
+                  ident.1 = rep(c("Pt11","Pt13","Pt17","Pt25","Pt27","Pt28","PtB13",
+                              "AIM13","AIM17","AIM24"),times = 7),
+                  ident.2 = rep(c("Pt11","Pt13","Pt17","Pt25","Pt27","Pt28","PtB13",
+                                  "AIM13","AIM17","AIM24"),times = 7),
                   stringsAsFactors = F)
 set.seed(101)
-print(label <- opts$label)
-file.name = "CD16_vs_CD14_monocytes"
+print(opt <- opts[args,])
+label = opt$label
+patient = opt$patient
 
-save.path = paste0(path,file.name,"/")
+save.path = paste0(path,label,"/")
 if(!dir.exists(save.path))dir.create(save.path, recursive = T)
 
 # subset
-
+Normal_cells =  colnames(object)[object$orig.ident %in% "Normal"]
+remove_normal_cells = sample(Normal_cells, size = 3*round(length(Normal_cells)/4))
+object %<>% subset(cells = remove_normal_cells, invert = T)
+Idents(object) = "patient"
+object %<>% subset(idents = c("Normal",patient))
 Idents(object) = "label"
 object %<>% subset(idents = label)
+object$orig.ident %<>% droplevels()
+
+Idents(object) = "orig.ident"
+orig.ident.num = as.data.frame.vector(table(object$orig.ident))
+if(any(orig.ident.num[,1] < 4)) {
+    keep = rownames(orig.ident.num)[orig.ident.num[,1] >= 4]
+    object %<>% subset(idents = keep)
+}
 GC()
 run_DE = TRUE
-file.path = paste0(save.path,file.name,"F0_DEGs.csv")
-
+FindMarkers.UMI
+if(!dir.exists(paste0(save.path,"DEGs")))dir.create(paste0(save.path,"DEGs"), recursive = T)
 if(run_DE) {
     gde.markers <- FindAllMarkers.UMI(object,
                                       logfc.threshold = 0,
@@ -61,14 +93,15 @@ if(run_DE) {
                                       return.thresh = 1,
                                       test.use = "MAST",
                                       latent.vars = "nFeature_SCT")
-    write.csv(gde.markers,file = file.path)
-} else gde.markers = read.csv(file = file.path, row.names = 1, stringsAsFactors = F)
+    write.csv(gde.markers,paste0(save.path,"DEGs/",patient,"_longitudinal_F0_DEGs.csv"))
+} else gde.markers = read.csv(paste0(save.path,"DEGs/",patient,"_longitudinal_F0_DEGs.csv"),
+                              row.names = 1, stringsAsFactors = F)
 
 
 #DoHeatmap.1======
 (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
 if(length(mito.genes)>0) gde.markers = gde.markers[-mito.genes,]
-Top_n = 40
+Top_n = 25
 top = gde.markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
 
 markers <- FilterGenes(object,c("CD19","CCND1","CD3D","CD3E","CD4","CD8A",
@@ -84,17 +117,17 @@ DoHeatmap.1(object =object, features = featuresNum, Top_n = Top_n,
             do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0, label=F, cex.row= 4, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
-            title = paste("Top",Top_n,"DE genes between CD14 monocytes and CD16 monocytes "),
-            save.path = save.path,
-            file.name = paste0("Heatmap_",file.name,"_noLabel.jpeg"))
+            title = paste("Top",Top_n,"DE genes in longitudinal",patient,label),
+            save.path = paste0(save.path,"Heatmaps"),
+            file.name = paste0(patient,"_Heatmap_nolabel.jpeg"))
 
 DoHeatmap.1(object =object, features = featuresNum, Top_n = Top_n,
             do.print=T, angle = 45, group.bar = T, title.size = 20, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0.05, label=T, cex.row= 4, legend.size = 0,width=10, height=6.5,
             pal_gsea = FALSE,
-            title = paste("Top",Top_n,"DE genes between CD14 monocytes and CD16 monocytes "),
-            save.path = save.path,
-            file.name = paste0("Heatmap_",file.name,"_Label.jpeg"))
+            title = paste("Top",Top_n,"DE genes in longitudinal",patient,label),
+            save.path = paste0(save.path,"Heatmaps"),
+            file.name = paste0(patient,"_Heatmap_label.jpeg"))
 # fgsea
 res = gde.markers
 res = res[order(res["p_val_adj"]),]
@@ -103,42 +136,21 @@ head(res, 20)
 hallmark <- fgsea::gmtPathways("../seurat_resources/msigdb/h.all.v6.2.symbols.gmt")
 names(hallmark) = gsub("HALLMARK_","",names(hallmark))
 names(hallmark) = gsub("\\_"," ",names(hallmark))
-hallmark$`NF-kB signaling` =  read.delim("data/200222 NFKB pathway gene list.txt") %>%
-    pull %>% as.character()
-hallmark$`MYC TARGETS` = c(hallmark$`MYC TARGETS V1`,hallmark$`MYC TARGETS V2`)
 
 # Now, run the fgsea algorithm with 1000 permutations:
 set.seed(100)
 fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark,
                         padj = 0.25,pval = 0.05,
-                        order.yaxis.by = c("CD16 Monocytes","NES"),
+                        order.yaxis.by = c("Normal","NES"),
                         decreasing = F,
-                        order.xaxis = c("CD14 Monocytes","CD16 Monocytes"),
-                        Rowv = F,
-                        Colv = F,
+                        order.xaxis = rownames(orig.ident.num),
+                        Rowv = F,Colv = F,
                         size = " -log10(pval)", fill = "NES",
                         pathway.name = "Hallmark",rotate.x.text = T,
-                        title = file.name,
+                        title = paste(label, "in", patient),
                         font.xtickslab=12, font.main=12, font.ytickslab = 10,
                         font.legend = list(size = 12),font.label = list(size = 12),
-                        do.return = T,
-                        save.path = save.path,
+                        do.return = T,save.path = paste0(save.path,"DEGs"),
                         do.print = T,
-                        width = 6,height = 7,hjust = 0.75)
-write.csv(fgseaRes, file = paste0(save.path,"FgseaDotPlot_FDR1_pval1.csv"))
-# VolcanoPlots
-gde = gde.markers[gde.markers$cluster %in% "CD16 Monocytes",]
-g <- VolcanoPlots(gde, cut_off_value = 0.05, cut_off = "p_val_adj",
-                  cut_off_logFC = 1,top = 15,
-                  cols = c("#ba2832","#d2dae2","#2a71b2"),
-                  cols.order = c('Upregulated','Stable','Downregulated'),
-                  alpha=1, size=3,
-                  legend.size = 12,legend.position="bottom",
-                  color = "black", pch=21)
-g = g + ggtitle("CD16 Monocytes vs CD14 Monocytes")
-g = g + TitleCenter()
-print(g)
-
-jpeg(paste0(save.path,"VolcanoPlots_",file.name,".jpeg"), units="in", width=10, height=10,res=600)
-print(g)
-dev.off()
+                        width = 7,height = 6,hjust = 0.75)
+write.csv(fgseaRes, file = paste0(save.path,"GSEA/",patient,"_FgseaDotPlot_FDR0.25_pval0.05.csv"))

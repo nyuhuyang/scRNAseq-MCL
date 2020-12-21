@@ -23,11 +23,17 @@ print(paste0("slurm_arrayid=",i))
 object = readRDS(file = "data/MCL_41_B_20200225.rds")
 DefaultAssay(object) = "SCT"
 Idents(object) = "orig.ident"
+object %<>% subset(idents = "Pt2_30Pd", invert = T)
+Idents(object) = "Doublets"
+object %<>% subset(idents = "Singlet")
+Idents(object) = "cell.types"
+table(Idents(object))
+
 object$X4clusters %<>% factor(levels=paste0("C",1:4))
 markers <- FilterGenes(object,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 
 
-step = 8
+step = 2
 # choose == "MCL_vs_B_cells"
 if(step == 0){  # need 32 GB
         # load data
@@ -54,7 +60,6 @@ if(step == 1){ # need 32 GB
                           ident.1 = rep(paste0("C",1:4),      time = 4))
 
         (opt = opts[i,])
-        object %<>% subset(idents = "Pt2_30Pd",invert = T)
         Idents(object) = "cell.types"
         object <- subset(object, idents= "MCL")
         Idents(object) = "X4clusters"
@@ -74,7 +79,6 @@ if(step == 2){ # need 32 GB
                           ident.1 = rep(c("B_cells",paste0("C",1:4)),      time = 4))
 
         (opt = opts[i,])
-        object %<>% subset(idents = "Pt2_30Pd",invert = T)
         object$X4clusters_normal = as.character(object$X4clusters)
         object$X4clusters_normal %<>% paste(object$cell.types, sep = "_")
         object$X4clusters_normal %<>% gsub(".*_B_cells","B_cells",.)
@@ -101,7 +105,7 @@ if(step == 3){ # need 32 GB
                           ident.1 = rep(paste0("C",1:4),      time = 4))
 
         (opt = opts[i,])
-        object %<>% subset(idents = c("Pt2_30Pd","N01","N02","N03"),invert = T)
+        object %<>% subset(idents = c("N01","N02","N03"),invert = T)
         object$X4clusters_B = as.character(object$X4clusters)
         object$X4clusters_B %<>% paste(object$cell.types, sep = "_")
         object$X4clusters_B %<>% gsub(".*_B_cells","B_cells",.)
@@ -161,19 +165,19 @@ if(step == 4){ # need 32 GB
 }
 # choose == "orig.ident_X4clusters_vs_Normal"
 if(step == 5){ # need 32 GB
-        object$orig.ident %<>% gsub("N02|N01|N03","Normal",.)
-        object %<>% subset(idents = "N04", invert = T)
-        object$orig.ident_X4clusters = paste0(object$orig.ident,"_",object$X4clusters)
-        object$orig.ident_X4clusters %<>% gsub("Normal_.*","Normal",.)
+        object$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
+        object %<>% subset(idents = "N04",invert = T)
+        object$orig.ident_X4clusters = paste0(object$orig.ident, "_", object$X4clusters)
+        object$orig.ident_X4clusters %<>% gsub("Normal_.*", "Normal", .)
         df = table(object$orig.ident_X4clusters) %>% as.data.frame.table
         keep = df$Var1[df$Freq >= 3] %>% as.character()
         Idents(object) = "orig.ident_X4clusters"
         object %<>% subset(idents = keep)
-        orig.ident_X4clusters = keep[-grepl("Normal",keep)]
+        orig.ident_X4clusters = keep[-grepl("Normal", keep)]
         print(s <- orig.ident_X4clusters[i]) #127
         object %<>% subset(idents = c("Normal",s))
 
-        save.path = paste0(path,"X4clusters_vs_Normal/",gsub("_.*","",s),"/")
+        save.path = paste0(path,"X4cluster_vs_Normal/",gsub("_.*","",s),"/")
         if(!dir.exists(save.path))dir.create(save.path, recursive = T)
         system.time(B_markers <- FindAllMarkers.UMI(object,
                                                     logfc.threshold = 0,

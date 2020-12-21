@@ -27,6 +27,9 @@ if(!dir.exists(path))dir.create(path, recursive = T)
 
 # Need 64GB
 DefaultAssay(object) = "SCT"
+Idents(object) = "Doublets"
+object <- subset(object, idents = "Singlet")
+
 orig.ident = levels(object$orig.ident)
 object$orig.ident %<>% gsub("N01|N02|N03|N04","Normal",.)
 orig.ident %<>% gsub("N01|N02|N03|N04","Normal",.)

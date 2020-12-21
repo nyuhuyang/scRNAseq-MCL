@@ -12,7 +12,6 @@ library(cowplot)
 library(fgsea)
 library(tibble)
 library(ggsci)
-library(fgsea)
 library(openxlsx)
 library(gplots)
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
@@ -84,8 +83,17 @@ Idents(B_cells_MCL) = "orig.ident"
 B_cells_MCL %<>% subset(idents = "Pt2_30Pd", invert = T)
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
-choose = c("X4clusters","X4cluster_vs_Normal","X4cluster_vs_B")[2]
+choose = c("X4clusters","X4cluster_vs_Normal","X4cluster_vs_B")[1]
+filter_by = c("top40","logFC0.01")[1]
+B_cells_MCL[["patient"]] = gsub("_.*","",B_cells_MCL$orig.ident)
+B_cells_MCL[["samples"]] = droplevels(B_cells_MCL[["orig.ident"]])
+Idents(B_cells_MCL) = "patient"
+#B_cells_MCL %<>% subset(idents = "Pt25")
+#cells <- sample(colnames(B_cells_MCL), size = 300)
+#B_cells_MCL %<>% subset(cells = cells)
 if(choose == "X4clusters"){
+        B_cells_MCL %<>% subset(idents = c("N01","N02","N03","N04"), invert = T)
+        B_cells_MCL@meta.data$samples %<>% droplevels()
         Idents(B_cells_MCL) = "X4clusters"
 
         B_cells_MCL %<>% sortIdent()
@@ -99,11 +107,17 @@ if(choose == "X4clusters"){
         (MT_gene <- grep("^MT-",X4clusters_markers$gene))
         X4clusters_markers = X4clusters_markers[-MT_gene,]
         Top_n = 40
-        top = X4clusters_markers %>% group_by(cluster) %>%
-                top_n(Top_n, cluster) %>% top_n(Top_n, avg_logFC)
-        unique(top$cluster)
+        top = switch (filter_by,
+                      "top40"= X4clusters_markers %>% group_by(cluster) %>%
+                              top_n(Top_n, cluster) %>% top_n(Top_n, avg_logFC),
+                      "logFC0.01" = X4clusters_markers %>% group_by(cluster) %>%
+                              filter(avg_logFC < 0.05 & avg_logFC > 0.01)
+        )
+        table(top$cluster)
         top = top[order(top$cluster),]
-        write.csv(top,paste0(path,choose,"/top40_genes_heatmap.csv"))
+        write.csv(top,paste0(path,choose,"/",filter_by,"_genes_heatmap.csv"))
+        #write.csv(top,paste0(path,choose,"/avg_logFC0.01_genes_heatmap.csv"))
+
         features = c(as.character(top$gene),
                      tail(VariableFeatures(object = B_cells_MCL), 2),
                      markers)
@@ -111,19 +125,19 @@ if(choose == "X4clusters"){
         B_cells_MCL %<>% ScaleData(features=features)
         featuresNum <- make.unique(features, sep = ".")
         B_cells_MCL %<>% MakeUniqueGenes(features = features)
-
-        DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-                    do.print=T, angle = 0, group.bar = T,
+        DoHeatmap.2(B_cells_MCL, features = featuresNum, #Top_n = Top_n,
+                    do.print=T, do.return=F,
+                    angle = 0,
+                    group.by = c("X4clusters","tissues"),group.bar = T,
                     group.colors = group.colors,
-                    title.size = 0, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0.02, label=T, cex.row= 5, legend.size = 0,
-                    width=7, height=14,
+                    group2.colors= Singler.colors,
+                    title.size = 16, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0.02, label=F, cex.row= 5,
+                    width=12, height=14,
                     pal_gsea = FALSE,
-                    unique.name = "cell.types",
+                    file.name = "Heatmap_",filter_by,"_X4clusters_tissue.jpeg",
                     title = "Top 40 DE genes in 4 B/MCL clusters",
-                    save.path = paste0(path,choose,"/"))
-        file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_B_cells_MCL_X4clusters_Legend.jpeg"),
-                    paste0(path,choose,"/Fig3D_4clusters.jpeg"))
+                    save.path = paste0(path,choose))
 }
 
 
@@ -134,6 +148,8 @@ if(choose == "X4cluster_vs_Normal"){
         B_cells_MCL$X4clusters_normal %<>% gsub("_MCL","",.)
         normal <- grepl("N01|N02|N03",B_cells_MCL$orig.ident)
         B_cells_MCL@meta.data[normal,"X4clusters_normal"] = "Normal"
+        B_cells_MCL@meta.data[,"X4clusters_normal"] %<>% factor(levels = c("Normal","B_cells", paste0("C",1:4)))
+
         Idents(B_cells_MCL) = "X4clusters_normal"
         B_cells_MCL %<>% subset(idents = "B_cells", invert = T)
         B_cells_MCL %<>% sortIdent()
@@ -160,23 +176,22 @@ if(choose == "X4cluster_vs_Normal"){
         Idents(B_cells_MCL) = "X4clusters_normal"
         Idents(B_cells_MCL) %<>% factor(levels = c("Normal", paste0("C",1:4)))
         table(Idents(B_cells_MCL))
-        DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
-                    do.print=T, angle = 0, group.bar = T,
-                    group.colors = c("#B3DE69",group.colors),
-                    title.size = 0, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0.02, label=T, cex.row= 5, legend.size = 0,
-                    width=7, height=14,
+        DoHeatmap.2(B_cells_MCL, features = featuresNum, Top_n = Top_n,
+                    do.print=T, angle = 0,
+                    group.by = c("X4clusters_normal","samples"),group.bar = T,
+                    group.colors = c("#31aa3a",group.colors),
+                    title.size = 16, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0.02, label=F, cex.row= 5,
+                    width=13, height=14,
                     pal_gsea = FALSE,
-                    unique.name = "cell.types",
-                    title = "Cluster",
-                    save.path = paste0(path,choose,"/"))
-        file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_B_cells_MCL_X4clusters_normal_Legend.jpeg"),
-                    paste0(path,choose,"/Heatmap_top40_MCL_B_cells_X4clusters_normal.jpeg"))
-}
+                    file.name = "Heatmap_top40_X4clusters_vs_normal.jpeg",
+                    title = "Top 40 DE genes in 4 B/MCL clusters and healthy donors",
+                    save.path = paste0(path,choose))
+        }
 
 if(choose == "X4cluster_vs_B"){
         Idents(B_cells_MCL) = "orig.ident"
-        B_cells_MCL %<>% subset(idents = c("N01","N02","N03"),invert = T)
+        B_cells_MCL %<>% subset(idents = c("N01","N02","N03","N04"),invert = T)
         B_cells_MCL$X4clusters_B = as.character(B_cells_MCL$X4clusters)
         B_cells_MCL$X4clusters_B %<>% paste(B_cells_MCL$cell.types, sep = "_")
         B_cells_MCL$X4clusters_B %<>% gsub(".*_B_cells","B_cells",.)
@@ -203,21 +218,20 @@ if(choose == "X4cluster_vs_B"){
         featuresNum <- make.unique(features, sep = ".")
         B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
 
+        B_cells_MCL@meta.data[,"X4clusters_B"] %<>% factor(levels = c("B_cells", paste0("C",1:4)))
         Idents(B_cells_MCL) = "X4clusters_B"
-        Idents(B_cells_MCL) %<>% factor(levels = c("B_cells", paste0("C",1:4)))
         table(Idents(B_cells_MCL))
-        DoHeatmap.1(B_cells_MCL, features = featuresNum, Top_n = Top_n,
+        DoHeatmap.2(B_cells_MCL, features = featuresNum, Top_n = Top_n,
                     do.print=T, angle = 0, group.bar = T,
+                    group.by = c("X4clusters_B","samples"),
                     group.colors = c("#31aa3a",group.colors),
-                    title.size = 0, no.legend = F,size=5,hjust = 0.5,
-                    group.bar.height = 0.02, label=T, cex.row= 5, legend.size = 0,
-                    width=7, height=14,
+                    title.size = 16, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0.02, label=F, cex.row= 5,
+                    width=13, height=14,
                     pal_gsea = FALSE,
-                    unique.name = "cell.types",
-                    title = "Clusters",
-                    save.path = paste0(path,choose,"/"))
-        file.rename(paste0(path,choose,"/Heatmap_top40_B_cells_MCL_B_cells_MCL_X4clusters_B_Legend.jpeg"),
-                    paste0(path,choose,"/Fig3D_4clusters_MCL_vs_B.jpeg"))
+                    file.name = "Heatmap_top40_X4clusters_vs_B.jpeg",
+                    title = "Top 40 DE genes in 4 MCL clusters and B cells",
+                    save.path = paste0(path,choose))
 }
 #==== Figure 3-D ===========
 choose <- c("X4clusters","X4cluster_vs_Normal")[2]
@@ -266,7 +280,7 @@ fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark,
                         font.xtickslab=10, font.main=14, font.ytickslab = 10,
                         font.legend = list(size = 10),font.label = list(size = 10),
                         do.return = T, do.print = T,
-                        width = 4.3,height = 4,save.path = paste0(path,choose,"/"))
+                        width = 4.3,height = 4,save.path = paste0(path,choose))
 file.rename(paste0(path,choose,"/Dotplot_Cluster_Hallmark_0.25_0.05.jpeg"),
             paste0(path,choose,"/Dotplot_",choose,"_Hallmark_0.25_0.05.jpeg"))
 write.csv(fgseaRes, file = paste0(path,choose,"/Dotplot",choose,"_FDR0.25_pval0.05.csv"))
@@ -301,9 +315,16 @@ TSNEPlot.1(sub_object, pt.size =0.3,
 ###############################
 path <- "Yang/B_pairwise_heatmaps/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
-group.colors = gg_color_hue(n=4)
+group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
 # =========Doheatmap for Normal / MCL ============
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
+# remove B cell in MCL, and keep the B cells in Normal
+B_cells_MCL$tests %<>% gsub("test.*","test",.)
+B_cells_MCL$tests_cell.types = paste(B_cells_MCL$tests,
+                                     B_cells_MCL$cell.types, sep = "_")
+Idents(B_cells_MCL) = "tests_cell.types"
+B_cells_MCL %<>% subset(idents = c("control_B_cells","test_MCL"))
+
 B_cells_MCL$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
 B_cells_MCL$X4_orig.ident = paste(B_cells_MCL$orig.ident,
                                    B_cells_MCL$X4clusters, sep = "_")
@@ -322,11 +343,13 @@ list_samples <- lapply(list_samples[c("MCL","MCL.1","MCL.2")],
 all(list_samples %>% unlist %>% as.vector %>% unique %in%
             B_cells_MCL$orig.ident)
 Idents(B_cells_MCL) = "orig.ident"
+B_cells_MCL %<>% subset(idents = "N04", invert = T)
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 (block <- VariableFeatures(B_cells_MCL) %>% tail(2))
 
 choose = c("X4cluster_vs_Normal","X4clusters")[1]
-for(sample in list_samples$MCL[6]){
+run_DE = F
+for(sample in list_samples$MCL[1]){
         subset.MCL <- subset(B_cells_MCL, idents = c("Normal",sample))
 
         # SplitTSNEPlot======
@@ -349,13 +372,14 @@ for(sample in list_samples$MCL[6]){
         subset.MCL <- subset(subset.MCL, idents = c(ident.1,ident.2))
 
         # FindAllMarkers.UMI======
-
-        gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
-                                       ident.2 = c(ident.2,ident.1), only.pos = T,
-                                       logfc.threshold = 0.1,min.cells.group =3,
-                                       min.pct = 0.1,return.thresh = 0.05,
-                                       latent.vars = "nCount_SCT")
-        write.csv(gde.markers, paste0(path,"DE_analysis_files/",sample,"_vs_Normal.csv"))
+        if(run_DE) {
+                gde.markers <- FindPairMarkers(subset.MCL, ident.1 = c(ident.1,ident.2),
+                                               ident.2 = c(ident.2,ident.1), only.pos = T,
+                                               logfc.threshold = 0.1,min.cells.group =3,
+                                               min.pct = 0.1,return.thresh = 0.05,
+                                               latent.vars = "nCount_SCT")
+                write.csv(gde.markers, paste0(path,"DE_analysis_files/",sample,"_vs_Normal.csv"))
+        }
 
         gde.markers = read.csv(paste0(path,"DE_analysis_files/",sample,"_vs_Normal.csv"),row.names = 1)
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
@@ -382,12 +406,12 @@ for(sample in list_samples$MCL[6]){
                          draw.lines =F, raster = FALSE,
                          pal_gsea = FALSE,
                          group.colors = c("#31aa3a",group.colors),
-                         width=2, height=22,res=600,no.legend = T,
-                         cex.row=5,
+                         width=length(group.by)+0.75/2, height=22,res=600,no.legend = T,
+                         cex.row=5,group.bar.height = 0.03,
                          do.print = T,
-                         unique.name = "cell.types",
+                         file.name = paste0("Heatmap_top",Top_n,"_",sample,"_",choose,".jpeg"),
                          title = paste("40 DEGs in",sample,"_Normal"),
-                         save.path = paste0(path,choose,"/"))
+                         save.path = paste0(path,choose))
 }
 
 # =========Doheatmap for MCL.1 / MCL.2 ============
@@ -406,8 +430,8 @@ markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SO
 
 Idents(B_cells_MCL) = "orig.ident"
 choose = c("X4cluster_vs_Normal","X4clusters")[2]
-run_DE = FALSE
-for(i in 1:10){ #1:10
+run_DE = F
+for(i in c(1,4)){ #1:10
 
         (samples1 = list_samples$MCL.1[i])
         (samples2 = list_samples$MCL.2[i])
@@ -460,18 +484,19 @@ for(i in 1:10){ #1:10
         exp[tail(VariableFeatures(object = B_cells_MCL), 2),] =0
         scale_exp <- exp %>% t %>% scale %>% t
         colnames(scale_exp)
-        (group.by = c(ident.1, ident.2))
+        group.by = factor(c(ident.1, ident.2), levels = c(ident.1, ident.2))
+
         DoHeatmap.matrix(scale_exp, features = featuresNum,
                          group.by = group.by,size = 6,angle =90,
                          draw.lines =F, raster = FALSE,
                          pal_gsea = FALSE,label = T,
                          group.colors = rep(group.colors[X4_cluster], 2),
-                         width=3, height=25,res=600,no.legend = T,
+                         width=length(group.by)+0.75/2, height=22,res=600,no.legend = T,
                          cex.row=5,
                          do.print = T,
-                         unique.name = "cell.types",
+                         file.name = paste0("Heatmap_top",Top_n,"_",samples1,"_vs_",samples2,"_",choose,".jpeg"),
                          title = paste0("40 DEGs in ",samples1,"_",samples2),
-                         save.path = paste0(path,choose,"/"))
+                         save.path = paste0(path,choose))
 }
 ###############################
 #### Fig 4
@@ -611,12 +636,12 @@ for(i in seq_along(Clusters)){
 
 
 
-### Fig. 7C ==========
+### Fig. 3F ==========
 path <- "Yang/PALIBR Figures legends methods/Figure 7/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
 
-B_cells_MCL = readRDS(file = "data/MCL_41_B_20200207.rds")
+B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 choose = c("X4clusters","X4cluster_vs_Normal")[1]
 if(choose == "X4clusters"){
         Idents(B_cells_MCL) = "cell.types"
@@ -666,7 +691,7 @@ if(choose == "X4clusters"){
                          cex.row=5,
                          group.colors = group.colors,
                          do.print = T,
-                         unique.name = "cell.types",
+                         file.name = paste0("Heatmap_top",Top_n,"_",sample,"_",choose,".jpeg"),
                          title = "40 DEGs",
                          save.path = path)
         file.rename(paste0(path,"Heatmap_top40_object_MCL_B_cells_X4clusters_Legend.jpeg"),

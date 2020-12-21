@@ -71,7 +71,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 #3.1  Compare DE across all major cell types==================
 # prepare average expression
 # load data
-B_cells_MCL = readRDS(file = "data/MCL_41_B_20200207.rds")
+B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 
 B_cells_MCL$orig.ident %<>% gsub("N02|N01|N03","Normal",.)
 B_cells_MCL$X4_orig.ident = paste(B_cells_MCL$orig.ident,

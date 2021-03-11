@@ -4,7 +4,7 @@
 #
 # ######################################################################
 # conda activate r4.0
-devtools::install_github("immunogenomics/harmony", ref= "ee0877a",force = T)
+#devtools::install_github("immunogenomics/harmony", ref= "ee0877a",force = T)
 invisible(lapply(c("Seurat","dplyr","kableExtra","ggplot2","cowplot","sctransform",
                    "harmony"), function(x) {
     suppressPackageStartupMessages(library(x,character.only = T))
@@ -22,18 +22,16 @@ if(!dir.exists("doc")) dir.create("doc")
 # ######################################################################
 #======1.1 Setup the Seurat objects =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/20200713_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/20210311_scRNAseq_info.xlsx")
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 (attach(df_samples))
-samples = df_samples$sample
+sample = df_samples$`sample name`
 
 #======1.2 load  SingleCellExperiment =========================
-(load(file = "data/MCL_AIM_58_20201009.Rda"))
+(load(file = "data/MCL_AIM_74_20210311.Rda"))
 meta.data = object@meta.data
-meta.data$sample = meta.data$orig.ident
 for(i in 1:length(samples)){
         cells <- meta.data$orig.ident %in% samples[i]
-        meta.data[cells,"orig.ident"]  = df_samples$`sample name`[i]
         meta.data[cells,"patient"]    = df_samples$patient[i]
         meta.data[cells,"project"]    = df_samples$project[i]
         meta.data[cells,"phase"]     = df_samples$phase[i]
@@ -42,7 +40,6 @@ for(i in 1:length(samples)){
         meta.data[cells,"disease"]    = df_samples$disease[i]
 }
 meta.data$orig.ident %<>% factor(levels = df_samples$`sample name`)
-meta.data$sample %<>% factor(levels = df_samples$sample)
 
 
 table(rownames(object@meta.data) == rownames(meta.data))
@@ -53,7 +50,7 @@ object@meta.data = meta.data
 #======1.6 Performing SCTransform and integration =========================
 set.seed(100)
 object_list <- SplitObject(object, split.by = "orig.ident")
-remove(object);GC()
+remove(object)GC()
 #save(object_list, file = "data/object_list_27_20201008.Rda")
 #(load(file = "data/object_list_27_20201008.Rda"))
 object_list %<>% lapply(SCTransform)
@@ -75,10 +72,10 @@ remove(object_list);GC()
 object <- IntegrateData(anchorset = anchors, normalization.method = "SCT",dims = 1:npcs)
 
 remove(anchors);GC()
-save(object, file = "data/MCL_AIM_58_20201009.Rda")
+save(object, file = "data/MCL_AIM_74_20210311.Rda")
 
 #======1.8  Harmony =========================
-(load(file = "data/MCL_AIM_58_20201009.Rda"))
+(load(file = "data/MCL_AIM_74_20210311.Rda"))
 
 DefaultAssay(object)  = "SCT"
 object <- FindVariableFeatures(object = object, selection.method = "vst",

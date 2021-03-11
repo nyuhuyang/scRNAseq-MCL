@@ -3,7 +3,7 @@ invisible(lapply(c("Seurat","monocle","dplyr",
                            suppressPackageStartupMessages(library(x,character.only = T))
                    }))
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
-#path <- "Yang/20200413_monocle2/"
+#path <- "output/20200413_monocle2/"
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #SBATCH --mem=32G

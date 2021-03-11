@@ -32,22 +32,23 @@ B_MCL_sce <- SummarizedExperiment(list(logcounts=B_MCL_bulk),
 
 # ====== load reference =============
 blue_encode <- BlueprintEncodeData()
-remove = grepl("CD4|CD8|Tregs|B-cells|Monocytes",blue_encode$label.fine)
-blue_encode = blue_encode[,!remove]
+#remove = grepl("CD4|CD8|Tregs|B-cells|Monocytes",blue_encode$label.fine)
+#blue_encode = blue_encode[,!remove]
 
-immue_exp <- DatabaseImmuneCellExpressionData()
+#immue_exp <- DatabaseImmuneCellExpressionData()
 
 common <- Reduce(intersect, list(rownames(sce),
                                  rownames(B_MCL_sce),
-                                 rownames(blue_encode),
-                                 rownames(immue_exp)))
+#                                 rownames(immue_exp)
+                                 rownames(blue_encode)
+                                 ))
 length(common)
 combine_ref = do.call("cbind", list(blue_encode[common,],
-                                    immue_exp[common,],
+                                    #immue_exp[common,],
                                     B_MCL_sce[common,]))
 table(combine_ref$label.fine)
 system.time(trained <- trainSingleR(ref = combine_ref,
                                     labels=combine_ref$label.fine))
 system.time(pred <- classifySingleR(sce[common,], trained))
 # elapsed 4872.846 sec
-saveRDS(object = pred, file = "output/20201112_MCL_AIM_58_singleR_pred.rds")
+saveRDS(object = pred, file = "output/20210119_MCL_AIM_58_singleR_pred.rds")

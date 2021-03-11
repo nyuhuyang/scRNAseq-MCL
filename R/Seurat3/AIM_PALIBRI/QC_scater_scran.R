@@ -21,7 +21,7 @@ save.path = "Yang/PALIBR_phasI_AIM/QC/"
 # ######################################################################
 #======1.1 Load the data files and Set up Seurat object =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/20200713_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("doc/20210311_scRNAseq_info.xlsx")
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) <- colnames(df_samples) %>% tolower
 
@@ -45,12 +45,13 @@ for(i in seq_along(df_samples$sample)){
         Seurat_raw[[i]] <- Read10X(data.dir = paste0("data/scRNAseq/",
                                                      df_samples$sample.id[i],"/",
                                                      df_samples$read.path[i]))
-        colnames(Seurat_raw[[i]]) = paste0(df_samples$sample[i],"_",colnames(Seurat_raw[[i]]))
+         colnames(Seurat_raw[[i]]) %<>% gsub("-[0-9+]","",.)
+        
+        colnames(Seurat_raw[[i]]) = paste0(df_samples$`sample name`[i],"-",colnames(Seurat_raw[[i]]))
         Seurat_list[[i]] <- CreateSeuratObject(Seurat_raw[[i]],
-                                               project = df_samples$`sample name`[i],
                                                  min.cells = 0,
+                                                 names.delim = "-",
                                                min.features = 0)
-        Seurat_list[[i]]@meta.data$tests <- df_samples$tests[i]
         Progress(i, length(df_samples$sample))
 }
 remove(Seurat_raw);GC()
@@ -74,25 +75,21 @@ g1 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
 save(g1,file= paste0(path,"g1","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
 #load(paste0(save.path,"g1_58_20201009.Rda"))
 #============1.2 scatter ======================
-Seurat_list <- SplitObject(object, split.by = "orig.ident")
-remove(object);GC()
-
+meta_data = object@meta.data
+meta_data$discard = FALSE
 for(i in 1:length(df_samples$sample)){
-        high.mito <- isOutlier(Seurat_list[[i]]$percent.mt, nmads=3, type="higher")
-        low.lib <- isOutlier(log10(Seurat_list[[i]]$nCount_RNA), type="lower", nmad=3)
-        low.genes <- isOutlier(log10(Seurat_list[[i]]$nFeature_RNA), type="lower", nmad=3)
+        cell = rownames(meta_data)[meta_data$orig.ident %in% df_samples$`sample name`[i]]
+        high.mito <- isOutlier(meta_data[cell,"percent.mt"], nmads=3, type="higher")
+        low.lib <- isOutlier(log10(meta_data[cell,"nCount_RNA"]), type="lower", nmad=3)
+        low.genes <- isOutlier(log10(meta_data[cell,"nFeature_RNA"]), type="lower", nmad=3)
         discard <- high.mito | low.lib | low.genes
         print(data.frame(HighMito= sum(high.mito),LowLib=sum(low.lib),
                          LowNgenes=sum(low.genes),Discard=sum(discard)))
-        Seurat_list[[i]] <- Seurat_list[[i]][,!discard]
-        #print(summary(!discard))
-        print(i)
+        meta_data[cell,"discard"] = discard
 }
-
-object <- Reduce(function(x, y) merge(x, y, do.normalize = F), Seurat_list)
-remove(Seurat_list);GC()
-
-object %<>% subset(subset = nFeature_RNA > 200 & nCount_RNA > 1000 & percent.mt < 50)
+object@meta.data = meta_data
+table(object$orig.ident, object$discard)
+object %<>% subset(subset = discard == FALSE & nFeature_RNA > 300 & nCount_RNA > 1000 & percent.mt < 50)
 # FilterCellsgenerate Vlnplot before and after filteration
 Idents(object) = "orig.ident"
 Idents(object) %<>% factor(levels = df_samples$`sample name`)
@@ -137,4 +134,4 @@ dev.off()
 
 #====
 format(object.size(object),unit = "GB")
-save(object, file = "data/MCL_AIM_58_20201009.Rda")
+save(object, file = "data/MCL_AIM_74_20210311.Rda")

@@ -95,9 +95,9 @@ for(i in index){
                          group.colors = c("#E6AB02","#2055da"),
                          colors = sns.RdBu_r_199,
                          do.print = T,
-                         unique.name = "cell.types",
-                         save.path = paste0(save.path,"Heatmap_top40_",sub(":","_",opt$cell.types),
-                                            opt$ident.1, "-",opt$ident.2,"_raw"))
+                         file.name = paste0("Heatmap_top40_",sub(":","_",opt$cell.types),
+                                            opt$ident.1, "-",opt$ident.2,"_raw.jpeg"),
+                         save.path = save.path)
         # scale heatmap
         sub_object %<>% ScaleData(features = features)
         scale_exp = AverageExpression(sub_object[features,],
@@ -113,9 +113,9 @@ for(i in index){
                          group.colors = c("#E6AB02","#2055da"),
                          colors = sns.RdBu_r_199,
                          do.print = T,
-                         unique.name = "cell.types",
-                         save.path = paste0(save.path,"Heatmap_top40_",sub(":","_",opt$cell.types),
-                                            opt$ident.1, "-",opt$ident.2,"_scale"))
+                         file.name = paste0("Heatmap_top40_",sub(":","_",opt$cell.types),
+                                            opt$ident.1, "-",opt$ident.2,"_scale.jpeg"),
+                         save.path = save.path)
         deg = deg[deg$cluster %in% opt$ident.1,]
         #avg_logFC = deg[deg$cluster %in% opt$ident.2,"avg_logFC"]
         #deg[deg$cluster %in% opt$ident.2,"avg_logFC"] = avg_logFC * -1

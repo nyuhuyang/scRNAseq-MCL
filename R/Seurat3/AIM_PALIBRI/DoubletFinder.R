@@ -47,7 +47,7 @@ maximal_pk
 ## Homotypic Doublet Proportion Estimate -------------------------------------------------------------------------------------
 for(i in 1:length(object_list)){
     print(paste("processing",unique(object_list[[i]]$orig.ident)))
-    homotypic.prop <- modelHomotypic(object_list[[i]]@meta.data$label.fine)
+    homotypic.prop <- modelHomotypic(object_list[[i]]@meta.data$cell.types)
     nExp_poi <- round(Multiplet_Rate(object_list[[i]])*length(colnames(object_list[[i]])))  ## Assuming 7.5% doublet formation rate - tailor for your dataset
     nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
 

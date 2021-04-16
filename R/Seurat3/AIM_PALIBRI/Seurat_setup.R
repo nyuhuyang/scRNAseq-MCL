@@ -118,7 +118,7 @@ p5 <- UMAPPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,legend.size
 #=======1.9 summary =======================================
 lapply(c(TSNEPlot.1, UMAPPlot.1), function(fun)
     fun(object, group.by="orig.ident",pt.size = 0.5,label = F,
-        label.repel = T,alpha = 0.9,cols = Singler.colors,
+        label.repel = T,alpha = 0.9,cols = c(Singler.colors,Singler.colors),
         no.legend = T,label.size = 4, repel = T, title = "Harmony Integration",
         do.print = T, do.return = F))
 
@@ -134,8 +134,10 @@ object@reductions$umap@cell.embeddings[,"UMAP_1"] = - object@reductions$umap@cel
 object@assays$RNA@scale.data = matrix(0,0,0)
 object@assays$SCT@scale.data = matrix(0,0,0)
 object@assays$integrated = NULL
-object@assays$SCT@misc = NULL
 
-save(object, file = "data/MCL_AIM_58_20201009.Rda")
 
-format(object.size(object),unit = "GB")
+save(object, file = "data/MCL_AIM_74_20210311.Rda")
+
+format(object.size(object@assays$RNA),unit = "GB")
+object@assays$RNA = NULL
+save(object, file = "data/MCL_AIM_74_20210311_SCT.Rda")

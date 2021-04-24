@@ -12,8 +12,6 @@ path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
 # change the current plan to access parallelization
-plan("multiprocess", workers = 4)
-plan()
 
 # SLURM_ARRAY_TASK_ID
 slurm_arrayid <- Sys.getenv('SLURM_ARRAY_TASK_ID')
@@ -26,21 +24,17 @@ path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path))dir.create(path, recursive = T)
 # Need 64GB
 # load files
-(load(file = "data/MCL_41_20191205.Rda"))
+(load(file = "data/MCL_41_harmony_20210424.Rda"))
 Idents(object) = "Doublets"
 object %<>% subset(idents = "Singlet")
 DefaultAssay(object)  = "SCT"
-object@meta.data$SCT_snn_res.0.8 %<>% as.character %>% as.integer
-idents.1 = sort(unique(object$SCT_snn_res.0.8))
+idents.1 = sort(unique(object$clusters))
 
-Idents(object) = "SCT_snn_res.0.8"
-object@meta.data$SCT_snn_res.0.8 %<>% as.character %>% as.integer
-idents.1 = sort(unique(object$SCT_snn_res.0.8))
+Idents(object) = "clusters"
 
-Idents(object) %<>% factor(levels = idents.1)
 
-cluster_markers = FindMarkers.UMI(object = object,ident.1 = args, #0-30
-                                  group.by = "SCT_snn_res.0.8",
+cluster_markers = FindMarkers.UMI(object = object,ident.1 = idents.1[args], #0-30
+                                  group.by = "clusters",
                                   logfc.threshold = 0,
                                   only.pos = F,
                                   test.use = "MAST",

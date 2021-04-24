@@ -1,7 +1,7 @@
 ########################################################################
 #
 #  0 setup environment, install libraries if necessary, load libraries
-# 
+#
 # ######################################################################
 #devtools::install_github("immunogenomics/harmony", ref= "ee0877a",force = T)
 invisible(lapply(c("Seurat","dplyr","kableExtra","ggplot2","cowplot","sctransform",
@@ -16,8 +16,8 @@ if(!dir.exists("doc")) dir.create("doc")
 
 ########################################################################
 #
-#  1 Seurat Alignment 
-# 
+#  1 Seurat Alignment
+#
 # ######################################################################
 #======1.1 Setup the Seurat objects =========================
 # read sample summary list
@@ -45,13 +45,13 @@ remove(sce_list,object_list);GC()
 
 (remove <- which(colnames(object@meta.data) %in% "ident"))
 meta.data = object@meta.data[,-remove]
-object@meta.data = meta.data 
+object@meta.data = meta.data
 remove(meta.data);GC()
 
 
 #======== 1.4 FindVariableFeatures ===================================
 # After removing unwanted cells from the dataset, the next step is to normalize the data.
-#object <- NormalizeData(object = object, normalization.method = "LogNormalize", 
+#object <- NormalizeData(object = object, normalization.method = "LogNormalize",
 #                      scale.factor = 10000)
 object <- FindVariableFeatures(object = object, selection.method = "vst",
                                num.bin = 20,
@@ -78,11 +78,11 @@ npcs = 30
 object_list %<>% lapply(function(x) {
     x %<>% RunPCA(features = object.features, verbose = FALSE)
 })
-object_list <- PrepSCTIntegration(object.list = object_list, anchor.features = object.features, 
+object_list <- PrepSCTIntegration(object.list = object_list, anchor.features = object.features,
                                   verbose = FALSE)
-anchors <- FindIntegrationAnchors(object_list, normalization.method = "SCT", 
+anchors <- FindIntegrationAnchors(object_list, normalization.method = "SCT",
                                   anchor.features = object.features,
-                                  reference = c(1, 2), reduction = "rpca", 
+                                  reference = c(1, 2), reduction = "rpca",
                                   dims = 1:npcs)
 remove(object_list);GC()
 
@@ -97,7 +97,7 @@ object <- ScoreJackStraw(object, dims = 1:100)
 jpeg(paste0(path,"JackStrawPlot.jpeg"), units="in", width=10, height=7,res=600)
 JackStrawPlot(object, dims = 80:90)+
     ggtitle("JackStrawPlot")+
-    theme(text = element_text(size=15),	
+    theme(text = element_text(size=15),
           plot.title = element_text(hjust = 0.5,size = 18))
 dev.off()
 npcs =50
@@ -152,7 +152,7 @@ p5 <- UMAPPlot.1(object, group.by="orig.ident",pt.size = 1,label = F,legend.size
                  label.size = 4, repel = T,title = "Harmony intergrated UMAP plot")
 
 #=======1.9 summary =======================================
-lapply(c(TSNEPlot.1, UMAPPlot.1), function(fun) 
+lapply(c(TSNEPlot.1, UMAPPlot.1), function(fun)
     fun(object, group.by="orig.ident",pt.size = 0.5,label = F,
         label.repel = T,alpha = 0.9,cols = Singler.colors,
         no.legend = T,label.size = 4, repel = T, title = "Harmony Integration",
@@ -170,6 +170,7 @@ object$groups = gsub("_.*", "", object$orig.ident)
 object$groups %<>% gsub("N01|N02|N03","Normal",.)
 object$groups %<>% gsub("PtU01|PtU02|PtU03|PtU04","Untreated",.)
 table(object$groups)
+
 save(object, file = "data/MCL_41_harmony_20191231.Rda")
 
 format(object.size(object[["SCT"]]),unit = "GB")

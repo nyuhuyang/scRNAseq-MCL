@@ -24,7 +24,7 @@ path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path))dir.create(path, recursive = T)
 # Need 64GB
 # load files
-(load(file = "data/MCL_41_harmony_20210424.Rda"))
+(load(file = "data/MCL_41_harmony_20210426.Rda"))
 Idents(object) = "Doublets"
 object %<>% subset(idents = "Singlet")
 DefaultAssay(object)  = "SCT"
@@ -39,6 +39,6 @@ cluster_markers = FindMarkers.UMI(object = object,ident.1 = idents.1[args], #0-3
                                   only.pos = F,
                                   test.use = "MAST",
                                   latent.vars = "nFeature_SCT")
-id = idents.1[args]
-if(id < 10) id %<>% paste0("0",.)
+id = sub("_.*",idents.1[args]) %>% as.integer()
+if(id < 10) id =  paste0("0",idents.1[args])
 write.csv(cluster_markers,file = paste0(path,id,"-markers_FC0_",idents.1[args],".csv"))

@@ -3,7 +3,7 @@
 #  0 setup environment, install libraries if necessary, load libraries
 #
 # ######################################################################
-invisible(lapply(c("Seurat","dplyr","cowplot","fgsea",
+invisible(lapply(c("Seurat","dplyr","cowplot","fgsea","kableExtra",
                    "magrittr","data.table","future","ggplot2","tidyr"), function(x) {
                        suppressPackageStartupMessages(library(x,character.only = T))
                    }))
@@ -32,20 +32,51 @@ lapply(c(TSNEPlot.1, UMAPPlot.1), function(fun)
         title = paste(formals(fun)$reduction, "plot for cell types of PALIBR phase I"),
         do.print = T, do.return = F))
 
-Idents(object) = "SCT_snn_res.0.8"
-c_11 <- subset(object, idents = 11)
+
+meta.data = readRDS("output/AIM_meta.data.rds")
+meta.data %<>% filter(SCT_snn_res.0.8 == 9)
+resistant_barcodes <- rownames(meta.data)
+table(gsub("-.*","",resistant_barcodes)) %>% kable %>% kable_styling()
+
+# change barcodes
+object$barcodes = gsub(".*_","",colnames(object))
+table(nchar(object$barcodes))
+object$barcodes %<>% paste0(as.character(object$orig.ident),"-",.)
+keep_resistant <- object$barcodes %in% resistant_barcodes
+keep_resistant <- colnames(object)[keep_resistant]
+##=============================
+object$clusters = as.integer(as.character(object$SCT_snn_res.0.8))
+table(as.character(object@meta.data[keep_resistant,"orig.ident"]),
+      object@meta.data[keep_resistant,"clusters"]) %>%
+    kable %>% kable_styling()
+
+resistant = grep("Pt-2-C30",keep_resistant,value = T,invert = T)
+
+object@meta.data[resistant,"clusters"] = "resistant"
+
+Idents(object) = "clusters"
+resistant <- subset(object, idents = "resistant")
 
 lapply(c(TSNEPlot.1, UMAPPlot.1), function(fun)
-    fun(c_11, group.by="orig.ident",pt.size = 0.5,label = F,
+    fun(resistant, group.by="clusters",pt.size = 0.5,label = F,
         label.repel = T,alpha = 0.9,cols = Singler.colors,
-        no.legend = F,label.size = 4, repel = T,title = "Cluster 11",
+        no.legend = F,label.size = 4, repel = T,title = "resistant cluster in PALIBR",
         do.print = T, do.return = F))
 
+# subset resistant into 2 based on umap
 object@meta.data %<>% cbind(object[["umap"]]@cell.embeddings)
-object$clusters = as.character(object$SCT_snn_res.0.8)
+object@meta.data[colnames(object) %in% keep_resistant &
+                     !(object$orig.ident %in% "Pt2_30Pd") &
+                     object$UMAP_1 >0,"clusters"] = "resistant_1"
+object@meta.data[colnames(object) %in% keep_resistant &
+                     !(object$orig.ident %in% "Pt2_30Pd") &
+                     object$UMAP_1 <0,"clusters"] = "resistant_2"
+Idents(object) = "clusters"
+resistant <- subset(object, idents = c("resistant_1","resistant_2"))
+
 # change cluster 11 Pt2
 c11_pt2 <- object$SCT_snn_res.0.8 == 11 & object$UMAP_1 < 0
-object@meta.data[c11_pt2,"clusters"] %<>% paste0("_Pt2")
+object@meta.data[c11_pt2,"clusters"] = "11_Pt2"
 # subset cluster 5
 c_5 <- subset(object, idents = 5)
 DefaultAssay(c_5)  = "SCT"
@@ -74,4 +105,17 @@ lapply(c(TSNEPlot.1, UMAPPlot.1), function(fun)
         do.print = T, do.return = F))
 object$UMAP_1 = NULL
 object$UMAP_2 = NULL
-save(object, file = "data/MCL_41_harmony_20210424.Rda")
+object$Doublets.1 = NULL
+save(object, file = "data/MCL_41_harmony_20210426.Rda")
+
+csv_list <- list.files("output/20210416",pattern = ".csv",full.names = T)
+deg_list <- pbapply::pblapply(csv_list, function(x){
+    tmp = read.csv(x)
+    cluster = sub(".*markers_FC0_","",x) %>% sub("\\.csv","",.) %>% paste0("cluster_",.)
+    tmp$cluster = cluster
+    tmp$gene = tmp$X
+    tmp[,-1]
+})
+names(deg_list) = gsub(".*markers_FC0_","",csv_list) %>% sub("\\.csv","",.)
+openxlsx::write.xlsx(deg_list, file =  paste0("output/20210416/cluster_deg_PALIBR.xlsx"),
+                     colNames = TRUE,row.names = F,borders = "surrounding",colWidths = c(NA, "auto", "auto"))

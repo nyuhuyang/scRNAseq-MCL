@@ -85,7 +85,7 @@ c_5 %<>% FindNeighbors(reduction = "harmony",dims = 1:85) %>%
 
 TSNEPlot.1(c_5,do.print = T, title = "re-cluster cluster 5 ")
 features <- FilterGenes(object,c("FCN1","ITGAL","ITGAM","FCGR1A",
-                                 "MS4A7","CDKN1C", "CSF1R","FCGR3A",
+                                 "FCGR3A","CDKN1C", "CSF1R","FCGR3A",
                                  "VCAN","S100A8","CD14","CSF3R"))
 FeaturePlot.1(c_5,features = features, pt.size = 0.005, cols = c("gray90", "red"),
               alpha = 1,reduction = "tsne",

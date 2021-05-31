@@ -38,10 +38,6 @@ singler$meta.data$orig.ident = object$orig.ident # the original identities, if n
 singler$meta.data$xy = object@reductions$tsne@cell.embeddings # the tSNE coordinates
 singler$meta.data$clusters = Idents(object) # the Seurat clusters (if 'clusters' not provided)
 save(singler,file="output/singlerT_MCL_41_20200225.Rda")
-##############################
-# add singleR label to Seurat
-###############################
-
 
 ##############################
 # check the spearman correlation
@@ -57,7 +53,9 @@ print(SingleR.DrawHeatmap(singler$singler[[1]]$SingleR.single,top.n = 50,normali
 dev.off()
 
 #Finally, we can also view the labeling as a table compared to the original identities:
-
+singlerDF = data.frame("singler1sub" = singler$singler[[1]]$SingleR.single$labels,
+                       "orig.ident" = gsub("_.*","",singler$singler[[1]]$SingleR.single$cell.names))
+singlerDF = singlerDF[colnames(object),]
 table(singlerDF$singler1sub, singlerDF$orig.ident) %>% kable %>%
         kable_styling()
 ##############################
@@ -94,6 +92,29 @@ table(singlerDF$cell.types, object$orig.ident) %>% kable %>% kable_styling()
 table(singlerDF$singler1sub, object$orig.ident)%>% kable %>% kable_styling()
 table(singlerDF$cell.types %>% sort)%>% kable %>% kable_styling()
 table(singlerDF$cell.types) %>% kable() %>% kable_styling()
+
+#======================================
+# subset Monocytes
+Idents(object) = "SCT_snn_res.0.8"
+c_5 <- subset(object, idents = c(5,16))
+DefaultAssay(c_5)  = "SCT"
+c_5 %<>% FindNeighbors(reduction = "harmony",dims = 1:85)
+c_5 %<>% FindClusters(resolution = 0.1)
+
+TSNEPlot.1(c_5,do.print = T, title = "re-cluster cluster 5 ")
+features <- FilterGenes(object,c("FCN1","ITGAL","ITGAM","FCGR1A",
+                                 "MS4A7","CDKN1C", "CSF1R","FCGR3A",
+                                 "VCAN","S100A8","CD14","CSF3R"))
+FeaturePlot.1(c_5,features = features, pt.size = 0.005, cols = c("gray90", "red"),
+              alpha = 1,reduction = "tsne",
+              threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 4,
+              units = "in",width=12, height=9, no.legend = T)
+
+CD14 <- colnames(c_5)[c_5$SCT_snn_res.0.1 %in% c(0,2)]
+CD16 <- colnames(c_5)[c_5$SCT_snn_res.0.1 == 1]
+singlerDF[CD14,"cell.types"] = "Monocytes:CD14+"
+singlerDF[CD16,"cell.types"] = "Monocytes:CD16+"
+
 ##############################
 # process color scheme
 ##############################
@@ -101,7 +122,7 @@ table(singlerDF$cell.types) %>% kable() %>% kable_styling()
 #singler_colors1 = as.vector(singler_colors$singler.color1[!is.na(singler_colors$singler.color1)])
 #singler_colors1[duplicated(singler_colors1)]
 #singler_colors2 = as.vector(singler_colors$singler.color2[!is.na(singler_colors$singler.color2)])
-singler_colors2 = c("#E6AB02","#6A3D9A", "#2055da", "#FB9A99", "#A65628", "#B3B3B3", "#B3DE69", "#F0027F")
+singler_colors2 = c("#E6AB02","#6A3D9A", "#2055da","#ADDFEE","#FB9A99","#FF0000", "#A65628", "#B3B3B3", "#B3DE69", "#F0027F")
 object <- AddMetaData(object = object,metadata = singlerDF["cell.types"])
 object <- AddMetaColor(object = object, label= "cell.types", colors = singler_colors2)
 Idents(object) <- "cell.types"
@@ -118,12 +139,12 @@ save(object,file="data/MCL_41_harmony_20200225.Rda")
 # draw tsne plot
 ##############################
 object <- subset(object,idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
-Idents(object) = "cell.types"
-object %<>% sortIdent()
 table(Idents(object))
 
+Idents(object)="Doublets"
+object %<>% subset(idents = "Singlet")
 
-cell_Freq <- table(Idents(object)) %>% as.data.frame
+cell_Freq <- table(object$cell.types) %>% as.data.frame
 cell_Freq = cell_Freq[order(cell_Freq$Var1),]
 cell_Freq$col = ExtractMetaColor(object)
 cell_Freq = cell_Freq[order(cell_Freq$Freq,decreasing = T),]
@@ -137,3 +158,19 @@ ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
           title = "Numbers of major cell types in total 43 samples")+NoLegend()+
   theme(plot.title = element_text(hjust = 0.5,size=15))
 dev.off()
+
+
+
+cell_num <- table(object$orig.ident,object$cell.types)
+cell_Freq <- round(prop.table(cell_num,margin = 1)*100,digits = 3) %>%
+  as.data.frame.matrix()
+cell_num %<>% as.data.frame.matrix()
+
+res <- list("cell.types.num"=cell_num,
+            "cell.types.perc" = cell_Freq)
+openxlsx::write.xlsx(res,
+                     file = paste0(path,"20210426_PALIBR_cell.types.xlsx"),
+                     colNames = TRUE, rowNames = TRUE,
+                     borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+
+

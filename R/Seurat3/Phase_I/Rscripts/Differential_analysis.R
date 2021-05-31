@@ -35,10 +35,11 @@ Idents(object) = "clusters"
 
 cluster_markers = FindMarkers.UMI(object = object,ident.1 = idents.1[args], #0-30
                                   group.by = "clusters",
-                                  logfc.threshold = 0,
+                                  logfc.threshold = 0.75,
                                   only.pos = F,
                                   test.use = "MAST",
                                   latent.vars = "nFeature_SCT")
 id = sub("_.*",idents.1[args]) %>% as.integer()
+id = idents.1[args]
 if(id < 10) id =  paste0("0",idents.1[args])
 write.csv(cluster_markers,file = paste0(path,id,"-markers_FC0_",idents.1[args],".csv"))

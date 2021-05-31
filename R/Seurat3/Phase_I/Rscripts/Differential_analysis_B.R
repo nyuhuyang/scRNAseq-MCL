@@ -80,23 +80,31 @@ if(step == 2){ # need 32 GB
 
         (opt = opts[i,])
         object$X4clusters_normal = as.character(object$X4clusters)
-        object$X4clusters_normal %<>% paste(object$cell.types, sep = "_")
-        object$X4clusters_normal %<>% gsub(".*_B_cells","B_cells",.)
-        object$X4clusters_normal %<>% gsub("_MCL","",.)
-        normal <- grepl("N01|N02|N03",object$orig.ident)
+        object@meta.data[object$orig.ident %in% c("N01","N02","N03"),
+                         "X4clusters_normal"] = "Normal"
+        object@meta.data[object$orig.ident %in% "Pt10_LN2Pd",
+                         "X4clusters_normal"] = "Pt10LN2"
+        object@meta.data[object$orig.ident %in% "Pt13_BMA1",
+                         "X4clusters_normal"] = "Pt13BMA1"
+        object@meta.data[object$orig.ident %in% "Pt25_SB1",
+                         "X4clusters_normal"] = "Pt25SB1"
+        object@meta.data[object$orig.ident %in% "Pt25_AMB25Pd",
+                         "X4clusters_normal"] = "Pt25AMB"
 
-        object@meta.data[normal,"X4clusters_normal"] = "Normal"
+
         Idents(object) = "X4clusters_normal"
         object %<>% sortIdent()
         table(Idents(object))
+        opts = c("C1","C2","C3","C4","Pt10LN2","Pt13BMA1","Pt25SB1","Pt25AMB")
+        print(paste0(opts[i]," vs. Normal"))
         system.time(MCL_markers <- FindMarkers.UMI(object,
-                                                   ident.1 = as.character(opt$ident.1),
+                                                   ident.1 = as.character(opts[i]),
                                                    ident.2 = "Normal",
-                                                   logfc.threshold = opt$logfc,
-                                                   only.pos = opt$only.pos,
+                                                   logfc.threshold = 0.25,
+                                                   only.pos = F,
                                                    test.use = "MAST",
                                                    latent.vars = "nFeature_SCT"))
-        write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC0.25.csv"))
 }
 # choose == "X4clusters_vs_B_cells"
 if(step == 3){ # need 32 GB
@@ -166,6 +174,7 @@ if(step == 4){ # need 32 GB
 # choose == "orig.ident_X4clusters_vs_Normal"
 if(step == 5){ # need 32 GB
         object$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
+        Idents(object) = "orig.ident"
         object %<>% subset(idents = "N04",invert = T)
         object$orig.ident_X4clusters = paste0(object$orig.ident, "_", object$X4clusters)
         object$orig.ident_X4clusters %<>% gsub("Normal_.*", "Normal", .)

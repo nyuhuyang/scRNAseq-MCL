@@ -39,18 +39,23 @@ table(Idents(object))
 path <- "Yang/PALIBR/Archive/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
-object$cell.types <- plyr::mapvalues(object@meta.data$cell.types,from = c("B_cells","MCL",
-                                                      "Myeloid cells",
-                                                      "NK_cells","T_cells:CD4+",
-                                                      "T_cells:CD8+"),
-                                             to = c("B","MCL",
-                                                    "Monocytes",
-                                                    "NK","CD4 T",
+object$cell.types <- plyr::mapvalues(object@meta.data$cell.types,
+                                     from = c("B_cells",
+                                              "Monocytes:CD14+",
+                                              "Monocytes:CD16+",
+                                              "NK_cells",
+                                              "T_cells:CD4+",
+                                              "T_cells:CD8+"),
+                                             to = c("B",
+                                                    "CD14 Monocytes",
+                                                    "CD16 Monocytes",
+                                                    "NK",
+                                                    "CD4 T",
                                                     "CD8 T"))
 object$cell.types %<>% as.character()
 object$cell.types.colors = object$cell.types.colors
 Idents(object) = "cell.types"
-object %<>% sortIdent()
+#bject %<>% sortIdent()
 TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "cell.types",
            cols = ExtractMetaColor(object),no.legend = F,border = T,
            pt.size = 0.1, do.print = T,do.return = F,legend.size = 25,
@@ -59,20 +64,19 @@ TSNEPlot.1(object = object, label = F, label.repel = F, group.by = "cell.types",
 #==== Figure 3-B ===========
 features <- FilterGenes(object,c("CD19","CCND1","SOX11",
                                  "CD3D","CD4","CD8A",
-                                 "MS4A7","CD14","FCGR1A",
+                                 "CD14","FCGR3A","FCGR1A",
                                  "GNLY","KLRC1","NCAM1"))
 FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
               alpha = 1,reduction = "tsne",
               threshold = 1, text.size = 20, border = T,do.print = T, do.return = F,ncol = 3,
-              units = "in",width=9, height=12, no.legend = T, save.path = path)
-file.rename(paste0(path,"FeaturePlot__object_cell.types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
-            paste0(path,"FeaturePlot_label.jpeg"))
+              units = "in",width=9, height=12, no.legend = T,
+              save.path = path, file.name = "FeaturePlot_label.jpeg")
 FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "red"),
               alpha = 1,reduction = "tsne",
               threshold = 1, text.size = 0, border = T,do.print = T, do.return = F,ncol = 3,
-              units = "in",width=9, height=12, no.legend = T, save.path = path)
-file.rename(paste0(path,"FeaturePlot__object_cell.types_CD19-CCND1-SOX11-CD3D-CD4-CD8A-MS4A7-CD14-FCGR1A-GNLY-KLRC1-NCAM1_tsne__.jpeg"),
-            paste0(path,"FeaturePlot_nolabel.jpeg"))
+              units = "in",width=9, height=12, no.legend = T,
+              save.path = path, file.name = "FeaturePlot_nolabel.jpeg")
+
 
 #==== Figure 3-C ===========
 path <- "Yang/PALIBR/Archive/Figure 3/Figure Sources/"

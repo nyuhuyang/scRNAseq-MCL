@@ -74,11 +74,6 @@ if(step == 1){ # need 32 GB
 }
 # choose == "X4clusters_vs_Normal"
 if(step == 2){ # need 32 GB
-        opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 5),
-                          logfc =  rep(c(0.25, 0.1, 0.05, 0), each = 5),
-                          ident.1 = rep(c("B_cells",paste0("C",1:4)),      time = 4))
-
-        (opt = opts[i,])
         object$X4clusters_normal = as.character(object$X4clusters)
         object@meta.data[object$orig.ident %in% c("N01","N02","N03"),
                          "X4clusters_normal"] = "Normal"
@@ -104,7 +99,7 @@ if(step == 2){ # need 32 GB
                                                    only.pos = F,
                                                    test.use = "MAST",
                                                    latent.vars = "nFeature_SCT"))
-        write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC0.25.csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC0.25_",i,"_",opts[i],".csv"))
 }
 # choose == "X4clusters_vs_B_cells"
 if(step == 3){ # need 32 GB

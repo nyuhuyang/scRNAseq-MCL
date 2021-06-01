@@ -77,20 +77,12 @@ if(step == 2){ # need 32 GB
         object$X4clusters_normal = as.character(object$X4clusters)
         object@meta.data[object$orig.ident %in% c("N01","N02","N03"),
                          "X4clusters_normal"] = "Normal"
-        object@meta.data[object$orig.ident %in% "Pt10_LN2Pd",
-                         "X4clusters_normal"] = "Pt10LN2"
-        object@meta.data[object$orig.ident %in% "Pt13_BMA1",
-                         "X4clusters_normal"] = "Pt13BMA1"
-        object@meta.data[object$orig.ident %in% "Pt25_SB1",
-                         "X4clusters_normal"] = "Pt25SB1"
-        object@meta.data[object$orig.ident %in% "Pt25_AMB25Pd",
-                         "X4clusters_normal"] = "Pt25AMB"
 
 
         Idents(object) = "X4clusters_normal"
         object %<>% sortIdent()
         table(Idents(object))
-        opts = c("C1","C2","C3","C4","Pt10LN2","Pt13BMA1","Pt25SB1","Pt25AMB")
+        opts = c("C1","C2","C3","C4")
         print(paste0(opts[i]," vs. Normal"))
         system.time(MCL_markers <- FindMarkers.UMI(object,
                                                    ident.1 = as.character(opts[i]),
@@ -100,6 +92,7 @@ if(step == 2){ # need 32 GB
                                                    test.use = "MAST",
                                                    latent.vars = "nFeature_SCT"))
         write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC0.25_",i,"_",opts[i],".csv"))
+
 }
 # choose == "X4clusters_vs_B_cells"
 if(step == 3){ # need 32 GB

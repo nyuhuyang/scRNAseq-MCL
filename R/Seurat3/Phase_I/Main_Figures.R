@@ -87,7 +87,7 @@ Idents(B_cells_MCL) = "orig.ident"
 B_cells_MCL %<>% subset(idents = "Pt2_30Pd", invert = T)
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
-choose = c("X4clusters","X4cluster_vs_Normal","X4cluster_vs_B")[1]
+choose = c("X4clusters","X4cluster_vs_Normal","X4cluster_vs_B")[2]
 filter_by = c("top40","logFC0.01")[1]
 B_cells_MCL[["patient"]] = gsub("_.*","",B_cells_MCL$orig.ident)
 B_cells_MCL[["samples"]] = droplevels(B_cells_MCL[["orig.ident"]])
@@ -147,29 +147,35 @@ if(choose == "X4clusters"){
 
 if(choose == "X4cluster_vs_Normal"){
         B_cells_MCL$X4clusters_normal = as.character(B_cells_MCL$X4clusters)
-        B_cells_MCL$X4clusters_normal %<>% paste(B_cells_MCL$cell.types, sep = "_")
-        B_cells_MCL$X4clusters_normal %<>% gsub(".*_B_cells","B_cells",.)
-        B_cells_MCL$X4clusters_normal %<>% gsub("_MCL","",.)
-        normal <- grepl("N01|N02|N03",B_cells_MCL$orig.ident)
-        B_cells_MCL@meta.data[normal,"X4clusters_normal"] = "Normal"
-        B_cells_MCL@meta.data[,"X4clusters_normal"] %<>% factor(levels = c("Normal","B_cells", paste0("C",1:4)))
-
+        B_cells_MCL@meta.data[B_cells_MCL$orig.ident %in% c("N01","N02","N03"),
+                                "X4clusters_normal"] = "Normal"
         Idents(B_cells_MCL) = "X4clusters_normal"
-        B_cells_MCL %<>% subset(idents = "B_cells", invert = T)
+        #B_cells_MCL %<>% subset(idents = "B_cells", invert = T)
         B_cells_MCL %<>% sortIdent()
         table(Idents(B_cells_MCL))
-        X4clusters_markers = read.csv(file=paste0(path, choose,"/X4cluster_vs_Normal_41-FC0.csv"),
-                                       row.names = 1, stringsAsFactors=F)
-        X4clusters_markers %<>% .[!(.$cluster %in% "B_cells"),]
+        csv_files <- list.files("output/20210531",full.names = T,pattern = ".csv")
+        deg_list <- lapply(csv_files,function(x) {
+                tmp = read.csv(x,row.names = 1, stringsAsFactors=F)
+                tmp$cluster = gsub(".*FC0.25_","",x) %>%
+                        gsub("\\.csv","",.) %>%
+                        gsub("[1-9]_","",.)
+                tmp$gene = rownames(tmp)
+                tmp
+        })
+        X4clusters_markers = bind_rows(deg_list)
+
+        #X4clusters_markers = read.csv(file=paste0(path, choose,"/X4cluster_vs_Normal_41-FC0.csv"),
+        #                               row.names = 1, stringsAsFactors=F)
+        #X4clusters_markers %<>% .[!(.$cluster %in% "B_cells"),]
         table(X4clusters_markers$cluster)
         markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
         (MT_gene <- grep("^MT-",X4clusters_markers$gene))
         X4clusters_markers = X4clusters_markers[-MT_gene,]
-        Top_n = 40
+        Top_n = 30
         top = X4clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
         table(top$cluster)
-        top = top[top$cluster %in% c("C1","C2","C3","C4"),]
-        write.csv(top,paste0(path,choose,"/top40_4clusters_over_normal_genes_heatmap.csv"))
+        #top = top[top$cluster %in% c("C1","C2","C3","C4"),]
+        write.csv(top,paste0("output/20210531/X4cluster_vs_Normal/","top40_4clusters_over_normal_genes_heatmap.csv"))
         features = c(as.character(top$gene),
                      tail(VariableFeatures(object = B_cells_MCL), 2),
                      markers)
@@ -177,18 +183,18 @@ if(choose == "X4cluster_vs_Normal"){
         featuresNum <- make.unique(features, sep = ".")
         B_cells_MCL = MakeUniqueGenes(object = B_cells_MCL, features = features)
 
+        B_cells_MCL$X4clusters_normal %<>% factor(levels = c("Normal", paste0("C",1:4)))
         Idents(B_cells_MCL) = "X4clusters_normal"
-        Idents(B_cells_MCL) %<>% factor(levels = c("Normal", paste0("C",1:4)))
         table(Idents(B_cells_MCL))
         DoHeatmap.2(B_cells_MCL, features = featuresNum, Top_n = Top_n,
                     do.print=T, angle = 0,
-                    group.by = c("X4clusters_normal","samples"),group.bar = T,
-                    group.colors = c("#31aa3a",group.colors),
+                    group.by = c("X4clusters_normal","orig.ident"),group.bar = T,
+                    group.colors = c("#31aa3a",group.colors,Singler.colors[1:4]),
                     title.size = 16, no.legend = F,size=5,hjust = 0.5,
                     group.bar.height = 0.02, label=F, cex.row= 5,
-                    width=13, height=14,
+                    width=14, height=19,
                     pal_gsea = FALSE,
-                    file.name = "Heatmap_top40_X4clusters_vs_normal.jpeg",
+                    file.name = "Heatmap_top30_X4clusters_vs_normal.jpeg",
                     title = "Top 40 DE genes in 4 B/MCL clusters and healthy donors",
                     save.path = paste0(path,choose))
         }
@@ -433,7 +439,7 @@ all(list_samples %>% unlist %>% as.vector %>% unique %in%
 markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 
 Idents(B_cells_MCL) = "orig.ident"
-choose = c("X4cluster_vs_Normal","X4clusters")[2]
+choose = c("X4cluster_vs_Normal","X4clusters")[1]
 run_DE = F
 for(i in c(1,4)){ #1:10
 
@@ -818,9 +824,10 @@ samples = c("N01","PtU01","PtU02","PtU04",#"PtU03",
 samples %<>% factor(levels = as.character(samples))
 
 Idents(object) = "cell.types"
-gene_list <- list("T_cells_CD4+" = c("IL32", "CD52", "TXNIP", "EEF1G", "EML4","TSC22D3"),#"TNFAIP3",
+gene_list <- list("T_cells_CD4+" = c("IL32", "CD52", "TXNIP", "EEF1G", "EML4","TSC22D3",
+                                     "KLRG1","TOX","PDCD1","PCNA"),#"TNFAIP3",
                   "T_cells_CD8+" = c("IL32", "CD52", "LTB", "IFITM1", "JUN", "JUNB", "RPS26",
-                                     "EEF1G", "EML4", "TSC22D3"))#"PIK3R1", "TNFAIP3",
+                                     "EEF1G", "EML4", "TSC22D3","KLRG1","TOX","PDCD1","PCNA"))#"PIK3R1", "TNFAIP3",
 cell.types <- c("T_cells_CD4+","T_cells_CD8+")
 
 #' adjust hex color scheme acorrding to the range, put white color at middle

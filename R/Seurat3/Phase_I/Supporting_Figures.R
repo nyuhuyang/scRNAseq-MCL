@@ -228,3 +228,69 @@ fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark,
                         width = 4.3,height = 4,save.path = paste0(read.path,"/3. CD4 T vs CD8 T/"))
 write.csv(fgseaRes, file = paste0(read.path,"/3. CD4 T vs CD8 T/","Dotplot_FDR1_pval1.csv"))
 
+# support Figure 3
+save_path = "Yang/PALIBR/Fig. S3/"
+object = readRDS(file = "data/MCL_41_B_20200225.rds")
+DefaultAssay(B_cells_MCL) = "SCT"
+Idents(B_cells_MCL) = "Doublets"
+B_cells_MCL %<>% subset(idents = "Singlet")
+
+B_cells_MCL$orig.ident %<>% gsub("^N01|^N02|^N03","Normal",.)
+B_cells_MCL$X4clusters_normal = as.character(B_cells_MCL$X4clusters)
+
+B_cells_MCL@meta.data[B_cells_MCL$orig.ident %in% "Normal","X4clusters_normal"] = "Normal"
+Idents(B_cells_MCL) = "orig.ident"
+opts = c("Pt10_LN2Pd","Pt13_BMA1","Pt25_SB1","Pt25_AMB25Pd")
+
+for(i in 2:length(opts)) {
+        sub_B_cells_MCL <- subset(B_cells_MCL, idents = c("Normal",opts[i]))
+        Idents(sub_B_cells_MCL) = "X4clusters_normal"
+        markers_list <- list()
+        X4Clusters = c("C1","C2","C3","C4")
+        sub_save_path = paste0(save_path,opts[i],"/")
+        if(!dir.exists(sub_save_path)) dir.create(sub_save_path, recursive = T)
+
+        for(c in seq_along(X4Clusters)){
+                markers_list[[c]] = FindMarkers.UMI(sub_B_cells_MCL,
+                                                   ident.1 = X4Clusters[c],
+                                                   ident.2 = "Normal",
+                                                   logfc.threshold = 0.25,
+                                                   only.pos = F,
+                                                   test.use = "MAST",
+                                                   latent.vars = "nFeature_SCT")
+                markers_list[[c]]$cluster = X4Clusters[c]
+                markers_list[[c]]$gene = rownames(markers_list[[c]])
+        }
+        X4clusters_markers = bind_rows(markers_list)
+        table(X4clusters_markers$cluster)
+        write.csv(markers,file = paste0(sub_save_path,opts[i],"X4cluster_Normal-FC0.25.csv"))
+        markers <- FilterGenes(sub_B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
+        (MT_gene <- grep("^MT-",X4clusters_markers$gene))
+        X4clusters_markers = X4clusters_markers[-MT_gene,]
+        Top_n = 40
+        top = X4clusters_markers %>% group_by(cluster) %>% top_n(Top_n, avg_logFC)
+        table(top$cluster)
+        #top = top[top$cluster %in% c("C1","C2","C3","C4"),]
+        write.csv(top,paste0(sub_save_path,"top40_4clusters_over_normal_genes_heatmap.csv"))
+        features = c(as.character(top$gene),
+                     tail(VariableFeatures(object = sub_B_cells_MCL), 2),
+                     markers)
+        sub_B_cells_MCL %<>% ScaleData(features=features)
+        featuresNum <- make.unique(features, sep = ".")
+        sub_B_cells_MCL %<>% MakeUniqueGenes(features = features)
+
+        sub_B_cells_MCL$X4clusters_normal %<>% factor(levels = c("Normal", paste0("C",1:4)))
+        Idents(sub_B_cells_MCL) = "X4clusters_normal"
+        table(Idents(sub_B_cells_MCL))
+        DoHeatmap.2(sub_B_cells_MCL, features = featuresNum, Top_n = Top_n,
+                    do.print=T, angle = 0,
+                    group.by = c("X4clusters_normal","orig.ident"),group.bar = T,
+                    group1.colors = c("#31aa3a","#181ea4","#5f66ec","#f46072","#e6001c"),
+                    title.size = 16, no.legend = F,size=5,hjust = 0.5,
+                    group.bar.height = 0.02, label=F, cex.row= 5,
+                    width=13, height=17,
+                    pal_gsea = FALSE,
+                    file.name = paste0(opts[i],"_Heatmap_top40_X4clusters_vs_normal.jpeg"),
+                    title = paste("Top 40 DE genes in 4 B/MCL clusters and healthy donors in",opts[i]),
+                    save.path = sub_save_path)
+}

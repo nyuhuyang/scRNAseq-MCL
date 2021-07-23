@@ -824,10 +824,10 @@ samples = c("N01","PtU01","PtU02","PtU04",#"PtU03",
 samples %<>% factor(levels = as.character(samples))
 
 Idents(object) = "cell.types"
-gene_list <- list("T_cells_CD4+" = c("IL32", "CD52", "TXNIP", "EEF1G", "EML4","TSC22D3",
-                                     "KLRG1","TOX","PDCD1","PCNA"),#"TNFAIP3",
-                  "T_cells_CD8+" = c("IL32", "CD52", "LTB", "IFITM1", "JUN", "JUNB", "RPS26",
-                                     "EEF1G", "EML4", "TSC22D3","KLRG1","TOX","PDCD1","PCNA"))#"PIK3R1", "TNFAIP3",
+gene_list <- list("T_cells_CD4+" = c("IL32","CD52","EEF1G","EML4","PCNA","TXNIP",
+                                     "KLRG1","IFITM","NFAT5","TOX","TIGIT","PDCD1"),
+                  "T_cells_CD8+" = c("IL32","CD52","EEF1G","EML4","PCNA","TXNIP",
+                                     "KLRG1","IFITM","NFAT5","TOX","TIGIT","PDCD1"))#"PIK3R1", "TNFAIP3",
 cell.types <- c("T_cells_CD4+","T_cells_CD8+")
 
 #' adjust hex color scheme acorrding to the range, put white color at middle
@@ -864,7 +864,7 @@ for(i in seq_along(cell.types)){
                          colors = skewed_corlor(sns.RdBu_r_199,
                                                 Min = min(exp[,as.character(S)]),
                                                 Max = max(exp[,as.character(S)])),
-                         width=ifelse(i == 1,4,4), height=ifelse(i == 1,3,4),res=600,
+                         width=ifelse(i == 1,4,4), height=ifelse(i == 1,4,4),res=600,
                          no.legend = T,
                          cex.row=10,
                          group.bar.height = 0,

@@ -230,7 +230,7 @@ write.csv(fgseaRes, file = paste0(read.path,"/3. CD4 T vs CD8 T/","Dotplot_FDR1_
 
 # support Figure 3
 save_path = "Yang/PALIBR/Fig. S3/"
-object = readRDS(file = "data/MCL_41_B_20200225.rds")
+B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 DefaultAssay(B_cells_MCL) = "SCT"
 Idents(B_cells_MCL) = "Doublets"
 B_cells_MCL %<>% subset(idents = "Singlet")
@@ -241,8 +241,8 @@ B_cells_MCL$X4clusters_normal = as.character(B_cells_MCL$X4clusters)
 B_cells_MCL@meta.data[B_cells_MCL$orig.ident %in% "Normal","X4clusters_normal"] = "Normal"
 Idents(B_cells_MCL) = "orig.ident"
 opts = c("Pt10_LN2Pd","Pt13_BMA1","Pt25_SB1","Pt25_AMB25Pd")
-
-for(i in 2:length(opts)) {
+runDE = FALSE
+for(i in 1:length(opts)) {
         sub_B_cells_MCL <- subset(B_cells_MCL, idents = c("Normal",opts[i]))
         Idents(sub_B_cells_MCL) = "X4clusters_normal"
         markers_list <- list()
@@ -250,20 +250,23 @@ for(i in 2:length(opts)) {
         sub_save_path = paste0(save_path,opts[i],"/")
         if(!dir.exists(sub_save_path)) dir.create(sub_save_path, recursive = T)
 
-        for(c in seq_along(X4Clusters)){
-                markers_list[[c]] = FindMarkers.UMI(sub_B_cells_MCL,
-                                                   ident.1 = X4Clusters[c],
-                                                   ident.2 = "Normal",
-                                                   logfc.threshold = 0.25,
-                                                   only.pos = F,
-                                                   test.use = "MAST",
-                                                   latent.vars = "nFeature_SCT")
-                markers_list[[c]]$cluster = X4Clusters[c]
-                markers_list[[c]]$gene = rownames(markers_list[[c]])
-        }
-        X4clusters_markers = bind_rows(markers_list)
-        table(X4clusters_markers$cluster)
-        write.csv(markers,file = paste0(sub_save_path,opts[i],"X4cluster_Normal-FC0.25.csv"))
+        if(runDE){
+                for(c in seq_along(X4Clusters)){
+                        markers_list[[c]] = FindMarkers.UMI(sub_B_cells_MCL,
+                                                            ident.1 = X4Clusters[c],
+                                                            ident.2 = "Normal",
+                                                            logfc.threshold = 0.25,
+                                                            only.pos = F,
+                                                            test.use = "MAST",
+                                                            latent.vars = "nFeature_SCT")
+                        markers_list[[c]]$cluster = X4Clusters[c]
+                        markers_list[[c]]$gene = rownames(markers_list[[c]])
+                }
+                X4clusters_markers = bind_rows(markers_list)
+                table(X4clusters_markers$cluster)
+                write.csv(X4clusters_markers,file = paste0(sub_save_path,opts[i],"X4cluster_Normal-FC0.25.csv"))
+        } else X4clusters_markers = read.csv(file = paste0(sub_save_path,opts[i],"X4cluster_Normal-FC0.25.csv"))
+
         markers <- FilterGenes(sub_B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
         (MT_gene <- grep("^MT-",X4clusters_markers$gene))
         X4clusters_markers = X4clusters_markers[-MT_gene,]
@@ -294,3 +297,96 @@ for(i in 2:length(opts)) {
                     title = paste("Top 40 DE genes in 4 B/MCL clusters and healthy donors in",opts[i]),
                     save.path = sub_save_path)
 }
+
+# eulerr cut_off_value = 0.5 ============
+read_path = "Yang/PALIBR/Fig. S3/"
+opts = c("Pt10_LN2Pd","Pt13_BMA1","Pt25_SB1","Pt25_AMB25Pd")
+deg_list <- lapply(opts, function(x) {
+        csv_name = list.files(paste0(read_path,x),"^top40",full.names = T)
+        tmp = read.csv(csv_name,stringsAsFactors = F)
+        tmp$sample = x
+        tmp
+})
+
+DEG <- bind_rows(deg_list)
+jpeg(paste0(read_path, "/F3S_top40_Venn_Diagrams.jpeg"),units="in", width=7, height=7,res=600)
+eulerr(df = DEG,group.by = "sample", shape =  "ellipse",cut_off = "avg_logFC",
+       cut_off_value = 0.5)
+dev.off()
+
+comm_shared_genes <- lapply(deg_list, function(df) df[(df$avg_logFC > 0),"gene"]) %>%
+        Reduce(intersect, .)
+length(comm_shared_genes)
+comm_shared_genes %>% kable() %>% kable_styling()
+# eulerr cut_off_value = 0.25 ============
+deg_list <- lapply(opts, function(x) {
+        csv_name = list.files(paste0(read_path,x),"FC0.25",full.names = T)
+        tmp = read.csv(csv_name,stringsAsFactors = F)
+        tmp$sample = x
+        tmp
+})
+
+DEG <- bind_rows(deg_list)
+
+jpeg(paste0(read_path, "/F3S_FC0.25_Venn_Diagrams.jpeg"),units="in", width=7, height=7,res=600)
+eulerr(df = DEG,group.by = "sample", shape =  "ellipse",cut_off = "avg_logFC",
+       cut_off_value = 0.25)
+dev.off()
+#======= dendrogram ============
+df_list <- split(DEG,DEG[,"sample"])
+comm_shared_genes <- lapply(df_list, function(df) df[(df$avg_logFC > 0),]) %>%
+        lapply(function(df) df[(abs(df[,"avg_logFC"]) > 0.25),"gene"]) %>%
+        Reduce(intersect, .)
+length(comm_shared_genes)
+
+B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
+Samples = c("Pt10_LN2Pd","Pt13_BMA1","Pt25_SB1","Pt25_AMB25Pd")
+
+Idents(B_cells_MCL) = "orig.ident"
+B_cells_MCL %<>% subset(idents = Samples)
+exp = AverageExpression(B_cells_MCL,assays = "SCT",features = comm_shared_genes)
+exp = exp$SCT
+
+
+require(gtools)
+require(RColorBrewer)
+require(made4)
+cols <- colorRampPalette(brewer.pal(10, "RdBu"))(256)
+jpeg(paste0(read_path, "/F3_dendrogram_spearman.jpeg"),units="in", width=4.5, height=7.5,res=600)
+heatplot.1(exp,cor.method = "spearman",cexCol=0.6)
+dev.off()
+
+jpeg(paste0(read_path, "/F3_dendrogram_pearson.jpeg"),units="in", width=4.5, height=7.5,res=600)
+heatplot.1(exp,cor.method = "pearson",cexCol=0.6)
+dev.off()
+
+
+ccgenes_shared_mtr =  exp %>% tibble::rownames_to_column("gene") %>%
+        filter(gene %in% c(unlist(cc.genes,use.names = F),"CCND1")) %>%
+        tibble::column_to_rownames("gene")
+
+cc_genes = c(unlist(cc.genes,use.names = F),"CCND1","CDK4") %>% .[. %in% rownames(B_cells_MCL)]
+exp = AverageExpression(B_cells_MCL,assays = "SCT",features = cc_genes)
+exp = exp$SCT
+write.csv(exp,file = paste0(read_path, "/FS3_402_genes.csv"))
+write.csv(exp,file = paste0(read_path, "/FS3_96_genes.csv"))
+
+cols.gentleman <- function() {
+        library(RColorBrewer)
+        hmcol <- colorRampPalette(brewer.pal(10, "RdBu"))(256)
+        return(rev(hmcol))
+}
+
+jpeg(paste0(read_path, "/FS3_ccgenes_dendrogram_spearman~.jpeg"),units="in", width=4.5, height=14,res=600)
+heatplot.1(exp,cor.method = "spearman",cexCol=0.7)
+dev.off()
+
+jpeg(paste0(read_path, "/FS3_ccgenes_dendrogram_spearman.jpeg"),units="in", width=4.5, height=7.5,res=600)
+heatplot.1(exp,cor.method = "spearman",cexCol=0.6)
+dev.off()
+
+jpeg(paste0(read_path, "/FS3_ccgenes_dendrogram_pearson~.jpeg"),units="in", width=4.5, height=7.5,res=600)
+heatplot.1(exp,cor.method = "pearson",cexCol=0.6)
+dev.off()
+
+write.csv(ccgenes_shared_mtr,file = paste0(read_path, "/FS3_ccgenes.csv"))

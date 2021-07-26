@@ -22,18 +22,18 @@ if(!dir.exists("doc")) dir.create("doc")
 df_samples <- readxl::read_excel("doc/20210715_scRNAseq_info.xlsx",sheet = "fastq")
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) %<>% tolower()
-df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I")
-
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I") %>%
+        filter(sample != "Pt11_31")
 # check missing data
 read.path = "../scRNAseq-AIM/data/counts"
 current <- list.files(read.path)
 (current <- current[!grepl(".Rda|RData",current)])
-(missing_data <- df_samples$sample[!(df_samples$sample %in% current)])
+(missing_data <- df_samples$sample.id[!(df_samples$sample.id %in% current)])
 
 #======1.1.2 record data quality before removing low quanlity cells =========================
 # if args 2 is passed
 message("read metrics_summary")
-QC_list <- lapply(df_samples$sample, function(x){
+QC_list <- lapply(df_samples$sample.id, function(x){
         tmp = read.csv(file = paste0(read.path,"/",x,
                                "/outs/metrics_summary.csv"))
         t(tmp)
@@ -49,7 +49,7 @@ cbind.fill <- function(...){
 }
 
 QC <- do.call(cbind.fill, QC_list)
-colnames(QC) = df_samples$sample.id
+colnames(QC) = df_samples$sample
 QC[is.na(QC)] = ""
 
 rownames(QC) = rownames(QC_list[[1]])
@@ -64,19 +64,16 @@ openxlsx::write.xlsx(df_samples, file =  paste0(path,"20210715_scRNAseq_info.xls
 ## Load the GEX dataset
 message("Loading the datasets")
 df_samples %<>% filter(sequence == "GEX")
-Seurat_list <- pblapply(df_samples$sample, function(s){
+Seurat_list <- pblapply(df_samples$sample.id, function(s){
         tmp <- Read10X(data.dir = paste0(read.path,"/",as.character(s),"/outs/filtered_feature_bc_matrix"))
         colnames(tmp) %<>% gsub("-[0-9+]","",.)
-        colnames(tmp) = paste0(colnames(tmp),"-",s)
+        s = df_samples[df_samples$sample.id == s,"sample"]
+        colnames(tmp) = paste0(s,"-", colnames(tmp))
         CreateSeuratObject(tmp,min.cells = 0,names.delim = "-",min.features = 0)
 })
 #========1.1.3 g1 QC plots before filteration=================================
 object <- Reduce(function(x, y) merge(x, y, do.normalize = F), Seurat_list)
 #remove(Seurat_list);GC()
-object$sample = gsub("^[A-Z]*-","",colnames(object))
-object$orig.ident = plyr::mapvalues(object$sample,
-                                    from = df_samples$`sample.id`,
-                                    to = df_samples$`sample`)
 # read and select mitochondial genes
 (mito <- switch (unique(df_samples$organism),
                  "Homo_sapiens" = "^MT-",
@@ -86,8 +83,8 @@ message("mito.genes:")
 
 (mito.features <- grep(pattern = mito, x = rownames(object), value = TRUE))
 object[["percent.mt"]] <- PercentageFeatureSet(object = object, pattern = mito)
+object$orig.ident %<>% factor(levels = df_samples$`sample`)
 Idents(object) = "orig.ident"
-Idents(object) %<>% factor(levels = df_samples$`sample`)
 g1 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
         VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
                 theme(axis.text.x = element_text(size=15,angle = 0,hjust = 0.5),legend.position="none")
@@ -153,4 +150,4 @@ dev.off()
 
 #====
 format(object.size(object),unit = "GB")
-saveRDS(object, file = "data/MCL_52_20210715.rds")
+saveRDS(object, file = "data/MCL_51_20210724.rds")

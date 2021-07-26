@@ -16,8 +16,8 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 ##############################
 # create singleR data frame
 ###############################
-pred = readRDS("output/MCL_SCT_52_20210715_singleR_pred.rds")
-object = readRDS(file = "data/MCL_SCT_52_20210715.rds")
+pred = readRDS("output/MCL_SCT_51_20210724_singleR_pred.rds")
+object = readRDS(file = "data/MCL_SCT_51_20210724.rds")
 
 singlerDF = data.frame("label.fine" = pred$pruned.labels,
                        row.names = rownames(pred))
@@ -36,7 +36,7 @@ singlerDF[grep("CD4+",singlerDF$cell.types),"cell.types"] ="T_cells:CD4+"
 singlerDF[grep("CD8+",singlerDF$cell.types),"cell.types"] ="T_cells:CD8+"
 singlerDF$cell.types %<>% gsub("Tregs","T_cells:regs",.)
 singlerDF$cell.types %<>% gsub("MEP|CLP|HSC|CMP|GMP|MPP","HSC/progenitors",.)
-singlerDF$cell.types %<>% gsub("DC|Macrophages|Macrophages M1","Macrophages",.)
+singlerDF$cell.types %<>% gsub("DC|Macrophages|Macrophages M1","other Myeloid cells",.)
 singlerDF$cell.types %<>% gsub("Eosinophils|Megakaryocytes","other Myeloid cells",.)
 singlerDF$cell.types %<>% gsub("Adipocytes|Fibroblasts|mv Endothelial cells|Keratinocytes","Nonhematopoietic cells",.)
 
@@ -77,7 +77,7 @@ lapply(c(TSNEPlot.1,UMAPPlot.1), function(fun)
         do.print = T,do.return = F,
         title ="labeling by blue_encode and MCL RNA-seq"))
 
-saveRDS(object, file = "data/MCL_SCT_52_20210715.rds")
+saveRDS(object, file = "data/MCL_SCT_51_20210724.rds")
 
 
 # by barplot

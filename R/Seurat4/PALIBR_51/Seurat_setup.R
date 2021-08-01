@@ -144,6 +144,7 @@ system.time(object %<>% RunTSNE(reduction = "harmony", dims = 1:npcs))
 
 saveRDS(object, file = "data/MCL_51_20210724.rds")
 #=======1.9 save SCT only =======================================
+format(object.size(object),unit = "GB")
 
 format(object.size(object@assays$RNA),unit = "GB")
 format(object.size(object@assays$integrated),unit = "GB")

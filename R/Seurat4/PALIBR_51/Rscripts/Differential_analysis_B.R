@@ -26,11 +26,14 @@ DefaultAssay(object) = "SCT"
 object = subset(object, subset =  Doublets == "Singlet"
                                 & X4cluster  %in% c("1","2","3","4")
 )
+
+
+object = subset(object, subset =  orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6"), invert = T)
+
 Idents(object) = "X4cluster"
 table(Idents(object))
 
 object$X4cluster %<>% factor(levels=c("1","2","3","4"))
-markers <- FilterGenes(object,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
 
 
 step = 1
@@ -63,7 +66,7 @@ if(step == 1){ # need 32 GB
                                                    logfc.threshold = 0,
                                                    only.pos = FALSE,
                                                    test.use = "wilcox"))
-        write.csv(MCL_markers,paste0(path,"MCL_only_41-FC0_cluster",i,".csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_only_51-FC0_cluster",i,".csv"))
 }
 # choose == "X4clusters_vs_Normal"
 if(step == 2){ # need 32 GB

@@ -28,36 +28,34 @@ object = subset(object, subset =  Doublets == "Singlet"
 )
 
 
-object = subset(object, subset =  orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6"), invert = T)
-
-Idents(object) = "X4cluster"
-table(Idents(object))
-
-object$X4cluster %<>% factor(levels=c("1","2","3","4"))
-
-
-step = 1
+step = 0
 # choose == "MCL_vs_B_cells"
 if(step == 0){  # need 32 GB
         # load data
         samples = as.character(unique(object$orig.ident))
-        opts = data.frame(ident.1 = samples[2:length(samples)],
-                          ident.2 = rep("N01", length(samples)-1),
-                          stringsAsFactors = F)
-        (opt = opts[i,])
-        object %<>% subset(idents = c(opt$ident.1,"N01"))
+        samples = samples[!samples %in% c("N01","N02","N03","N04")]
+        print(ident.1 <- samples[i])
+
+        Idents(object) = "orig.ident"
+        object %<>% subset(idents = c(ident.1,"N01"))
 
         MCL_markers <- FindAllMarkers_UMI(object,
                                         logfc.threshold = 0,
                                         only.pos = F,
                                         return.thresh = 1,
-                                        test.use = "wilcox",
+                                        test.use = "MAST",
                                         latent.vars = "nFeature_SCT")
 
-        write.csv(MCL_markers,paste0(path,"MCL_B_",opt$ident.1, "-N01.csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_B_",ident.1, "-vs-N01.csv"))
 }
 # choose == "X4clusters"
 if(step == 1){ # need 32 GB
+        object = subset(object, subset =  orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6"), invert = T)
+        object = subset(object, subset =  orig.ident %in% c("N01","N02","N03","N04"), invert = T)
+
+        Idents(object) = "X4cluster"
+        table(Idents(object))
+        object$X4cluster %<>% factor(levels=c("1","2","3","4"))
 
         system.time(MCL_markers <- FindMarkers_UMI(object,
                                                    ident.1 = as.character(i),
@@ -65,7 +63,7 @@ if(step == 1){ # need 32 GB
                                                    return.thresh = 1,
                                                    logfc.threshold = 0,
                                                    only.pos = FALSE,
-                                                   test.use = "wilcox"))
+                                                   test.use = "MAST"))
         write.csv(MCL_markers,paste0(path,"MCL_only_51-FC0_cluster",i,".csv"))
 }
 # choose == "X4clusters_vs_Normal"
@@ -85,7 +83,7 @@ if(step == 2){ # need 32 GB
                                                    ident.2 = "Normal",
                                                    logfc.threshold = 0.25,
                                                    only.pos = F,
-                                                   test.use = "wilcox",
+                                                   test.use = "MAST",
                                                    latent.vars = "nFeature_SCT"))
         write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC0.25_",i,"_",opts[i],".csv"))
 
@@ -110,7 +108,7 @@ if(step == 3){ # need 32 GB
                                                    ident.2 = "B_cells",
                                                    logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
-                                                   test.use = "wilcox",
+                                                   test.use = "MAST",
                                                    latent.vars = "nFeature_SCT"))
         write.csv(MCL_markers,paste0(path,"MCL_B_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
 }
@@ -149,7 +147,7 @@ if(step == 4){ # need 32 GB
         system.time(B_markers <- FindAllMarkers.UMI(object,
                                                    logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
-                                                   test.use = "wilcox",
+                                                   test.use = "MAST",
                                                    return.thresh = 1,
                                                    latent.vars = "nFeature_SCT"))
         write.csv(B_markers,paste0(path,"B_41-FC",opt$logfc,"_",
@@ -175,7 +173,7 @@ if(step == 5){ # need 32 GB
         system.time(B_markers <- FindAllMarkers.UMI(object,
                                                     logfc.threshold = 0,
                                                     only.pos = T,
-                                                    test.use = "wilcox",
+                                                    test.use = "MAST",
                                                     return.thresh = 1,
                                                     latent.vars = "nFeature_SCT"))
         write.csv(B_markers, paste0(save.path,"DE_FC0_",s,"-Normal",".csv"))
@@ -253,7 +251,7 @@ if(step == 6){ # need 32 GB
                                                  ident.2 = ident.2,
                                                  logfc.threshold = 0,
                                                  only.pos = F,
-                                                 test.use = "wilcox",
+                                                 test.use = "MAST",
                                                  return.thresh = 1,
                                                  latent.vars = "nFeature_SCT"))
         write.csv(B_markers, paste0(save.path,"DE_FC0_",opt[2],"_",opt[1],".csv"))
@@ -299,7 +297,7 @@ if(step == 7){
         gde.markers <- FindAllMarkers.UMI(subset.MCL,
                                        logfc.threshold = 0.05,
                                        only.pos = T,
-                                       test.use = "wilcox")
+                                       test.use = "MAST")
         write.csv(gde.markers,paste0(path,opt$group,"_",opt$cluster,
                                      "_FC0.05_markers.csv"))
         (mito.genes <- grep(pattern = "^MT-", x = gde.markers$gene))
@@ -357,7 +355,7 @@ if(step == 8){
                                           logfc.threshold = 0,
                                           return.thresh = 1,
                                           only.pos = F,
-                                          test.use = "wilcox",
+                                          test.use = "MAST",
                                           latent.vars = "nFeature_SCT")
         write.csv(MCL_markers,paste0(save.path,"MCL_vs_B_within_",X4Cluster,
                                      "_FC0_markers.csv"))

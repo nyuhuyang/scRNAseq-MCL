@@ -14,44 +14,34 @@ library(tibble)
 library(ggsci)
 library(openxlsx)
 library(gplots)
-source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4_functions.R")
 
 # load data
-(load(file="data/MCL_41_harmony_20200225.Rda"))
-df_samples <- readxl::read_excel("doc/191120_scRNAseq_info.xlsx")
-colnames(df_samples) <- colnames(df_samples) %>% tolower
-table(object$orig.ident)
-
-(df_samples = df_samples[df_samples$`sample name` %in% object$orig.ident,])
-(samples = df_samples$`sample name`[df_samples$`sample name` %in% object$orig.ident])
+object = readRDS(file ="data/MCL_SCT_51_20210724.rds")
+df_samples <- readxl::read_excel("doc/20210715_scRNAseq_info.xlsx",sheet = "fastq")
+df_samples = as.data.frame(df_samples)
+colnames(df_samples) %<>% tolower()
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I") %>%
+        filter(sample != "Pt11_31")
+table(df_samples$sample %in% object$orig.ident)
+table(object$orig.ident %in% df_samples$sample)
+(df_samples[!df_samples$sample %in% object$orig.ident,])
+(samples = df_samples$sample[df_samples$sample %in% object$orig.ident])
 
 # preprocess
 object$orig.ident %<>% factor(levels = samples)
-Idents(object) = "orig.ident"
-object %<>% subset(idents = "Pt2_30Pd", invert = T)
-Idents(object) = "Doublets"
-object %<>% subset(idents = "Singlet")
+#Idents(object) = "orig.ident"
+#object %<>% subset(idents = "Pt2_30Pd", invert = T)
+#Idents(object) = "Doublets"
+#object %<>% subset(idents = "Singlet")
 Idents(object) = "cell.types"
-object %<>% subset(idents = c("HSC/progenitors","Nonhematopoietic cells"), invert = TRUE)
+object %<>% subset(idents = c("HSC/progenitors","Nonhematopoietic cells","unknown"), invert = TRUE)
 table(Idents(object))
 
 #==== Figure 3-A ===========
 path <- "Yang/PALIBR/Archive/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
-object$cell.types <- plyr::mapvalues(object@meta.data$cell.types,
-                                     from = c("B_cells",
-                                              "Monocytes:CD14+",
-                                              "Monocytes:CD16+",
-                                              "NK_cells",
-                                              "T_cells:CD4+",
-                                              "T_cells:CD8+"),
-                                             to = c("B",
-                                                    "CD14 Monocytes",
-                                                    "CD16 Monocytes",
-                                                    "NK",
-                                                    "CD4 T",
-                                                    "CD8 T"))
 object$cell.types %<>% as.character()
 object$cell.types.colors = object$cell.types.colors
 Idents(object) = "cell.types"
@@ -81,7 +71,6 @@ FeaturePlot.1(object,features = features, pt.size = 0.005, cols = c("gray90", "r
 #==== Figure 3-C ===========
 path <- "Yang/PALIBR/Archive/Figure 3/Figure Sources/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
-
 B_cells_MCL = readRDS(file = "data/MCL_41_B_20200225.rds")
 Idents(B_cells_MCL) = "orig.ident"
 B_cells_MCL %<>% subset(idents = "Pt2_30Pd", invert = T)

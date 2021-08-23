@@ -28,7 +28,7 @@ object = subset(object, subset =  Doublets == "Singlet"
 )
 
 
-step = 0
+step = 2
 # choose == "MCL_vs_B_cells"
 if(step == 0){  # need 32 GB
         # load data
@@ -50,6 +50,7 @@ if(step == 0){  # need 32 GB
 }
 # choose == "X4clusters"
 if(step == 1){ # need 32 GB
+
         object = subset(object, subset =  orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6"), invert = T)
         object = subset(object, subset =  orig.ident %in% c("N01","N02","N03","N04"), invert = T)
 
@@ -68,24 +69,24 @@ if(step == 1){ # need 32 GB
 }
 # choose == "X4clusters_vs_Normal"
 if(step == 2){ # need 32 GB
-        object$X4clusters_normal = as.character(object$X4clusters)
+        object = subset(object, subset =  orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6"), invert = T)
+        object$X4clusters_normal = as.character(object$X4cluster)
         object@meta.data[object$orig.ident %in% c("N01","N02","N03"),
                          "X4clusters_normal"] = "Normal"
 
 
         Idents(object) = "X4clusters_normal"
-        object %<>% sortIdent()
         table(Idents(object))
-        opts = c("C1","C2","C3","C4")
+        opts = as.character(1:4)
         print(paste0(opts[i]," vs. Normal"))
-        system.time(MCL_markers <- FindMarkers.UMI(object,
-                                                   ident.1 = as.character(opts[i]),
+        system.time(MCL_markers <- FindMarkers_UMI(object,
+                                                   ident.1 = opts[i],
                                                    ident.2 = "Normal",
                                                    logfc.threshold = 0.25,
                                                    only.pos = F,
                                                    test.use = "MAST",
                                                    latent.vars = "nFeature_SCT"))
-        write.csv(MCL_markers,paste0(path,"MCL_Normal_41-FC0.25_",i,"_",opts[i],".csv"))
+        write.csv(MCL_markers,paste0(path,"MCL_Normal_51-FC0.25_",i,"_",opts[i],".csv"))
 
 }
 # choose == "X4clusters_vs_B_cells"
@@ -103,7 +104,7 @@ if(step == 3){ # need 32 GB
         Idents(object) = "X4clusters_B"
         object %<>% sortIdent()
         table(Idents(object))
-        system.time(MCL_markers <- FindMarkers.UMI(object,
+        system.time(MCL_markers <- FindMarkers_UMI(object,
                                                    ident.1 = as.character(opt$ident.1),
                                                    ident.2 = "B_cells",
                                                    logfc.threshold = opt$logfc,

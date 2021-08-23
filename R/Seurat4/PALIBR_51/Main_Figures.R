@@ -221,30 +221,57 @@ write.csv(fgseaRes, file = paste0(path,"/Fig3E_Dotplot",choose,"_FDR0.25_pval0.0
 
 #==== Figure 3-F venn diagram ===========
 path <- "Yang/PALIBR/51_samples/Fig. 3/"
+read_path = "output/20210812_MCL_vs_N01/"
+PD_sampples = c("Pt10_LN2","Pt13_BMA1","Pt25_SB1","Pt25_AMB25",
+         "Pt15_BMA1","Pt18_5_1","Pt18_5_8","Pt25_25")
+deg_list <- lapply(PD_sampples, function(x) {
+        csv_name = paste0(read_path,"MCL_B_",x,"-vs-N01.csv")
+        tmp = read.csv(csv_name,stringsAsFactors = F)
+        tmp$sample = x
+        tmp
+})
 
+gde.all <- bind_rows(deg_list)
+gde.all %<>% filter(avg_log2FC >0) %>% filter(cluster != "N01")
 
-opts <- data.frame("choose" = rep(c("X4clusters","X4cluster_vs_Normal"), each = 2),
-                   "LogFC" = c(0,0.1,0,0.25), stringsAsFactors = F)
-
-choose = "X4cluster"
-gde.all = read.csv(file = paste0(path,"/MCL_only_",choose,"_51-FC0.csv"),
-                   row.names = 1, stringsAsFactors=F)
-gde.all = gde.all[gde.all$p_val_adj <0.01 ,]
-
-for(value in c(0.5,0.25,0.1)){
-        pos_genes <- eulerr(gde.all,shape =  "circle",#key = c("C1","C2","C3","C4","B_cells"),
-                              cut_off = "avg_log2FC", cut_off_value = value,do.print = T,return.raw = T,
-                              save.path = path, file.name =paste0("Fig3F_Venn_log2FC_",value,".jpeg"))
+for(value in c(1,0.05,0.01,0.001)){
+        pos_genes <- eulerr(gde.all,group.by = "cluster", shape =  "circle",#key = c("C1","C2","C3","C4","B_cells"),
+                            cut_off = "p_val_adj", cut_off_value = value,do.print = T,return.raw = T,
+                            save.path = path, file.name =paste0("Fig3F_Venn_padj_",value,".jpeg"))
         euler_df <- eulerr::euler(pos_genes,shape = "circle")
         pos_genes_list <- as.list(euler_df$original.values)
         names(pos_genes_list) %<>% paste(":",pos_genes_list)
-        id <- eulerr:::bit_indexr(4)
+        id <- eulerr:::bit_indexr(8)
         for (i in nrow(id):1) {
                 pos_genes_list[[i]] = Reduce(intersect, pos_genes[id[i,]])  %>%
                         setdiff(Reduce(union, pos_genes[!id[i,]]))
         }
         pos_genes_df <- list2df(pos_genes_list)
+        pos_genes_df = pos_genes_df[,sapply(pos_genes_list,length) != 0]
+        write.xlsx(pos_genes_df, asTable = F,
+                   file = paste0(path,"Fig3F_Venn_postive_shared_gene_list_padj",value,".xlsx"),
+                   borders = "surrounding")
+        print(value)
+}
+
+gde.all <- bind_rows(deg_list)
+gde.all %<>% filter(p_val_adj <0.01) %>% filter(cluster != "N01")
+for(value in c(0.5,0.25,0.1, 0)){
+        pos_genes <- eulerr(gde.all,group.by = "cluster", shape =  "circle",#key = c("C1","C2","C3","C4","B_cells"),
+                              cut_off = "avg_log2FC", cut_off_value = value,do.print = T,return.raw = T,
+                              save.path = path, file.name =paste0("Fig3F_Venn_log2FC_",value,".jpeg"))
+        euler_df <- eulerr::euler(pos_genes,shape = "circle")
+        pos_genes_list <- as.list(euler_df$original.values)
+        names(pos_genes_list) %<>% paste(":",pos_genes_list)
+        id <- eulerr:::bit_indexr(8)
+        for (i in nrow(id):1) {
+                pos_genes_list[[i]] = Reduce(intersect, pos_genes[id[i,]])  %>%
+                        setdiff(Reduce(union, pos_genes[!id[i,]]))
+        }
+        pos_genes_df <- list2df(pos_genes_list)
+        pos_genes_df = pos_genes_df[,sapply(pos_genes_list,length) != 0]
         write.xlsx(pos_genes_df, asTable = F,
                    file = paste0(path,"Fig3F_Venn_postive_shared_gene_list_FC",value,".xlsx"),
                    borders = "surrounding")
+        print(value)
 }

@@ -152,6 +152,9 @@ object[['RNA']] <- NULL
 object[['integrated']] <- NULL
 format(object.size(object),unit = "GB")
 
+object[["SCT"]]@scale.data = matrix(0,0,0)
+#object[["SCT"]]@counts = matrix(0,0,0)
+
 saveRDS(object, file = "data/MCL_SCT_51_20210724.rds")
 
 

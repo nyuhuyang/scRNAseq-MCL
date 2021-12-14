@@ -15,7 +15,6 @@ source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3
 source("R/util.R")
 
 # run below line in cluster
-#export OMP_NUM_THREADS=1; OPENBLAS_NUM_THREADS=1;
 
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path))dir.create(path, recursive = T)
@@ -33,6 +32,8 @@ object = readRDS(file = "data/MCL_SCT_51_20210724.rds")
 object_list <- SplitObject(object,split.by = "orig.ident")
 rm(object);GC()
 ## pK Identification (no ground-truth) ---------------------------------------------------------------------------------------
+Sys.setenv("OMP_NUM_THREADS" = 16)
+
 npcs = 100
 sweep.res_list <- list()
 for (i in 1:length(object_list)) {
@@ -82,6 +83,7 @@ meta.data_list <- lapply(object_list, function(x) {
     })
 meta.data = bind_rows(meta.data_list)
 rownames(meta.data) = meta.data$row.names
+
 object = readRDS(file = "data/MCL_SCT_51_20210724.rds")
 meta.data = meta.data[rownames(object@meta.data),]
 meta.data$doublets = gsub("Doublet","Doublet-Low Confidence",meta.data$Low_confident_doublets)

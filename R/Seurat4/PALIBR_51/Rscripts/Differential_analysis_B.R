@@ -145,7 +145,7 @@ if(step == 4){ # need 32 GB
                 ident.2 = "C2_Pt25_1"
                 object %<>% subset(idents = c(ident.1,ident.2))
         }
-        system.time(B_markers <- FindAllMarkers.UMI(object,
+        system.time(B_markers <- FindMarkers_UMI(object,
                                                    logfc.threshold = opt$logfc,
                                                    only.pos = opt$only.pos,
                                                    test.use = "MAST",
@@ -171,7 +171,7 @@ if(step == 5){ # need 32 GB
 
         save.path = paste0(path,"X4cluster_vs_Normal/",gsub("_.*","",s),"/")
         if(!dir.exists(save.path))dir.create(save.path, recursive = T)
-        system.time(B_markers <- FindAllMarkers.UMI(object,
+        system.time(B_markers <- FindMarkers_UMI(object,
                                                     logfc.threshold = 0,
                                                     only.pos = T,
                                                     test.use = "MAST",
@@ -295,7 +295,7 @@ if(step == 7){
         if(any(df$Freq < 5)) subset.MCL %<>% subset(idents = df[df$Freq >= 5,"Var1"])
         Idents(subset.MCL) = "orig.ident"
 
-        gde.markers <- FindAllMarkers.UMI(subset.MCL,
+        gde.markers <- FindMarkers_UMI(subset.MCL,
                                        logfc.threshold = 0.05,
                                        only.pos = T,
                                        test.use = "MAST")
@@ -352,7 +352,7 @@ if(step == 8){
         sub_object <- subset(object,idents = X4Cluster)
         Idents(sub_object) = "cell.types"
 
-        MCL_markers <- FindAllMarkers.UMI(sub_object,
+        MCL_markers <- FindMarkers_UMI(sub_object,
                                           logfc.threshold = 0,
                                           return.thresh = 1,
                                           only.pos = F,
@@ -429,4 +429,28 @@ if(step == 8){
                     X4Cluster,".jpeg"), units="in", width=10, height=7,res=600)
         print(p)
         dev.off()
+}
+
+# choose == "response_X4clusters_vs_rest in CR and PD"
+if(step == 6){ # need 32 GB
+        object = subset(object, subset =  response %in% c("CR","PD"))
+        object$response %<>% droplevels()
+        object$response_X4clusters = paste0(object$response,"_",object$X4cluster)
+
+        # remove cluster with less than 3 cells======
+        opts = as.data.frame(table(object$response_X4clusters)) %>% filter(Freq >= 3) #8
+        print(opt <- as.character(opts[i,1]))
+
+        save.path = paste0(path,"response_X4clusters_vs_rest/")
+        if(!dir.exists(save.path))dir.create(save.path, recursive = T)
+        Idents(object) = "response_X4clusters"
+        system.time(B_markers <- FindMarkers_UMI(object,
+                                                 ident.1 = opt,
+                                                 logfc.threshold = 0.1,
+                                                 only.pos = F,
+                                                 test.use = "MAST",
+                                                 latent.vars = "nFeature_SCT"))
+        B_markers$cluster = opt
+        B_markers$gene = rownames(B_markers)
+        write.csv(B_markers, paste0(save.path,opt,"_FC0.1_.csv"))
 }

@@ -6,7 +6,7 @@
 #SBATCH --job-name=velocyto
 #SBATCH --mem=256G  # memory requested, units available: K,M,G,T
 
-conda activate scanpy
+conda activate r4.0.3
 #---------------------Variables to be set-------------------------#
 PROJECT_NAME="scRNAseq-MCL"
 path=/athena/elementolab/scratch/yah2014/Projects/${PROJECT_NAME}/data/bam

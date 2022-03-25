@@ -28,7 +28,7 @@ object = subset(object, subset =  Doublets == "Singlet"
 )
 
 
-step = 2
+step = 9
 # choose == "MCL_vs_B_cells"
 if(step == 0){  # need 32 GB
         # load data
@@ -432,7 +432,7 @@ if(step == 8){
 }
 
 # choose == "response_X4clusters_vs_rest in CR and PD"
-if(step == 6){ # need 32 GB
+if(step == 8){ # need 32 GB
         object = subset(object, subset =  response %in% c("CR","PD"))
         object$response %<>% droplevels()
         object$response_X4clusters = paste0(object$response,"_",object$X4cluster)

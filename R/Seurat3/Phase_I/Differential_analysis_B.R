@@ -15,7 +15,7 @@ library(eulerr)
 library(openxlsx)
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
 
-path <- "Yang/Figure Sources/"
+path <- "Yang/Figure Sources/51_samples/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #============= after running Differential_analysis.R Rsscript ===========
 # X4clusters =====
@@ -32,14 +32,14 @@ for(i in seq_along(idents.all)){
 }
 gde.all <- bind_rows(genes.de)
 rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$gene))
-write.csv(gde.all, file = paste0(path,"Figure Sources/",choose,"/",choose,"_41-FC0.1.csv"))
+write.csv(gde.all, file = paste0(path,"heatmaps_full/",choose,"/",choose,"_51-FC0.csv"))
 #============
 choose = "X4cluster_vs_Normal"
-(de_file_names = list.files("output/20200226",pattern = "MCL_B_41-FC0.25_"))
-idents.all = c("B_cells",paste0("C",1:4))
+(de_file_names <- list.files("output/20210823_MCL_vs_Normal",pattern = "MCL_Normal_51"))
+idents.all = 1:4
 genes.de <- list()
 for(i in seq_along(idents.all)){
-        genes.de[[i]] <- read.csv(paste0("output/20200226/",de_file_names[i]),
+        genes.de[[i]] <- read.csv(paste0("output/20210823_MCL_vs_Normal/",de_file_names[i]),
                                   stringsAsFactors = F,row.names = 1)
         genes.de[[i]] <- genes.de[[i]][order(genes.de[[i]]$p_val, -genes.de[[i]][, 2]), ]
 
@@ -48,23 +48,8 @@ for(i in seq_along(idents.all)){
 }
 gde.all <- bind_rows(genes.de)
 rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$gene))
-write.csv(gde.all, file = paste0(path,"Figure Sources/",choose,"/",choose,"_41-FC0.25.csv"))
-#============
-choose = "X4cluster_vs_B"
-(de_file_names = list.files("output/20200227",pattern = "MCL_B_41-FC0_"))
-idents.all = paste0("C",1:4)
-genes.de <- list()
-for(i in seq_along(idents.all)){
-        genes.de[[i]] <- read.csv(paste0("output/20200227/",de_file_names[i]),
-                                  stringsAsFactors = F,row.names = 1)
-        genes.de[[i]] <- genes.de[[i]][order(genes.de[[i]]$p_val, -genes.de[[i]][, 2]), ]
+write.csv(gde.all, file = paste0(path,"heatmaps_full/",choose,"/",choose,"_51-FC0.25.csv"))
 
-        genes.de[[i]]$cluster <- idents.all[i]
-        genes.de[[i]]$gene <- rownames(x = genes.de[[i]])
-}
-gde.all <- bind_rows(genes.de)
-rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$gene))
-write.csv(gde.all, file = paste0(path,choose,"/",choose,"_41-FC0.csv"))
 #===================
 path <- "Yang/Figure Sources/Log2UMI/"
 if(!dir.exists(path)) dir.create(path, recursive = T)

@@ -36,6 +36,9 @@ RemoveDup <- function(mat){
 MCL_B_bulk <- inner_join(B_bulk, MCL_bulk, by = "X")
 MCL_B_bulk <- RemoveDup(MCL_B_bulk);dim(MCL_B_bulk)
 colnames(MCL_B_bulk) %<>% gsub("X","Pt",.)
+TPM = pbapply::pbapply(MCL_B_bulk,2, function(x) x/sum(x)* 10^6)
+
+
 #======= clean "1-Sep"  "1-Mar"  "10-Sep" "10-Mar" "1-Dec"  ==========
 grep("^[0-9]{1,2}-",rownames(MCL_B_bulk),value = T) %>% sort
 Excel_gene = data.frame("Excel_gene" = grep("^[0-9]{1,2}-",rownames(MCL_B_bulk),value = T) %>% sort)

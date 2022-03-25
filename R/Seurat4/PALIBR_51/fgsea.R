@@ -14,7 +14,7 @@ library(tibble)
 library(ggsci)
 library(progress)
 
-source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 
@@ -26,7 +26,7 @@ deg_list <- pbapply::pblapply(csv_list, function(x){
     tmp = tmp[order(tmp$avg_log2FC,decreasing = T), ]
     #tmp = tmp[tmp$avg_log2FC > 0, ]
     tmp
-    
+
 })
 
 
@@ -70,7 +70,6 @@ hallmark %<>% lapply(function(x) Hmisc::capitalize(tolower((x))))
 #=========
 res =  bind_rows(deg_list)
 res$cluster = res$cell.type
-colnames(res)[2] = "avg_logFC"
 (clusters = unique(as.character(res$cluster)))
 
 # hallmark
@@ -80,7 +79,7 @@ Fgsea_res <- FgseaDotPlot(stats=res, pathways=hallmark,Rowv = T,
                  axis.text.x = element_text(angle = 45, hjust = 1,size = 12),
                  width = 6,do.return = T)
 colnames(Fgsea_res)[5] = "cell.type"
-openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ), 
+openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ),
                      file =  paste0(path,"hallmark_gsea.xlsx"),
                      colNames = TRUE,row.names = F,borders = "surrounding",colWidths = c(NA, "auto", "auto"))
 
@@ -91,7 +90,7 @@ Fgsea_res <- FgseaDotPlot(stats=res, pathways=msigdb_list[["Biocarta"]],Rowv = T
                           axis.text.x = element_text(angle = 45, hjust = 1,size = 12),
                           height= 10,width = 5,do.return = T)
 colnames(Fgsea_res)[5] = "cell.type"
-openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ), 
+openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ),
                      file =  paste0(path,"Biocarta_gsea.xlsx"),
                      colNames = TRUE,row.names = F,borders = "surrounding",colWidths = c(NA, "auto", "auto"))
 
@@ -102,7 +101,7 @@ Fgsea_res <- FgseaDotPlot(stats=res, pathways=msigdb_list[["kegg"]],Rowv = T,
                           axis.text.x = element_text(angle = 45, hjust = 1,size = 11),
                           height= 7.5,width = 6,do.return = T)
 colnames(Fgsea_res)[5] = "cell.type"
-openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ), 
+openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ),
                      file =  paste0(path,"kegg_gsea.xlsx"),
                      colNames = TRUE,row.names = F,borders = "surrounding",colWidths = c(NA, "auto", "auto"))
 
@@ -116,7 +115,7 @@ Fgsea_res <- FgseaDotPlot(stats=res, pathways=msigdb_list[["reactome"]],
                           axis.text.x = element_text(angle = 45, hjust = 1,size = 11),
                           height= 8,width = 12,do.return = T)
 colnames(Fgsea_res)[5] = "cell.type"
-openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ), 
+openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ),
                      file =  paste0(path,"reactome_gsea.xlsx"),
                      colNames = TRUE,row.names = F,borders = "surrounding",colWidths = c(NA, "auto", "auto"))
 
@@ -129,7 +128,7 @@ Fgsea_res <- FgseaDotPlot(stats=res, pathways=msigdb_list[["GO Biological Proces
                           axis.text.x = element_text(angle = 45, hjust = 1,size = 11),
                           height= 10,width =8,do.return = T)
 colnames(Fgsea_res)[5] = "cell.type"
-openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ), 
+openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ),
                      file =  paste0(path,"go_bp_gsea.xlsx"),
                      colNames = TRUE,row.names = F,borders = "surrounding",colWidths = c(NA, "auto", "auto"))
 
@@ -142,7 +141,7 @@ Fgsea_res <- FgseaDotPlot(stats=res, pathways=msigdb_list[["GO Cellular Componen
                           axis.text.x = element_text(angle = 45, hjust = 1,size = 11),
                           height= 10,width =8,do.return = T)
 colnames(Fgsea_res)[5] = "cell.type"
-openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ), 
+openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ),
                      file =  paste0(path,"go_cc_gsea.xlsx"),
                      colNames = TRUE,row.names = F,borders = "surrounding",colWidths = c(NA, "auto", "auto"))
 
@@ -154,6 +153,6 @@ Fgsea_res <- FgseaDotPlot(stats=res, pathways=msigdb_list[["GO Molecular Functio
                           axis.text.x = element_text(angle = 45, hjust = 1,size = 11),
                           height= 8,width =9,do.return = T)
 colnames(Fgsea_res)[5] = "cell.type"
-openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ), 
+openxlsx::write.xlsx(split(Fgsea_res,f = Fgsea_res$cell.type ),
                      file =  paste0(path,"go_mf_gsea.xlsx"),
                      colNames = TRUE,row.names = F,borders = "surrounding",colWidths = c(NA, "auto", "auto"))

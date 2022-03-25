@@ -19,7 +19,7 @@ if(!dir.exists("doc")) dir.create("doc")
 # ######################################################################
 #======1.1 Load the data files and Set up Seurat object =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/20210715_scRNAseq_info.xlsx",sheet = "fastq")
+df_samples <- readxl::read_excel("doc/20220314_scRNAseq_info.xlsx",sheet = "fastq")
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) %<>% tolower()
 df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I") %>%
@@ -58,8 +58,12 @@ QC["Estimated.Number.of.Cells",] %>% gsub(",","",.) %>% as.numeric %>% sum
 write.csv(QC,paste0(path,"metrics_summary.csv"))
 df_samples %<>% cbind(t(QC))
 rownames(df_samples) = df_samples$sample
-openxlsx::write.xlsx(df_samples, file =  paste0(path,"20210715_scRNAseq_info.xlsx"),
-                     colNames = TRUE,row.names = T,borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+openxlsx::write.xlsx(df_samples, file =  paste0(path,"20220318_scRNAseq_info.xlsx"),
+                     colNames = TRUE,row.names = T,borders = "surrounding")
+
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I") %>%
+        filter(sample != "Pt11_31") %>%
+        filter(patient %in% c("AFT12","UNC22"))
 
 ## Load the GEX dataset
 message("Loading the datasets")
@@ -87,7 +91,8 @@ object$orig.ident %<>% factor(levels = df_samples$`sample`)
 Idents(object) = "orig.ident"
 g1 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
         VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
-                theme(axis.text.x = element_text(size=15,angle = 0,hjust = 0.5),legend.position="none")
+                theme(axis.text.x = element_text(size=10,angle = 45,hjust = 1,vjust = 1),
+                      legend.position="none",plot.title = element_text(hjust = 0.5))
 })
 save(g1,file= paste0(path,"g1","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
 
@@ -118,7 +123,8 @@ Idents(object) %<>% factor(levels = df_samples$`sample`)
 
 g2 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
         VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
-                theme(axis.text.x = element_text(size=15,angle = 0,hjust = 0.5),legend.position="none")
+                theme(axis.text.x = element_text(size=10,angle = 45,hjust = 1,vjust = 1),
+                      legend.position="none",plot.title = element_text(hjust = 0.5))
 })
 save(g2,file= paste0(path,"g2","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
 #load(paste0(save.path,"g2_58_20201009.Rda"))
@@ -133,10 +139,10 @@ print(plot_grid(g1[[1]]+ggtitle("nFeature_RNA before filteration")+
 dev.off()
 jpeg(paste0(path,"S1_nUMI.jpeg"), units="in", width=10, height=7,res=600)
 print(plot_grid(g1[[2]]+ggtitle("nCount_RNA before filteration")+
-                        scale_y_log10(limits = c(500,100000))+
+                        scale_y_log10(limits = c(100,100000))+
                         theme(plot.title = element_text(hjust = 0.5)),
                 g2[[2]]+ggtitle("nCount_RNA after filteration")+
-                        scale_y_log10(limits = c(500,100000))+
+                        scale_y_log10(limits = c(100,100000))+
                         theme(plot.title = element_text(hjust = 0.5))))
 dev.off()
 jpeg(paste0(path,"S1_mito.jpeg"), units="in", width=10, height=7,res=600)
@@ -150,4 +156,4 @@ dev.off()
 
 #====
 format(object.size(object),unit = "GB")
-saveRDS(object, file = "data/MCL_51_20210724.rds")
+saveRDS(object, file = "data/MCL_10_20220318.rds")

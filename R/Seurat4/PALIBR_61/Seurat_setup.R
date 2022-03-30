@@ -53,6 +53,33 @@ table(rownames(object@meta.data) == rownames(meta.data))
 table(colnames(object) == rownames(meta.data))
 object@meta.data = meta.data
 Idents(object) = "orig.ident"
+
+# Determine the ‘dimensionality’ of the dataset  =========
+npcs = 100
+
+DefaultAssay(object) <- "RNA"
+object <- FindVariableFeatures(object = object, selection.method = "vst",
+                               num.bin = 20, nfeatures = 2000,
+                               mean.cutoff = c(0.1, 8), dispersion.cutoff = c(1, Inf))
+object %<>% ScaleData(verbose = FALSE)
+object %<>% RunPCA(npcs = 100, verbose = FALSE)
+jpeg(paste0(path,"ElbowPlot_RNA.jpeg"), units="in", width=10, height=7,res=600)
+print(ElbowPlot(object,ndims = 100))
+dev.off()
+object <- JackStraw(object, num.replicate = 20,dims = npcs)
+object <- ScoreJackStraw(object, dims = 1:npcs)
+
+for(i in 0:9){
+    a = i*10+1; b = (i+1)*10
+    jpeg(paste0(path,"JackStrawPlot_",a,"_",b,".jpeg"), units="in", width=10, height=7,res=600)
+    print(JackStrawPlot(object, dims = a:b))
+    dev.off()
+    Progress(i, 9)
+}
+p.values = object[["pca"]]@jackstraw@overall.p.values
+print(npcs <- max(which(p.values[,"Score"] <=0.05)))
+npcs = 59
+
 #======1.6 Performing SCTransform and integration =========================
 
 set.seed(100)
@@ -108,6 +135,7 @@ object@reductions$pca = NULL
 object@reductions$umap = NULL
 object@reductions$tsne = NULL
 #======1.7 UMAP from raw pca =========================
+
 DefaultAssay(object)  = "SCT"
 object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
 
@@ -150,7 +178,9 @@ object %<>% FindNeighbors(reduction = "harmony",dims = 1:npcs)
 object %<>% FindClusters(resolution = 0.8)
 object %<>% RunUMAP(reduction = "harmony", dims = 1:npcs)
 system.time(object %<>% RunTSNE(reduction = "harmony", dims = 1:npcs))
-
+object[['RNA']]@scale.data = matrix(0,0,0)
+object[['integrated']]@scale.data = matrix(0,0,0)
+object[["SCT"]]@scale.data = matrix(0,0,0)
 saveRDS(object, file = "data/MCL_61_20220318.rds")
 
 # ======1.8.5 Unimodal UMAP Projection =========================
@@ -158,21 +188,18 @@ object = readRDS("data/MCL_61_20220318.rds")
 DefaultAssay(object) = "SCT"
 object.reference = readRDS("data/MCL_SCT_51_20210724.rds")
 object.reference %<>% RunUMAP(reduction = "harmony", dims = 1:100,return.model = TRUE)
+object.reference_sub <- subset(object.reference, subset = patient %in% c("N01","Pt25","PtB13"))
+#length(setdiff(colnames(object),colnames(object_reference)))
+#newCells <- setdiff(colnames(object),colnames(object_reference))
+#object.query = object[,newCells]
 
-length(setdiff(colnames(object),colnames(object_reference)))
-newCells <- setdiff(colnames(object),colnames(object_reference))
-object.query = object[,newCells]
-
-anchors <- FindTransferAnchors(reference = object.reference, query = object.query,
+anchors <- FindTransferAnchors(reference = object.reference_sub, query = object,
                                         dims = 1:30, reference.reduction = "pca")
 object.query <- MapQuery(anchorset = anchors,
-                           reference = object.reference, query = object.query,
+                           reference = object.reference, query = object,
                            refdata = list(cell.types = "cell.types"),
                          reference.reduction = "pca", reduction.model = "umap")
 
-object[["umap"]]@cell.embeddings[newCells,] = object.query[["umap"]]@cell.embeddings[newCells,]
-oldCells <- intersect(colnames(object),colnames(object.reference))
-object[["umap"]]@cell.embeddings[oldCells,] = object.reference[["umap"]]@cell.embeddings[oldCells,]
 saveRDS(object, file = "data/MCL_61_20220318.rds")
 
 #=======1.9 save SCT only =======================================
@@ -184,6 +211,8 @@ object[['RNA']] <- NULL
 object[['integrated']] <- NULL
 format(object.size(object),unit = "GB")
 
+object[['RNA']]@scale.data = matrix(0,0,0)
+object[['integrated']]@scale.data = matrix(0,0,0)
 object[["SCT"]]@scale.data = matrix(0,0,0)
 object[["SCT"]]@counts = matrix(0,0,0)
 

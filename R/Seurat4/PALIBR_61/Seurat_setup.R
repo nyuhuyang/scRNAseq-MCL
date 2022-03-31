@@ -89,7 +89,7 @@ remove(object);GC()
 object_list %<>% pblapply(SCTransform,method = "glmGamPoi",vars.to.regress = "percent.mt")
 features <- SelectIntegrationFeatures(object.list = object_list)
 
-options(future.globals.maxSize= object.size(object_list)*1.5)
+options(future.globals.maxSize= object.size(object)*10)
 object_list %<>% pblapply(FUN = function(x) {
     x <- ScaleData(x, features = features, verbose = FALSE)
     x <- RunPCA(x, features = features, verbose = FALSE)
@@ -137,7 +137,10 @@ object@reductions$tsne = NULL
 #======1.7 UMAP from raw pca =========================
 
 DefaultAssay(object)  = "SCT"
+object$orig.ident = gsub("-.*","",colnames(object))
+object$orig.ident %<>% factor(levels = df_samples$sample)
 object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
+saveRDS(object, file = "data/MCL_61_20220318.rds")
 
 object <- FindVariableFeatures(object = object, selection.method = "vst",
                                num.bin = 20, nfeatures = 2000,

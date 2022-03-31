@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --output=MCLDE_%A_%a.txt
 #SBATCH --job-name=MCLDE
-#SBATCH --mem=16G   # memory requested, units available: K,M,G,T
+#SBATCH --mem=32G   # memory requested, units available: K,M,G,T
 
 echo We are now running an R script.
 echo "Job ID : $JOB_ID"  ${SLURM_ARRAY_TASK_ID}

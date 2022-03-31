@@ -3,7 +3,7 @@ invisible(lapply(c("Seurat","dplyr","ggplot2","cowplot","pbapply","sctransform",
     suppressPackageStartupMessages(library(x,character.only = T))
 }))
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4_functions.R")
-save.path <- paste0("output/",gsub("-","",Sys.Date()))
+save.path <- paste0("output/",gsub("-","",Sys.Date()),"/Pt22_67")
 if(!dir.exists(save.path)) dir.create(save.path, recursive = T)
 # Need 64GB ?
 set.seed(101)
@@ -26,7 +26,8 @@ print(npcs <- test_df[args,"npcs"])
 file.name = paste0("cs",npcs,"_dist.",min.dist,"_spread.",spread)
 
 object = readRDS(file = "data/MCL_61_20220318.rds")
-
+object %<>% subset(subset  = orig.ident != "Pt22_67")
+object$orig.ident %<>% droplevels()
 #object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
 DefaultAssay(object) = "SCT"
 print(length(VariableFeatures(object)))
@@ -37,7 +38,8 @@ system.time(object %<>% RunHarmony.1(group.by = "orig.ident", dims.use = 1:npcs,
                                      theta = 2, plot_convergence = TRUE,
                                      nclust = 50, max.iter.cluster = 100))
 dev.off()
-object %<>% RunUMAP(reduction = "harmony", dims = 1:npcs,return.model = TRUE)
+object %<>% RunUMAP(reduction = "harmony", dims = 1:npcs,min.dist = min.dist,spread = spread,
+                    return.model = TRUE)
 
 UMAPPlot.1(object, group.by = "orig.ident", do.print = T,title = file.name,file.name = paste0(file.name,".jpeg"))
 object %<>% FindNeighbors(reduction = "umap",dims = 1:2)

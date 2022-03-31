@@ -9,7 +9,7 @@ source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/SingleR_functions.R")
 
 # ====== load single cell =============
-object = readRDS(file = "data/MCL_SCT_61_20220318.rds")
+object = readRDS(file = "data/MCL_61_20220331.rds")
 
 sce <- SingleCellExperiment(list(logcounts=object[["SCT"]]@data),
                                 colData=DataFrame(object@meta.data))
@@ -72,4 +72,4 @@ system.time(trained <- trainSingleR(ref = combine_ref,
                                     labels=combine_ref$label.fine))
 system.time(pred <- classifySingleR(sce[common,], trained))
 # elapsed 4872.846 sec
-saveRDS(object = pred, file = "output/MCL_61_20220318_singleR_pred.rds")
+saveRDS(object = pred, file = "output/MCL_61_20220331_singleR_pred.rds")

@@ -62,8 +62,7 @@ openxlsx::write.xlsx(df_samples, file =  paste0(path,"20220318_scRNAseq_info.xls
                      colNames = TRUE,row.names = T,borders = "surrounding")
 
 df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I") %>%
-        filter(sample != "Pt11_31") %>%
-        filter(patient %in% c("AFT12","UNC22"))
+        filter(sample != "Pt11_31")
 
 ## Load the GEX dataset
 message("Loading the datasets")
@@ -87,11 +86,11 @@ message("mito.genes:")
 
 (mito.features <- grep(pattern = mito, x = rownames(object), value = TRUE))
 object[["percent.mt"]] <- PercentageFeatureSet(object = object, pattern = mito)
-object$orig.ident %<>% factor(levels = df_samples$`sample`)
+object$orig.ident %<>% factor(levels = df_samples$sample)
 Idents(object) = "orig.ident"
 g1 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
         VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
-                theme(axis.text.x = element_text(size=10,angle = 45,hjust = 1,vjust = 1),
+                theme(axis.text.x = element_text(size=4,angle = 45,hjust = 1,vjust = 1),
                       legend.position="none",plot.title = element_text(hjust = 0.5))
 })
 save(g1,file= paste0(path,"g1","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
@@ -119,11 +118,11 @@ object %<>% subset(subset = discard == FALSE
                    )
 # FilterCellsgenerate Vlnplot before and after filteration
 Idents(object) = "orig.ident"
-Idents(object) %<>% factor(levels = df_samples$`sample`)
+Idents(object) %<>% factor(levels = df_samples$sample)
 
 g2 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
         VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
-                theme(axis.text.x = element_text(size=10,angle = 45,hjust = 1,vjust = 1),
+                theme(axis.text.x = element_text(size=4,angle = 45,hjust = 1,vjust = 1),
                       legend.position="none",plot.title = element_text(hjust = 0.5))
 })
 save(g2,file= paste0(path,"g2","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
@@ -156,4 +155,4 @@ dev.off()
 
 #====
 format(object.size(object),unit = "GB")
-saveRDS(object, file = "data/MCL_10_20220318.rds")
+saveRDS(object, file = "data/MCL_61_20220331.rds")

@@ -17,7 +17,7 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # create singleR data frame
 ###############################
 pred = readRDS("output/MCL_61_20220331_singleR_pred.rds")
-object = readRDS(file = "data/MCL_61_20220318.rds")
+object = readRDS(file = "data/MCL_61_20220331.rds")
 
 singlerDF = data.frame("label.fine" = pred$pruned.labels,
                        row.names = rownames(pred))
@@ -67,6 +67,7 @@ singlerDF$cell.types.colors %<>% plyr::mapvalues(from = c("B_cells","Erythrocyte
                                                         "#1B9E77","#B3DE69","#F0027F",
                                                         "#7570B3","#F2F2F2"))
 table(colnames(object) == rownames(singlerDF))
+table(singlerDF$cell.types.colors)
 object@meta.data %<>% cbind(singlerDF)
 
 saveRDS(object@meta.data,"output/20220331/meta.data.rds")
@@ -77,8 +78,7 @@ lapply(c(TSNEPlot.1,UMAPPlot.1), function(fun)
         do.print = T,do.return = F,
         title ="labeling by blue_encode and MCL RNA-seq"))
 
-saveRDS(object, file = "data/MCL_SCT_61_20220318.rds")
-
+saveRDS(object@meta.data, file = "MCL_61_20220331_metadata.rds")
 
 # by barplot
 cell_Freq <- table(object$label.fine) %>% as.data.frame

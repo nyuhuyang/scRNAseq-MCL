@@ -58,6 +58,7 @@ Idents(object) = "orig.ident"
 npcs = 100
 
 DefaultAssay(object) <- "RNA"
+object %<>% NormalizeData()
 object <- FindVariableFeatures(object = object, selection.method = "vst",
                                num.bin = 20, nfeatures = 2000,
                                mean.cutoff = c(0.1, 8), dispersion.cutoff = c(1, Inf))
@@ -137,11 +138,11 @@ object@reductions$tsne = NULL
 #======1.7 UMAP from raw pca =========================
 
 DefaultAssay(object)  = "SCT"
-object$orig.ident = gsub("-.*","",colnames(object))
-object$orig.ident %<>% factor(levels = df_samples$sample)
+
 object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
 saveRDS(object, file = "data/MCL_61_20220318.rds")
 
+object = readRDS(file = "data/MCL_61_20220331.rds")
 object <- FindVariableFeatures(object = object, selection.method = "vst",
                                num.bin = 20, nfeatures = 2000,
                                mean.cutoff = c(0.1, 8), dispersion.cutoff = c(1, Inf))

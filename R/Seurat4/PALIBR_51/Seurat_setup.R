@@ -103,7 +103,7 @@ DefaultAssay(object)  = "SCT"
 object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
 
 object <- FindVariableFeatures(object = object, selection.method = "vst",
-                               num.bin = 20, nfeatures = 2000,
+                               num.bin = 20, nfeatures = 3000,
                                mean.cutoff = c(0.1, 8), dispersion.cutoff = c(1, Inf))
 object %<>% ScaleData(verbose = FALSE)
 object %<>% RunPCA(verbose = T,npcs = 100)

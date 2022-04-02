@@ -8,8 +8,10 @@ path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 object = readRDS(file = "data/MCL_61_20220331.rds")
 
+npcs = 100
 
 DefaultAssay(object) <- "RNA"
+object %<>% NormalizeData()
 object <- FindVariableFeatures(object = object, selection.method = "vst",
                                num.bin = 20, nfeatures = 2000,
                                mean.cutoff = c(0.1, 8), dispersion.cutoff = c(1, Inf))
@@ -35,5 +37,5 @@ object[['RNA']]@scale.data = matrix(0,0,0)
 format(object.size(object),unit = "GB")
 
 options(future.globals.maxSize= object.size(object)*10)
-object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
+#object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
 saveRDS(object, file = "data/MCL_61_20220331.rds")

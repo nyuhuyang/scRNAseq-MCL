@@ -20,20 +20,24 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # ######################################################################
 #======1.1 Setup the Seurat objects =========================
 # read sample summary list
-df_samples <- readxl::read_excel("output/20220318/20220318_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("output/20220411/20220411_scRNAseq_info.xlsx")
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) %<>% tolower()
-df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I")
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% c("PALIBR_I","Cell_line")) %>%
+    filter(sample != "Pt11_31")
 nrow(df_samples)
-df_samples$date %<>% gsub(" UTC","",.) %>% as.character()
 #======1.2 load  Seurat =========================
-object = readRDS(file = "data/MCL_61_20220331.rds")
+object = readRDS(file = "data/MCL_65_20220411.rds")
 
 meta.data = object@meta.data
 for(i in 1:length(df_samples$sample)){
     cells <- meta.data$orig.ident %in% df_samples$sample[i]
     print(table(cells))
     meta.data[cells,"tissue"] = df_samples$tissue[i]
+    meta.data[cells,"patient"] = df_samples$patient[i]
+    meta.data[cells,"treatment"] = df_samples$treatment[i]
+    meta.data[cells,"response"] = df_samples$response[i]
+    meta.data[cells,"phase"] = df_samples$phase[i]
     meta.data[cells,"project"] = df_samples$project[i]
     meta.data[cells,"date"] = as.character(df_samples$date[i])
     meta.data[cells,"Mean.Reads.per.Cell"] = df_samples$mean.reads.per.cell[i]
@@ -72,43 +76,35 @@ for(i in 0:9){
 }
 p.values = object[["pca"]]@jackstraw@overall.p.values
 print(npcs <- max(which(p.values[,"Score"] <=0.05)))
-npcs = 59
+npcs = 83
 
-#======1.6 Performing SCTransform  =========================
 
+#======1.6 Performing SCTransform and integration =========================
+
+format(object.size(object),unit = "GB")
+options(future.globals.maxSize= object.size(object)*10)
 object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
-saveRDS(object, file = "data/MCL_61_20220331.rds")
-
-object = readRDS(file = "data/MCL_61_20220331.rds")
-object <- FindVariableFeatures(object = object, selection.method = "vst",
-                               num.bin = 20, nfeatures = 2000,
-                               mean.cutoff = c(0.1, 8), dispersion.cutoff = c(1, Inf))
+DefaultAssay(object) <- "SCT"
 object %<>% ScaleData(verbose = FALSE)
-object %<>% RunPCA(verbose = T,npcs = 100)
+object %<>% RunPCA(verbose = T,npcs = npcs)
 
 jpeg(paste0(path,"S1_ElbowPlot_SCT.jpeg"), units="in", width=10, height=7,res=600)
-ElbowPlot(object, ndims = 100)
+ElbowPlot(object, ndims = npcs)
 dev.off()
 
-npcs = 100
+
 object %<>% RunUMAP(reduction = "pca", dims = 1:npcs)
-system.time(object %<>% RunTSNE(reduction = "pca", dims = 1:npcs))
 
 object[["raw.umap"]] <- CreateDimReducObject(embeddings = object@reductions[["umap"]]@cell.embeddings,
                                              key = "rawUMAP_", assay = DefaultAssay(object))
 colnames(object[["raw.umap"]]@cell.embeddings) %<>% paste0("raw-",.)
 
-object[["raw.tsne"]] <- CreateDimReducObject(embeddings = object@reductions[["tsne"]]@cell.embeddings,
-                                             key = "rawtSNE_", assay = DefaultAssay(object))
-colnames(object[["raw.tsne"]]@cell.embeddings) %<>% paste0("raw-",.)
-object@reductions$umap = NULL
-object@reductions$tsne = NULL
-saveRDS(object, file = "data/MCL_61_20220331.rds")
+saveRDS(object, file = "data/MCL_65_20220411.rds")
 
 
 #======1.8 UMAP from harmony =========================
 
-npcs = 100
+npcs = 83
 jpeg(paste0(path,"S1_RunHarmony.jpeg"), units="in", width=10, height=7,res=600)
 system.time(object %<>% RunHarmony.1(group.by = "orig.ident", dims.use = 1:npcs,
                                      theta = 2, plot_convergence = TRUE,
@@ -118,30 +114,12 @@ dev.off()
 object %<>% FindNeighbors(reduction = "harmony",dims = 1:npcs)
 object %<>% FindClusters(resolution = 0.8)
 object %<>% RunUMAP(reduction = "harmony", dims = 1:npcs)
-system.time(object %<>% RunTSNE(reduction = "harmony", dims = 1:npcs))
 object[['RNA']]@scale.data = matrix(0,0,0)
-object[['integrated']]@scale.data = matrix(0,0,0)
 object[["SCT"]]@scale.data = matrix(0,0,0)
-saveRDS(object, file = "data/MCL_61_20220331.rds")
+format(object.size(object),unit = "GB")
 
-# ======1.8.5 Unimodal UMAP Projection =========================
-object = readRDS("data/MCL_61_20220331.rds")
-DefaultAssay(object) = "SCT"
-object.reference = readRDS("data/MCL_SCT_51_20210724.rds")
-object.reference %<>% RunUMAP(reduction = "harmony", dims = 1:100,return.model = TRUE)
-object.reference_sub <- subset(object.reference, subset = patient %in% c("N01","Pt25","PtB13"))
-#length(setdiff(colnames(object),colnames(object_reference)))
-#newCells <- setdiff(colnames(object),colnames(object_reference))
-#object.query = object[,newCells]
+saveRDS(object, file = "data/MCL_65_20220411.rds")
 
-anchors <- FindTransferAnchors(reference = object.reference_sub, query = object,
-                                        dims = 1:30, reference.reduction = "pca")
-object.query <- MapQuery(anchorset = anchors,
-                           reference = object.reference, query = object,
-                           refdata = list(cell.types = "cell.types"),
-                         reference.reduction = "pca", reduction.model = "umap")
-
-saveRDS(object, file = "data/MCL_61_20220331.rds")
 
 #=======1.9 save SCT only =======================================
 format(object.size(object),unit = "GB")
@@ -149,7 +127,6 @@ format(object.size(object),unit = "GB")
 format(object.size(object@assays$RNA),unit = "GB")
 format(object.size(object@assays$integrated),unit = "GB")
 object[['RNA']] <- NULL
-object[['integrated']] <- NULL
 format(object.size(object),unit = "GB")
 
 object[['RNA']]@scale.data = matrix(0,0,0)
@@ -157,6 +134,6 @@ object[['integrated']]@scale.data = matrix(0,0,0)
 object[["SCT"]]@scale.data = matrix(0,0,0)
 object[["SCT"]]@counts = matrix(0,0,0)
 
-saveRDS(object, file = "data/MCL_SCT_61_20220331.rds")
+saveRDS(object, file = "data/MCL_SCT_65_20220411.rds")
 
 

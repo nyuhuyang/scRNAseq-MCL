@@ -3,7 +3,6 @@
 #  0 setup environment, install libraries if necessary, load libraries
 #
 # ######################################################################
-AverageExpression()
 library(Seurat)
 library(dplyr)
 library(tidyr)

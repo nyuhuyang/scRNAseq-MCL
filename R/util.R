@@ -1,20 +1,20 @@
-add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10, 
-                             bp_tolerance = 2e+06) 
+add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10,
+                             bp_tolerance = 2e+06)
 {
     assay = DefaultAssay(seurat_obj)
     lfiles <- list.files(infercnv_output_path, full.names = FALSE)
-    if (!file.exists(paste(infercnv_output_path, "run.final.infercnv_obj", 
+    if (!file.exists(paste(infercnv_output_path, "run.final.infercnv_obj",
                            sep = .Platform$file.sep))) {
-        flog.warn(sprintf("::Could not find \"run.final.infercnv_obj\" file at: %s", 
-                          paste(infercnv_output_path, "run.final.infercnv_obj", 
+        flog.warn(sprintf("::Could not find \"run.final.infercnv_obj\" file at: %s",
+                          paste(infercnv_output_path, "run.final.infercnv_obj",
                                 sep = .Platform$file.sep)))
         stop()
     }
-    infercnv_obj = readRDS(paste(infercnv_output_path, "run.final.infercnv_obj", 
+    infercnv_obj = readRDS(paste(infercnv_output_path, "run.final.infercnv_obj",
                                  sep = .Platform$file.sep))
     if (is.null(seurat_obj)) {
         flog.info("No Seurat object provided, will only write metadata matrix.")
-    } else if (!(setequal(row.names(seurat_obj@meta.data), colnames(infercnv_obj@expr.data)) || 
+    } else if (!(setequal(row.names(seurat_obj@meta.data), colnames(infercnv_obj@expr.data)) ||
                setequal(colnames(seurat_obj[[assay]]), colnames(infercnv_obj@expr.data)))) {
         flog.warn("::Cell names in Seurat object and infercnv results do not match")
         stop()
@@ -23,14 +23,14 @@ add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10
     if (!is.null(infercnv_obj@options$analysis_mode)) {
         analysis_mode_pattern = gsub("[\"]", "", infercnv_obj@options$analysis_mode)
     }
-    if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMM.*", 
+    if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMM.*",
                                           analysis_mode_pattern, ".Pnorm_0.[0-9]+")))) {
         scaling_factor = 1
-        if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMMi6.*", 
+        if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMMi6.*",
                                               analysis_mode_pattern, ".Pnorm_0.[0-9]+")))) {
             center_state = 1
         }
-        else if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMMi3.*", 
+        else if (any(grep(lfiles, pattern = paste0("HMM_CNV_predictions.HMMi3.*",
                                                    analysis_mode_pattern, ".Pnorm_0.[0-9]+")))) {
             center_state = 1
         }
@@ -38,24 +38,24 @@ add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10
             flog.warn("::Found filtered HMM predictions output, but they do not match any known model type.")
             stop()
         }
-        regions = read.table(paste(infercnv_output_path, sort(lfiles[grep(lfiles, 
-                                                                          pattern = paste0("HMM_CNV_predictions.HMMi[36].*", 
-                                                                                           analysis_mode_pattern, ".Pnorm_0.[0-9]+.pred_cnv_regions.dat"))])[1], 
-                                   sep = .Platform$file.sep), sep = "\t", header = TRUE, 
+        regions = read.table(paste(infercnv_output_path, sort(lfiles[grep(lfiles,
+                                                                          pattern = paste0("HMM_CNV_predictions.HMMi[36].*",
+                                                                                           analysis_mode_pattern, ".Pnorm_0.[0-9]+.pred_cnv_regions.dat"))])[1],
+                                   sep = .Platform$file.sep), sep = "\t", header = TRUE,
                              check.names = FALSE)
-        hmm_genes = read.table(paste(infercnv_output_path, sort(lfiles[grep(lfiles, 
-                                                                            pattern = paste0("HMM_CNV_predictions.HMMi[36].*", 
-                                                                                             analysis_mode_pattern, ".Pnorm_0.[0-9]+.pred_cnv_genes.dat"))])[1], 
-                                     sep = .Platform$file.sep), sep = "\t", header = TRUE, 
+        hmm_genes = read.table(paste(infercnv_output_path, sort(lfiles[grep(lfiles,
+                                                                            pattern = paste0("HMM_CNV_predictions.HMMi[36].*",
+                                                                                             analysis_mode_pattern, ".Pnorm_0.[0-9]+.pred_cnv_genes.dat"))])[1],
+                                     sep = .Platform$file.sep), sep = "\t", header = TRUE,
                                check.names = FALSE)
-    } else if (any(grep(lfiles, pattern = paste0("17_HMM_predHMM.*", 
+    } else if (any(grep(lfiles, pattern = paste0("17_HMM_predHMM.*",
                                                analysis_mode_pattern)))) {
         scaling_factor = 2
-        if (any(grep(lfiles, pattern = paste0("17_HMM_predHMMi6.*", 
+        if (any(grep(lfiles, pattern = paste0("17_HMM_predHMMi6.*",
                                               analysis_mode_pattern)))) {
             center_state = 3
         }
-        else if (any(grep(lfiles, pattern = paste0("17_HMM_predHMMi3.*", 
+        else if (any(grep(lfiles, pattern = paste0("17_HMM_predHMMi3.*",
                                                    analysis_mode_pattern)))) {
             center_state = 2
         }
@@ -63,49 +63,49 @@ add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10
             flog.warn("::Found HMM predictions output, but they do not match any known model type")
             stop()
         }
-        regions = read.table(paste(infercnv_output_path, lfiles[grep(lfiles, 
-                                                                     pattern = paste0("17_HMM_predHMMi[36].*", analysis_mode_pattern, 
-                                                                                      ".pred_cnv_regions.dat"))][1], sep = .Platform$file.sep), 
+        regions = read.table(paste(infercnv_output_path, lfiles[grep(lfiles,
+                                                                     pattern = paste0("17_HMM_predHMMi[36].*", analysis_mode_pattern,
+                                                                                      ".pred_cnv_regions.dat"))][1], sep = .Platform$file.sep),
                              sep = "\t", header = TRUE, check.names = FALSE)
-        hmm_genes = read.table(paste(infercnv_output_path, lfiles[grep(lfiles, 
-                                                                       pattern = paste0("17_HMM_predHMMi[36].*", analysis_mode_pattern, 
-                                                                                        ".pred_cnv_genes.dat"))][1], sep = .Platform$file.sep), 
+        hmm_genes = read.table(paste(infercnv_output_path, lfiles[grep(lfiles,
+                                                                       pattern = paste0("17_HMM_predHMMi[36].*", analysis_mode_pattern,
+                                                                                        ".pred_cnv_genes.dat"))][1], sep = .Platform$file.sep),
                                sep = "\t", header = TRUE, check.names = FALSE)
     } else {
-        flog.warn(sprintf("::Could not find any HMM predictions outputs at: %s", 
+        flog.warn(sprintf("::Could not find any HMM predictions outputs at: %s",
                           infercnv_output_path))
         stop()
     }
-    features_to_add <- infercnv:::.get_features(infercnv_obj = infercnv_obj, 
-                                     infercnv_output_path = infercnv_output_path, regions = regions, 
-                                     hmm_genes = hmm_genes, center_state = center_state, 
+    features_to_add <- infercnv:::.get_features(infercnv_obj = infercnv_obj,
+                                     infercnv_output_path = infercnv_output_path, regions = regions,
+                                     hmm_genes = hmm_genes, center_state = center_state,
                                      scaling_factor = scaling_factor, top_n = top_n, bp_tolerance = bp_tolerance)
     if (!is.null(seurat_obj)) {
         for (lv in levels(infercnv_obj@gene_order$chr)) {
             seurat_obj@meta.data[[paste0("has_cnv_", lv)]] = features_to_add$feature_vector_chrs_has_cnv[[lv]]
             seurat_obj@meta.data[[paste0("has_loss_", lv)]] = features_to_add$feature_vector_chrs_has_loss[[lv]]
             seurat_obj@meta.data[[paste0("has_dupli_", lv)]] = features_to_add$feature_vector_chrs_has_dupli[[lv]]
-            seurat_obj@meta.data[[paste0("proportion_cnv_", 
+            seurat_obj@meta.data[[paste0("proportion_cnv_",
                                          lv)]] = features_to_add$feature_vector_chrs_gene_cnv_proportion[[lv]]
-            seurat_obj@meta.data[[paste0("proportion_loss_", 
+            seurat_obj@meta.data[[paste0("proportion_loss_",
                                          lv)]] = features_to_add$feature_vector_chrs_gene_loss_proportion[[lv]]
-            seurat_obj@meta.data[[paste0("proportion_dupli_", 
+            seurat_obj@meta.data[[paste0("proportion_dupli_",
                                          lv)]] = features_to_add$feature_vector_chrs_gene_dupli_proportion[[lv]]
-            seurat_obj@meta.data[[paste0("proportion_scaled_cnv_", 
+            seurat_obj@meta.data[[paste0("proportion_scaled_cnv_",
                                          lv)]] = features_to_add$feature_vector_chrs_gene_cnv_proportion_scaled[[lv]]
-            seurat_obj@meta.data[[paste0("proportion_scaled_loss_", 
+            seurat_obj@meta.data[[paste0("proportion_scaled_loss_",
                                          lv)]] = features_to_add$feature_vector_chrs_gene_loss_proportion_scaled[[lv]]
-            seurat_obj@meta.data[[paste0("proportion_scaled_dupli_", 
+            seurat_obj@meta.data[[paste0("proportion_scaled_dupli_",
                                          lv)]] = features_to_add$feature_vector_chrs_gene_dupli_proportion_scaled[[lv]]
         }
-        for (n in names(features_to_add)[grep(names(features_to_add), 
+        for (n in names(features_to_add)[grep(names(features_to_add),
                                               pattern = "top_")]) {
             seurat_obj@meta.data[[n]] = features_to_add[[n]]
         }
     }
-    out_mat = matrix(NA, ncol = ((9 * length(levels(infercnv_obj@gene_order$chr))) + 
+    out_mat = matrix(NA, ncol = ((9 * length(levels(infercnv_obj@gene_order$chr))) +
                                      length(features_to_add) - 9), nrow = ncol(infercnv_obj@expr.data))
-    out_mat_feature_names = vector("character", ((9 * length(levels(infercnv_obj@gene_order$chr))) + 
+    out_mat_feature_names = vector("character", ((9 * length(levels(infercnv_obj@gene_order$chr))) +
                                                      length(features_to_add) - 9))
     i = 1
     for (lv in levels(infercnv_obj@gene_order$chr)) {
@@ -118,15 +118,15 @@ add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10
         out_mat[, i + 6] = features_to_add$feature_vector_chrs_gene_cnv_proportion_scaled[[lv]]
         out_mat[, i + 7] = features_to_add$feature_vector_chrs_gene_loss_proportion_scaled[[lv]]
         out_mat[, i + 8] = features_to_add$feature_vector_chrs_gene_dupli_proportion_scaled[[lv]]
-        out_mat_feature_names[i:(i + 8)] = c(paste0("has_cnv_", 
-                                                    lv), paste0("has_loss_", lv), paste0("has_dupli_", 
-                                                                                         lv), paste0("proportion_cnv_", lv), paste0("proportion_loss_", 
-                                                                                                                                    lv), paste0("proportion_dupli_", lv), paste0("proportion_scaled_cnv_", 
-                                                                                                                                                                                 lv), paste0("proportion_scaled_loss_", lv), paste0("proportion_scaled_dupli_", 
+        out_mat_feature_names[i:(i + 8)] = c(paste0("has_cnv_",
+                                                    lv), paste0("has_loss_", lv), paste0("has_dupli_",
+                                                                                         lv), paste0("proportion_cnv_", lv), paste0("proportion_loss_",
+                                                                                                                                    lv), paste0("proportion_dupli_", lv), paste0("proportion_scaled_cnv_",
+                                                                                                                                                                                 lv), paste0("proportion_scaled_loss_", lv), paste0("proportion_scaled_dupli_",
                                                                                                                                                                                                                                     lv))
         i = i + 9
     }
-    for (n in names(features_to_add)[grep(names(features_to_add), 
+    for (n in names(features_to_add)[grep(names(features_to_add),
                                           pattern = "top_")]) {
         out_mat[, i] = features_to_add[[n]]
         out_mat_feature_names[i] = n
@@ -134,7 +134,7 @@ add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10
     }
     colnames(out_mat) = out_mat_feature_names
     row.names(out_mat) = colnames(infercnv_obj@expr.data)
-    write.table(out_mat, paste(infercnv_output_path, "map_metadata_from_infercnv.txt", 
+    write.table(out_mat, paste(infercnv_output_path, "map_metadata_from_infercnv.txt",
                                sep = .Platform$file.sep), quote = FALSE, sep = "\t")
     return(seurat_obj)
 }
@@ -144,109 +144,136 @@ add_to_seurat.1 <- function (seurat_obj = NULL, infercnv_output_path, top_n = 10
 
 #remove NA columns and NA rows, remove duplicate Gene_name
 CleanUp <- function(df){
-    
+
         rm_NA_col <- df[which(df[,1] == "Gene_name"),] %>% is.na %>% as.vector
         df = df[,!rm_NA_col]
         rm_NA_row <- apply(df,1, function(x) all(is.na(x)))
         df = df[!rm_NA_row,]
         colnames(df) = df[which(df[,1] == "Gene_name"),] %>% as.character
         df = df[-which(df[,1] == "Gene_name"),]
-        
+
         rm_col <- colnames(df) %in% c("Gene_id","biotype")
         df = df[,!rm_col]
         df = RemoveDup(df)
-        
+
         return(df)
 }
 
 # modify doubletFinder_v3 to commendate SCT
-doubletFinder_v3 <- function (seu, PCs, pN = 0.25, pK, nExp, reuse.pANN = FALSE, 
-                              sct = FALSE) 
-{
-    require(Seurat)
-    require(fields)
-    require(KernSmooth)
-    if (reuse.pANN != FALSE) {
-        pANN.old <- seu@meta.data[, reuse.pANN]
+
+
+
+
+doubletFinder_v3 <- function(seu, PCs, pN = 0.25, pK, nExp, reuse.pANN = FALSE, sct = FALSE, annotations = NULL) {
+    require(Seurat); require(fields); require(KernSmooth)
+    ## Generate new list of doublet classificatons from existing pANN vector to save time
+    if (reuse.pANN != FALSE ) {
+        pANN.old <- seu@meta.data[ , reuse.pANN]
         classifications <- rep("Singlet", length(pANN.old))
-        classifications[order(pANN.old, decreasing = TRUE)[1:nExp]] <- "Doublet"
-        seu@meta.data[, paste("DF.classifications", pN, pK, 
-                              nExp, sep = "_")] <- classifications
+        classifications[order(pANN.old, decreasing=TRUE)[1:nExp]] <- "Doublet"
+        seu@meta.data[, paste("DF.classifications",pN,pK,nExp,sep="_")] <- classifications
         return(seu)
     }
+
     assay = DefaultAssay(seu)
     if (reuse.pANN == FALSE) {
+        ## Make merged real-artifical data
         real.cells <- rownames(seu@meta.data)
         data <- seu[[assay]]@counts[, real.cells]
         n_real.cells <- length(real.cells)
         n_doublets <- round(n_real.cells/(1 - pN) - n_real.cells)
-        print(paste("Creating", n_doublets, "artificial doublets...", 
-                    sep = " "))
+        print(paste("Creating", n_doublets, "artificial doublets...", sep = " "))
         real.cells1 <- sample(real.cells, n_doublets, replace = TRUE)
         real.cells2 <- sample(real.cells, n_doublets, replace = TRUE)
         doublets <- (data[, real.cells1] + data[, real.cells2])/2
         colnames(doublets) <- paste("X", 1:n_doublets, sep = "")
         data_wdoublets <- cbind(data, doublets)
+        # Keep track of the types of the simulated doublets
+        if(!is.null(annotations)){
+            stopifnot(typeof(annotations)=="character")
+            stopifnot(length(annotations)==length(Cells(seu)))
+            stopifnot(!any(is.na(annotations)))
+            annotations <- factor(annotations)
+            names(annotations) <- Cells(seu)
+            doublet_types1 <- annotations[real.cells1]
+            doublet_types2 <- annotations[real.cells2]
+        }
+        ## Store important pre-processing information
         orig.commands <- seu@commands
+        ## Pre-process Seurat object
+
         if (sct == FALSE) {
             print("Creating Seurat object...")
             seu_wdoublets <- CreateSeuratObject(counts = data_wdoublets)
+
             print("Normalizing Seurat object...")
-            seu_wdoublets <- NormalizeData(seu_wdoublets, normalization.method = orig.commands$NormalizeData.RNA@params$normalization.method, 
-                                           scale.factor = orig.commands$NormalizeData.RNA@params$scale.factor, 
+            seu_wdoublets <- NormalizeData(seu_wdoublets,
+                                           normalization.method = orig.commands$NormalizeData.RNA@params$normalization.method,
+                                           scale.factor = orig.commands$NormalizeData.RNA@params$scale.factor,
                                            margin = orig.commands$NormalizeData.RNA@params$margin)
+
             print("Finding variable genes...")
-            seu_wdoublets <- FindVariableFeatures(seu_wdoublets, 
-                                                  selection.method = orig.commands$FindVariableFeatures.RNA$selection.method, 
-                                                  loess.span = orig.commands$FindVariableFeatures.RNA$loess.span, 
-                                                  clip.max = orig.commands$FindVariableFeatures.RNA$clip.max, 
-                                                  mean.function = orig.commands$FindVariableFeatures.RNA$mean.function, 
-                                                  dispersion.function = orig.commands$FindVariableFeatures.RNA$dispersion.function, 
-                                                  num.bin = orig.commands$FindVariableFeatures.RNA$num.bin, 
-                                                  binning.method = orig.commands$FindVariableFeatures.RNA$binning.method, 
-                                                  nfeatures = orig.commands$FindVariableFeatures.RNA$nfeatures, 
-                                                  mean.cutoff = orig.commands$FindVariableFeatures.RNA$mean.cutoff, 
+            seu_wdoublets <- FindVariableFeatures(seu_wdoublets,
+                                                  selection.method = orig.commands$FindVariableFeatures.RNA$selection.method,
+                                                  loess.span = orig.commands$FindVariableFeatures.RNA$loess.span,
+                                                  clip.max = orig.commands$FindVariableFeatures.RNA$clip.max,
+                                                  mean.function = orig.commands$FindVariableFeatures.RNA$mean.function,
+                                                  dispersion.function = orig.commands$FindVariableFeatures.RNA$dispersion.function,
+                                                  num.bin = orig.commands$FindVariableFeatures.RNA$num.bin,
+                                                  binning.method = orig.commands$FindVariableFeatures.RNA$binning.method,
+                                                  nfeatures = orig.commands$FindVariableFeatures.RNA$nfeatures,
+                                                  mean.cutoff = orig.commands$FindVariableFeatures.RNA$mean.cutoff,
                                                   dispersion.cutoff = orig.commands$FindVariableFeatures.RNA$dispersion.cutoff)
+
             print("Scaling data...")
-            seu_wdoublets <- ScaleData(seu_wdoublets, features = orig.commands$ScaleData.RNA$features, 
-                                       model.use = orig.commands$ScaleData.RNA$model.use, 
-                                       do.scale = orig.commands$ScaleData.RNA$do.scale, 
-                                       do.center = orig.commands$ScaleData.RNA$do.center, 
-                                       scale.max = orig.commands$ScaleData.RNA$scale.max, 
-                                       block.size = orig.commands$ScaleData.RNA$block.size, 
+            seu_wdoublets <- ScaleData(seu_wdoublets,
+                                       features = orig.commands$ScaleData.RNA$features,
+                                       model.use = orig.commands$ScaleData.RNA$model.use,
+                                       do.scale = orig.commands$ScaleData.RNA$do.scale,
+                                       do.center = orig.commands$ScaleData.RNA$do.center,
+                                       scale.max = orig.commands$ScaleData.RNA$scale.max,
+                                       block.size = orig.commands$ScaleData.RNA$block.size,
                                        min.cells.to.block = orig.commands$ScaleData.RNA$min.cells.to.block)
+
             print("Running PCA...")
-            seu_wdoublets <- RunPCA(seu_wdoublets, features = orig.commands$ScaleData.RNA$features, 
-                                    npcs = length(PCs), rev.pca = orig.commands$RunPCA.RNA$rev.pca, 
-                                    weight.by.var = orig.commands$RunPCA.RNA$weight.by.var, 
-                                    verbose = FALSE)
-            pca.coord <- seu_wdoublets@reductions$pca@cell.embeddings[, 
-                                                                      PCs]
+            seu_wdoublets <- RunPCA(seu_wdoublets,
+                                    features = orig.commands$ScaleData.RNA$features,
+                                    npcs = length(PCs),
+                                    rev.pca =  orig.commands$RunPCA.RNA$rev.pca,
+                                    weight.by.var = orig.commands$RunPCA.RNA$weight.by.var,
+                                    verbose=FALSE)
+            pca.coord <- seu_wdoublets@reductions$pca@cell.embeddings[ , PCs]
             cell.names <- rownames(seu_wdoublets@meta.data)
             nCells <- length(cell.names)
-            rm(seu_wdoublets)
-            gc()
+            rm(seu_wdoublets); gc() # Free up memory
         }
         if (sct == TRUE) {
-            require(sctransform)
-            print("Creating Seurat object...")
-            seu_wdoublets <- CreateSeuratObject(counts = data_wdoublets)
-            print("Running SCTransform...")
-            seu_wdoublets <- SCTransform(seu_wdoublets)
-            print("Running PCA...")
-            seu_wdoublets <- RunPCA(seu_wdoublets)
-            pca.coord <- seu_wdoublets@reductions$pca@cell.embeddings[, 
-                                                                      PCs]
-            cell.names <- rownames(seu_wdoublets@meta.data)
-            nCells <- length(cell.names)
-            rm(seu_wdoublets)
-            gc()
+            if (sct == TRUE) {
+                require(sctransform)
+                print("Creating Seurat object...")
+                seu_wdoublets <- CreateSeuratObject(counts = data_wdoublets)
+
+                print("Running SCTransform...")
+                seu_wdoublets <- SCTransform(seu_wdoublets)
+
+                print("Running PCA...")
+                seu_wdoublets <- RunPCA(seu_wdoublets, npcs = length(PCs))
+                pca.coord <- seu_wdoublets@reductions$pca@cell.embeddings[ , PCs]
+                cell.names <- rownames(seu_wdoublets@meta.data)
+                nCells <- length(cell.names)
+                rm(seu_wdoublets); gc()
+            }
         }
+        ## Compute PC distance matrix
         print("Calculating PC distance matrix...")
         dist.mat <- fields::rdist(pca.coord)
+
+        ## Compute pANN
         print("Computing pANN...")
-        pANN <- as.data.frame(matrix(0L, nrow = n_real.cells, 
-                                     ncol = 1))
+        pANN <- as.data.frame(matrix(0L, nrow = n_real.cells, ncol = 1))
+        if(!is.null(annotations)){
+            neighbor_types <- as.data.frame(matrix(0L, nrow = n_real.cells, ncol = length(levels(doublet_types1))))
+        }
         rownames(pANN) <- real.cells
         colnames(pANN) <- "pANN"
         k <- round(nCells * pK)
@@ -259,9 +286,9 @@ doubletFinder_v3 <- function (seu, PCs, pN = 0.25, pK, nExp, reuse.pANN = FALSE,
         print("Classifying doublets..")
         classifications <- rep("Singlet", n_real.cells)
         classifications[order(pANN$pANN[1:n_real.cells], decreasing = TRUE)[1:nExp]] <- "Doublet"
-        seu@meta.data[, paste("pANN", pN, pK, nExp, sep = "_")] <- pANN[rownames(seu@meta.data), 
+        seu@meta.data[, paste("pANN", pN, pK, nExp, sep = "_")] <- pANN[rownames(seu@meta.data),
                                                                         1]
-        seu@meta.data[, paste("DF.classifications", pN, pK, 
+        seu@meta.data[, paste("DF.classifications", pN, pK,
                               nExp, sep = "_")] <- classifications
         return(seu)
     }
@@ -284,7 +311,7 @@ find.localMaxima <- function(x) {
 # re-calculate the cdr3 frequency in data.frame
 Frequency <- function(df, key = "cdr3",top=NULL,remove.na =T,
                       remove.dup =T, verbose = FALSE){
-        
+
         #colnames(df) = tolower(colnames(df))
         if(any(colnames(df) %in% "frequency")){
                 df = df[,-which(colnames(df) %in% "frequency")]
@@ -310,21 +337,21 @@ Frequency <- function(df, key = "cdr3",top=NULL,remove.na =T,
 
 # DouletFinder
 Multiplet_Rate <- function(object, numBatches = 1, num10xRuns = 1){
-    
+
     numCellsRecovered = 1.0 * ncol(object)
     m = 4.597701e-06
     r = 0.5714286
-    
+
     numCellsLoaded = numCellsRecovered / r
     multipletRate = m * numCellsLoaded / num10xRuns
-    
+
     singletRate = 1.0 - multipletRate;
     numSinglet = singletRate * numCellsRecovered
     numMultiplet = numCellsRecovered - numSinglet
     numIdentMultiplet = numMultiplet * (numBatches - 1) / numBatches
     numNonIdentMultiplet = numMultiplet - numIdentMultiplet
     numCells = numSinglet + numNonIdentMultiplet
-    
+
     return(numNonIdentMultiplet/numCells)
 }
 
@@ -339,7 +366,7 @@ qplot_2axis <- function(data,x = "pK", y1 = "MeanBC", y2 = "BCmetric"){
     scale_factor <- diff(a)/diff(b)
     data_y2 <- ((data_y2 - b[1]) * scale_factor) + a[1]
     trans <- ~ ((. - a[1]) / scale_factor) + b[1]
-    
+
     g <- ggplot(data = data, aes_string(x = x, y = y1))+
         geom_line()+geom_point()+
         geom_point(aes(y = data_y2),colour = "blue")+
@@ -347,9 +374,9 @@ qplot_2axis <- function(data,x = "pK", y1 = "MeanBC", y2 = "BCmetric"){
         scale_y_continuous(name = y1,
                            sec.axis = sec_axis(trans=trans, name=y2))+
         theme(axis.text.y.right = element_text(color = "blue"))
-    
+
     g
-    
+
 }
 
 #remove duplicate rownames with lower rowsumns
@@ -373,7 +400,7 @@ RemoveDup <- function(mat){
 
 #' select 1/4 of cell from control
 ScaleDown <- function(object, control=c("BH","DJ","MD","NZ")){
-    
+
         normal_cells = lapply(control, function(x){
         rownames(object@meta.data)[(object@meta.data$orig.ident %in% x)]
         })
@@ -383,14 +410,14 @@ ScaleDown <- function(object, control=c("BH","DJ","MD","NZ")){
         cell.use <- object@cell.names[!(object@cell.names %in% remove_normal_cells)]
         object <- SubsetData(object, cells.use = cell.use)
         object@meta.data$orig.ident = gsub(paste(control,collapse = "|"),"Normal",object@meta.data$orig.ident)
-        
+
         return(object)
 }
 
 #' select 10% of cell from control
 #' Seurat 3
 ScaleDown.1 <- function(object, control=c("BH","DJ","MD","NZ"), scale.down=0.1){
-    
+
     normal_cells = lapply(control, function(x){
         rownames(object@meta.data)[(object@meta.data$orig.ident %in% x)]
     })
@@ -402,7 +429,7 @@ ScaleDown.1 <- function(object, control=c("BH","DJ","MD","NZ"), scale.down=0.1){
     cell.use <- colnames(object)[!(colnames(object) %in% remove_normal_cells)]
     object <- object[, cell.use]
     object@meta.data$orig.ident = gsub(paste(control,collapse = "|"),"Normal",object@meta.data$orig.ident)
-    
+
     return(object)
 }
 
@@ -419,7 +446,7 @@ ScaleDown.1 <- function(object, control=c("BH","DJ","MD","NZ"), scale.down=0.1){
 TCR_Longitud_Plot <- function(TCR_data, order.by, group,color=NULL,
 size=2,colors = singler.colors,x.margin=0.125,
 do.return = TRUE, do.print = FALSE,do.log =TRUE, top=20){
-    
+
     colnames(TCR_data) = tolower(colnames(TCR_data))
     TCR_data$orig.ident = as.character(TCR_data$orig.ident)
     TCR_data <- split(TCR_data, TCR_data$orig.ident) %>%
@@ -430,7 +457,7 @@ do.return = TRUE, do.print = FALSE,do.log =TRUE, top=20){
     # fill up 0
     TCR_data %<>% spread(key="orig.ident", value="frequency",fill = 0)
     TCR_data %<>% gather(key="orig.ident",value="frequency",-cdr3)
-    
+
     TCR_data$orig.ident = factor(TCR_data$orig.ident,levels = order.by)
     TCR_data$samples <- as.integer(TCR_data$orig.ident)
     g1 <- ggplot(data=TCR_data, aes(x=samples, y=frequency, group=cdr3,colour=cdr3)) +
@@ -484,7 +511,7 @@ do.return = TRUE, do.print = FALSE,top=20){
     colnames(TCR_data)[2:3] =c("sample1","sample2")
     TCR_data$counts = as.numeric(TCR_data$sample1>0)+
     as.numeric(TCR_data$sample2>0)
-    
+
     g1 <- ggplot(data=TCR_data, aes(x=sample1, y=sample2,
     group=counts, color=counts)) +
     geom_point(size = 2)+
@@ -502,7 +529,7 @@ do.return = TRUE, do.print = FALSE,top=20){
     legend.position="none",
     plot.title = element_text(hjust = 0.5),
     axis.text.x  = element_text(angle=70, vjust=0.5))
-    
+
     if(do.print){
         path <- paste0("output/",gsub("-","",Sys.Date()),"/")
         if(!dir.exists(path)) dir.create(path, recursive = T)
@@ -514,24 +541,24 @@ do.return = TRUE, do.print = FALSE,top=20){
 }
 
 
-show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = NULL, arrow.colors = par("fg"), 
-                                              corr.sigma = 0.05, 
-          show.grid.flow = FALSE, grid.n = 20, grid.sd = NULL, min.grid.cell.mass = 1, 
-          min.arrow.size = NULL, arrow.scale = 1, max.grid.arrow.length = NULL, 
-          fixed.arrow.length = FALSE, plot.grid.points = FALSE, scale = "log", 
-          nPcs = NA, arrow.lwd = 1, xlab = "", ylab = "", n.cores = velocyto.R:::defaultNCores(), 
-          do.par = T, show.cell = NULL, cell.border.alpha = 0.3, cc = NULL, 
-          return.details = FALSE, expression.scaling = FALSE, ...) 
+show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = NULL, arrow.colors = par("fg"),
+                                              corr.sigma = 0.05,
+          show.grid.flow = FALSE, grid.n = 20, grid.sd = NULL, min.grid.cell.mass = 1,
+          min.arrow.size = NULL, arrow.scale = 1, max.grid.arrow.length = NULL,
+          fixed.arrow.length = FALSE, plot.grid.points = FALSE, scale = "log",
+          nPcs = NA, arrow.lwd = 1, xlab = "", ylab = "", n.cores = velocyto.R:::defaultNCores(),
+          do.par = T, show.cell = NULL, cell.border.alpha = 0.3, cc = NULL,
+          return.details = FALSE, expression.scaling = FALSE, ...)
 {
     randomize <- FALSE
-    if (do.par) 
-        par(mfrow = c(1, 1), mar = c(3.5, 3.5, 2.5, 1.5), mgp = c(2, 
+    if (do.par)
+        par(mfrow = c(1, 1), mar = c(3.5, 3.5, 2.5, 1.5), mgp = c(2,
                                                                   0.65, 0), cex = 0.85)
     celcol <- "white"
     if (is.null(show.cell)) {
         celcol <- cell.colors[rownames(emb)]
     }
-    plot(emb, bg = celcol, pch = 21, col = ac(1, alpha = cell.border.alpha), 
+    plot(emb, bg = celcol, pch = 21, col = ac(1, alpha = cell.border.alpha),
          xlab = xlab, ylab = ylab,fg = gray(0.7), ...)
     em <- as.matrix(vel$current)
     ccells <- intersect(rownames(emb), colnames(em))
@@ -542,24 +569,24 @@ show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = N
     nd <- nd[cgenes, ]
     em <- em[cgenes, ]
     if (randomize) {
-        nd <- t(apply(nd, 1, function(x) (rbinom(length(x), 
+        nd <- t(apply(nd, 1, function(x) (rbinom(length(x),
                                                  1, 0.5) * 2 - 1) * abs(sample(x))))
     }
     if (is.null(cc)) {
         cat("delta projections ... ")
         if (scale == "log") {
             cat("log ")
-            cc <- velocyto.R:::colDeltaCorLog10(em, (log10(abs(nd) + 1) * 
+            cc <- velocyto.R:::colDeltaCorLog10(em, (log10(abs(nd) + 1) *
                                             sign(nd)), nthreads = n.cores)
         }
         else if (scale == "sqrt") {
             cat("sqrt ")
-            cc <- velocyto.R:::colDeltaCorSqrt(em, (sqrt(abs(nd)) * sign(nd)), 
+            cc <- velocyto.R:::colDeltaCorSqrt(em, (sqrt(abs(nd)) * sign(nd)),
                                   nthreads = n.cores)
         }
         else if (scale == "rank") {
             cat("rank ")
-            cc <- velocyto.R:::colDeltaCor((apply(em, 2, rank)), (apply(nd, 
+            cc <- velocyto.R:::colDeltaCor((apply(em, 2, rank)), (apply(nd,
                                                            2, rank)), nthreads = n.cores)
         }
         else {
@@ -573,7 +600,7 @@ show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = N
     if (n > nrow(cc)) {
         n <- nrow(cc)
     }
-    emb.knn <- velocyto.R:::balancedKNN(t(emb), k = n, maxl = nrow(emb), 
+    emb.knn <- velocyto.R:::balancedKNN(t(emb), k = n, maxl = nrow(emb),
                            dist = "euclidean", n.threads = n.cores)
     diag(emb.knn) <- 1
     cat("transition probs ... ")
@@ -583,44 +610,44 @@ show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = N
     cat("done\n")
     if (!is.null(show.cell)) {
         i <- match(show.cell, rownames(emb))
-        if (is.na(i)) 
+        if (is.na(i))
             stop(paste("specified cell", i, "is not in the embedding"))
-        points(emb, pch = 19, col = ac(val2col(tp[rownames(emb), 
+        points(emb, pch = 19, col = ac(val2col(tp[rownames(emb),
                                                   show.cell], gradient.range.quantile = 1), alpha = 0.5))
-        points(emb[show.cell, 1], emb[show.cell, 2], pch = 3, 
+        points(emb[show.cell, 1], emb[show.cell, 2], pch = 3,
                cex = 1, col = 1)
         di <- t(t(emb) - emb[i, ])
         di <- di/sqrt(Matrix::rowSums(di^2)) * arrow.scale
         di[i, ] <- 0
         dir <- Matrix::colSums(di * tp[, i])
-        dic <- Matrix::colSums(di * (tp[, i] > 0)/sum(tp[, i] > 
+        dic <- Matrix::colSums(di * (tp[, i] > 0)/sum(tp[, i] >
                                                           0))
         dia <- dir - dic
-        suppressWarnings(arrows(emb[colnames(em)[i], 1], emb[colnames(em)[i], 
-                                                             2], emb[colnames(em)[i], 1] + dic[1], emb[colnames(em)[i], 
+        suppressWarnings(arrows(emb[colnames(em)[i], 1], emb[colnames(em)[i],
+                                                             2], emb[colnames(em)[i], 1] + dic[1], emb[colnames(em)[i],
                                                                                                        2] + dic[2], length = 0.05, lwd = 1, col = "blue"))
-        suppressWarnings(arrows(emb[colnames(em)[i], 1], emb[colnames(em)[i], 
-                                                             2], emb[colnames(em)[i], 1] + dir[1], emb[colnames(em)[i], 
+        suppressWarnings(arrows(emb[colnames(em)[i], 1], emb[colnames(em)[i],
+                                                             2], emb[colnames(em)[i], 1] + dir[1], emb[colnames(em)[i],
                                                                                                        2] + dir[2], length = 0.05, lwd = 1, col = "red"))
-        suppressWarnings(arrows(emb[colnames(em)[i], 1] + dic[1], 
-                                emb[colnames(em)[i], 2] + dic[2], emb[colnames(em)[i], 
-                                                                      1] + dir[1], emb[colnames(em)[i], 2] + dir[2], 
+        suppressWarnings(arrows(emb[colnames(em)[i], 1] + dic[1],
+                                emb[colnames(em)[i], 2] + dic[2], emb[colnames(em)[i],
+                                                                      1] + dir[1], emb[colnames(em)[i], 2] + dir[2],
                                 length = 0.05, lwd = 1, lty = 1, col = "grey50"))
-        suppressWarnings(arrows(emb[colnames(em)[i], 1], emb[colnames(em)[i], 
-                                                             2], emb[colnames(em)[i], 1] + dia[1], emb[colnames(em)[i], 
+        suppressWarnings(arrows(emb[colnames(em)[i], 1], emb[colnames(em)[i],
+                                                             2], emb[colnames(em)[i], 1] + dia[1], emb[colnames(em)[i],
                                                                                                        2] + dia[2], length = 0.05, lwd = 1, col = "black"))
     }
     else {
         cat("calculating arrows ... ")
-        arsd <- data.frame(t(velocyto.R:::embArrows(emb, tp, arrow.scale, 
+        arsd <- data.frame(t(velocyto.R:::embArrows(emb, tp, arrow.scale,
                                        n.cores)))
         rownames(arsd) <- rownames(emb)
         if (expression.scaling) {
             tpb <- tp > 0
             tpb <- t(t(tpb)/colSums(tpb))
             es <- as.matrix(em %*% tp) - as.matrix(em %*% as.matrix(tpb))
-            pl <- pmin(1, pmax(0, apply(as.matrix(vel$deltaE[, 
-                                                             colnames(es)]) * es, 2, sum)/sqrt(colSums(es * 
+            pl <- pmin(1, pmax(0, apply(as.matrix(vel$deltaE[,
+                                                             colnames(es)]) * es, 2, sum)/sqrt(colSums(es *
                                                                                                            es))))
             arsd <- arsd * pl
         }
@@ -636,23 +663,23 @@ show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = N
             gx <- seq(rx[1], rx[2], length.out = grid.n)
             gy <- seq(ry[1], ry[2], length.out = grid.n)
             if (is.null(grid.sd)) {
-                grid.sd <- sqrt((gx[2] - gx[1])^2 + (gy[2] - 
+                grid.sd <- sqrt((gx[2] - gx[1])^2 + (gy[2] -
                                                          gy[1])^2)/2
                 cat("grid.sd=", grid.sd, " ")
             }
             if (is.null(min.arrow.size)) {
-                min.arrow.size <- sqrt((gx[2] - gx[1])^2 + (gy[2] - 
+                min.arrow.size <- sqrt((gx[2] - gx[1])^2 + (gy[2] -
                                                                 gy[1])^2) * 0.01
                 cat("min.arrow.size=", min.arrow.size, " ")
             }
             if (is.null(max.grid.arrow.length)) {
-                max.grid.arrow.length <- sqrt(sum((par("pin")/c(length(gx), 
+                max.grid.arrow.length <- sqrt(sum((par("pin")/c(length(gx),
                                                                 length(gy)))^2)) * 0.25
-                cat("max.grid.arrow.length=", max.grid.arrow.length, 
+                cat("max.grid.arrow.length=", max.grid.arrow.length,
                     " ")
             }
             garrows <- do.call(rbind, lapply(gx, function(x) {
-                cd <- sqrt(outer(emb[, 2], -gy, "+")^2 + (x - 
+                cd <- sqrt(outer(emb[, 2], -gy, "+")^2 + (x -
                                                               emb[, 1])^2)
                 cw <- dnorm(cd, sd = grid.sd)
                 gw <- Matrix::colSums(cw)
@@ -661,41 +688,41 @@ show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = N
                 gyd <- Matrix::colSums(cw * arsd$yd)/cws
                 al <- sqrt(gxd^2 + gyd^2)
                 vg <- gw >= min.grid.cell.mass & al >= min.arrow.size
-                cbind(rep(x, sum(vg)), gy[vg], x + gxd[vg], 
+                cbind(rep(x, sum(vg)), gy[vg], x + gxd[vg],
                       gy[vg] + gyd[vg])
             }))
             colnames(garrows) <- c("x0", "y0", "x1", "y1")
             if (fixed.arrow.length) {
-                suppressWarnings(arrows(garrows[, 1], garrows[, 
-                                                              2], garrows[, 3], garrows[, 4], length = 0.05, 
+                suppressWarnings(arrows(garrows[, 1], garrows[,
+                                                              2], garrows[, 3], garrows[, 4], length = 0.05,
                                         lwd = arrow.lwd))
             }
             else {
-                alen <- pmin(max.grid.arrow.length, sqrt(((garrows[, 
-                                                                   3] - garrows[, 1]) * par("pin")[1]/diff(par("usr")[c(1, 
-                                                                                                                        2)]))^2 + ((garrows[, 4] - garrows[, 2]) * 
+                alen <- pmin(max.grid.arrow.length, sqrt(((garrows[,
+                                                                   3] - garrows[, 1]) * par("pin")[1]/diff(par("usr")[c(1,
+                                                                                                                        2)]))^2 + ((garrows[, 4] - garrows[, 2]) *
                                                                                                                                        par("pin")[2]/diff(par("usr")[c(3, 4)]))^2))
                 suppressWarnings(lapply(1:nrow(garrows), function(i) arrows(garrows[i,1], garrows[i, 2], garrows[i, 3], garrows[i,4],
                                                                             length = alen[i], lwd = arrow.lwd, col = arrow.colors)))
             }
-            if (plot.grid.points) 
-                points(rep(gx, each = length(gy)), rep(gy, length(gx)), 
+            if (plot.grid.points)
+                points(rep(gx, each = length(gy)), rep(gy, length(gx)),
                        pch = ".", cex = 0.1, col = ac(1, alpha = 0.4))
             cat("done\n")
             if (return.details) {
                 cat("expression shifts .")
-                scale.int <- switch(scale, log = 2, sqrt = 3, 
+                scale.int <- switch(scale, log = 2, sqrt = 3,
                                     1)
                 if (!expression.scaling) {
                     tpb <- tp > 0
                     tpb <- t(t(tpb)/colSums(tpb))
-                    es <- as.matrix(em %*% tp) - as.matrix(em %*% 
+                    es <- as.matrix(em %*% tp) - as.matrix(em %*%
                                                                as.matrix(tpb))
                 }
                 cat(".")
-                gs <- do.call(cbind, parallel::mclapply(gx, 
+                gs <- do.call(cbind, parallel::mclapply(gx,
                                                         function(x) {
-                                                            cd <- sqrt(outer(emb[, 2], -gy, "+")^2 + 
+                                                            cd <- sqrt(outer(emb[, 2], -gy, "+")^2 +
                                                                            (x - emb[, 1])^2)
                                                             cw <- dnorm(cd, sd = grid.sd)
                                                             gw <- Matrix::colSums(cw)
@@ -719,9 +746,9 @@ show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = N
                     nd <- (sqrt(abs(nd)) * sign(nd))
                 }
                 cat(".")
-                gv <- do.call(cbind, parallel::mclapply(gx, 
+                gv <- do.call(cbind, parallel::mclapply(gx,
                                                         function(x) {
-                                                            cd <- sqrt(outer(emb[, 2], -gy, "+")^2 + 
+                                                            cd <- sqrt(outer(emb[, 2], -gy, "+")^2 +
                                                                            (x - emb[, 1])^2)
                                                             cw <- dnorm(cd, sd = grid.sd)
                                                             gw <- Matrix::colSums(cw)
@@ -739,20 +766,20 @@ show.velocity.on.embedding.cor.1 <- function (emb, vel, n = 100, cell.colors = N
                                                             }
                                                         }, mc.cores = n.cores, mc.preschedule = T))
                 cat(". done\n")
-                return(invisible(list(tp = tp, cc = cc, garrows = garrows, 
-                                      arrows = as.matrix(ars), vel = nd, eshifts = es, 
+                return(invisible(list(tp = tp, cc = cc, garrows = garrows,
+                                      arrows = as.matrix(ars), vel = nd, eshifts = es,
                                       gvel = gv, geshifts = gs, scale = scale)))
             }
         }
         else {
             apply(ars, 1, function(x) {
                 if (fixed.arrow.length) {
-                    suppressWarnings(arrows(x[1], x[2], x[3], 
+                    suppressWarnings(arrows(x[1], x[2], x[3],
                                             x[4], length = 0.05, lwd = arrow.lwd))
                 }
                 else {
-                    ali <- sqrt(((x[3] - x[1]) * par("pin")[1]/diff(par("usr")[c(1, 
-                                                                                 2)]))^2 + ((x[4] - x[2]) * par("pin")[2]/diff(par("usr")[c(3, 
+                    ali <- sqrt(((x[3] - x[1]) * par("pin")[1]/diff(par("usr")[c(1,
+                                                                                 2)]))^2 + ((x[4] - x[2]) * par("pin")[2]/diff(par("usr")[c(3,
                                                                                                                                             4)]))^2)
                     suppressWarnings(arrows(x[1], x[2], x[3], col = arrow.colors,
                                             x[4], length = min(0.05, ali), lwd = arrow.lwd))

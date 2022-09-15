@@ -9,6 +9,7 @@ invisible(lapply(c("Seurat","dplyr","magrittr","tidyr",
         suppressPackageStartupMessages(library(x,character.only = T))
 }))
 source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4_differential_expression.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path))dir.create(path, recursive = T)
 
@@ -71,7 +72,7 @@ if(step == 1){ # need 32 GB
         MT <- grepl("^MT-",markers$gene)
         if(any(MT)) markers = markers[!MT,]
 
-        write.csv(markers,paste0(save_path,arg,"-",opt$ident,"-",num,".",opt$type, ".csv"))
+        write.csv(markers,paste0(path,arg,"-DGEs-",opt[1],"_vs_",opt[2], ".csv"))
 
 
         g <- VolcanoPlots(markers, cut_off_value = 0.05, cut_off = "p_val", cut_off_logFC = 0.1,top = 20,

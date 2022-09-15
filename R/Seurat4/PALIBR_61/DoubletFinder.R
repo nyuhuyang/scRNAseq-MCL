@@ -34,7 +34,7 @@ rm(object);GC()
 ## pK Identification (no ground-truth) ---------------------------------------------------------------------------------------
 Sys.setenv("OMP_NUM_THREADS" = 16)
 
-npcs = 100
+npcs = 59
 sweep.res_list <- list()
 for (i in 1:length(object_list)) {
     sweep.res_list[[i]] <- paramSweep_v4(object_list[[i]], PCs = 1:npcs, sct = T)
@@ -58,11 +58,11 @@ for(i in 1:length(object_list)){
     nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
 
     ## Run DoubletFinder with varying classification stringencies ----------------------------------------------------------------
-    object_list[[i]] <- doubletFinder_v3(object, PCs = 1:59,
-                                         pN = 0.25, pK = maximal_pk,
+    object_list[[i]] <- doubletFinder_v3(object_list[[i]], PCs = 1:npcs,
+                                         pN = 0.25, pK = maximal_pk[i],
                                          nExp = nExp_poi, reuse.pANN = FALSE, sct = F,
-                                         annotations = object$label.fine)
-    object_list[[i]] <- doubletFinder_v3(object_list[[i]], PCs = 1:50,
+                                         annotations = object_list[[i]]$label.fine)
+    object_list[[i]] <- doubletFinder_v3(object_list[[i]], PCs = 1:npcs,
                                          pN = 0.25, pK = maximal_pk[i],
                                          nExp = nExp_poi.adj,
                                          reuse.pANN = grep("pANN",colnames(object_list[[i]]@meta.data),value = T),

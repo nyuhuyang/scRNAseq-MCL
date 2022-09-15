@@ -21,14 +21,14 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # ######################################################################
 #======1.1 Setup the Seurat objects =========================
 # read sample summary list
-df_samples <- readxl::read_excel("output/20220411/20220411_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("output/20220901/20220901_scRNAseq_info.xlsx")
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) %<>% tolower()
-df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% c("PALIBR_I","Cell_line")) %>%
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% c("PALIBR_I","PALIBR_II")) %>%
     filter(sample != "Pt11_31")
 nrow(df_samples)
 #======1.2 load  Seurat =========================
-object = readRDS(file = "data/MCL_65_20220411.rds")
+object = readRDS(file = "data/MCL_87_20220901.rds")
 
 meta.data = object@meta.data
 for(i in 1:length(df_samples$sample)){
@@ -77,13 +77,13 @@ for(i in 0:9){
 }
 p.values = object[["pca"]]@jackstraw@overall.p.values
 print(npcs <- max(which(p.values[,"Score"] <=0.05)))
-npcs = 83
+npcs <- 90
 
 
 #======1.6 Performing SCTransform and integration =========================
 
 format(object.size(object),unit = "GB")
-options(future.globals.maxSize= object.size(object)*10)
+options(future.globals.maxSize= object.size(object)*30)
 object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
 DefaultAssay(object) <- "SCT"
 object %<>% ScaleData(verbose = FALSE)
@@ -100,15 +100,12 @@ object[["raw.umap"]] <- CreateDimReducObject(embeddings = object@reductions[["um
                                              key = "rawUMAP_", assay = DefaultAssay(object))
 colnames(object[["raw.umap"]]@cell.embeddings) %<>% paste0("raw-",.)
 
-saveRDS(object, file = "data/MCL_65_20220411.rds")
-
-
 #======1.8 UMAP from harmony =========================
 
-npcs = 83
+npcs = 90
 jpeg(paste0(path,"S1_RunHarmony.jpeg"), units="in", width=10, height=7,res=600)
 system.time(object %<>% RunHarmony.1(group.by = "orig.ident", dims.use = 1:npcs,
-                                     theta = 2, plot_convergence = TRUE,
+                                     theta = 2, plot_convergence = TRUE,do_pca = FALSE,
                                      nclust = 50, max.iter.cluster = 100))
 dev.off()
 
@@ -119,22 +116,20 @@ object[['RNA']]@scale.data = matrix(0,0,0)
 object[["SCT"]]@scale.data = matrix(0,0,0)
 format(object.size(object),unit = "GB")
 
-saveRDS(object, file = "data/MCL_65_20220411.rds")
+saveRDS(object, file = "data/MCL_87_20220901.rds")
 
 
 #=======1.9 save SCT only =======================================
 format(object.size(object),unit = "GB")
 
 format(object.size(object@assays$RNA),unit = "GB")
-format(object.size(object@assays$integrated),unit = "GB")
-object[['RNA']] <- NULL
+object@assays[["RNA"]] = NULL
 format(object.size(object),unit = "GB")
 
 object[['RNA']]@scale.data = matrix(0,0,0)
-object[['integrated']]@scale.data = matrix(0,0,0)
 object[["SCT"]]@scale.data = matrix(0,0,0)
 object[["SCT"]]@counts = matrix(0,0,0)
 
-saveRDS(object, file = "data/MCL_SCT_65_20220411.rds")
+saveRDS(object, file = "data/MCL_SCT_87_20220901.rds")
 
 

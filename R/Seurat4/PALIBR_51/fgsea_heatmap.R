@@ -41,7 +41,7 @@ Fgsea_res <- FgseaDotPlot(stats=res, pathways=hallmark,Rowv = T,
                           plot.title = element_text(hjust = 1,size = 15),
                           axis.text.x = element_text(angle = 45, hjust = 1,size = 10),
                           width = 6,do.return = T)
-pthy = c("MYC TARGETS V1", "MYC TARGETS V2","TNFA SIGNALING VIA NFKB","NF-kB pathway",
+pathways = c("MYC TARGETS V1", "MYC TARGETS V2","TNFA SIGNALING VIA NFKB","NF-kB pathway",
              "IL2 STAT5 SIGNALING","INTERFERON ALPHA RESPONSE","INTERFERON GAMMA RESPONSE")
 for(pthy in pathways){
     pathway_res = Fgsea_res %>% filter(pathway %in% pthy)

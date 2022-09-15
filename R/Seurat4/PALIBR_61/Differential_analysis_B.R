@@ -41,3 +41,24 @@ rownames(exp) = rownames(object)
 fwrite(exp,paste0(path,"B_MCL_log2UMI.csv"),row.names = TRUE)
 fwrite(df,paste0(path,"B_MCL_number.csv"),row.names = TRUE)
 
+
+#==============
+csv_names = sapply(opts,function(x) paste)
+csv_index = list.files("output/20220420",pattern = ".csv") %>% gsub("-.*","",.) %>% as.integer()
+table(1:13 %in% csv_index)
+csv_names = list.files("output/20220420",pattern = ".csv")
+deg_list <- pbapply::pblapply(csv_names, function(csv){
+    tmp <- read.csv(paste0("output/20220420/",csv),row.names = 1)
+    tmp = tmp[tmp$p_val_adj < 0.05,]
+    tmp$gene = rownames(tmp)
+    tmp %<>% group_by(cluster) %>% arrange(desc(avg_log2FC), .by_group = TRUE)
+    tmp
+})
+
+deg = bind_rows(deg_list)
+deg %<>% filter(p_val_adj < 0.05)
+deg_list = split(deg, f = deg$cluster)
+
+openxlsx::write.xlsx(deg_list, file = paste0(path,"AFT12_DEG.xlsx"),
+           colNames = TRUE, borders = "surrounding")
+

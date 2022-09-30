@@ -66,4 +66,28 @@ meta.data$X6cluster_AIM74.colors <- plyr::mapvalues(meta.data$X6cluster_AIM74,
 meta.data$X9cluster.colors <- plyr::mapvalues(meta.data$X9cluster,
                                                     from = meta_data3$X9cluster,
                                                     to = meta_data3$X9cluster.colors)
+
+df_samples <- readxl::read_excel("doc/20220901_scRNAseq_info.xlsx",sheet = "PALIBR+AIM") %>% as.data.frame
+colnames(df_samples) %<>% tolower()
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% c("PALIBR_I","PALIBR_II")) %>%
+    filter(sample != "Pt11_31")
+nrow(df_samples)
+table(meta.data$orig.ident %in% df_samples$sample)
+meta.data$response <- plyr::mapvalues(meta.data$orig.ident,
+                                              from = df_samples$sample,
+                                              to = df_samples$response)
+meta.data$response %<>% factor(levels = c("Normal","Untreated","CR","PR","PD"))
+
+meta.data$response_X6cluster_MCL61 <- paste0(meta.data$response,"_",
+                                             meta.data$X6cluster_MCL61)
+meta.data$response_X6cluster_AIM74 <- paste0(meta.data$response,"_",
+                                             meta.data$X6cluster_AIM74)
+meta.data$response_X9cluster <- paste0(meta.data$response,"_",
+                                             meta.data$X9cluster)
+meta.data$orig.ident_X6cluster_MCL61 <- paste0(meta.data$orig.ident,"_",
+                                             meta.data$X6cluster_MCL61)
+meta.data$orig.ident_X6cluster_AIM74 <- paste0(meta.data$orig.ident,"_",
+                                             meta.data$X6cluster_AIM74)
+meta.data$orig.ident_X9cluster <- paste0(meta.data$orig.ident,"_",
+                                               meta.data$X9cluster)
 saveRDS(meta.data, file = "output/MCL_SCT_87_20220901_meta.data_v2.rds")

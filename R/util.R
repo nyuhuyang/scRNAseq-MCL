@@ -160,10 +160,6 @@ CleanUp <- function(df){
 }
 
 # modify doubletFinder_v3 to commendate SCT
-
-
-
-
 doubletFinder_v3 <- function(seu, PCs, pN = 0.25, pK, nExp, reuse.pANN = FALSE, sct = FALSE, annotations = NULL) {
     require(Seurat); require(fields); require(KernSmooth)
     ## Generate new list of doublet classificatons from existing pANN vector to save time

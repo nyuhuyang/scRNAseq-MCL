@@ -19,15 +19,16 @@ if(!dir.exists("doc")) dir.create("doc")
 # ######################################################################
 #======1.1 Load the data files and Set up Seurat object =========================
 # read sample summary list
-df_samples <- readxl::read_excel("doc/20210715_scRNAseq_info.xlsx",sheet = "fastq")
+df_samples <- readxl::read_excel("doc/20220901_scRNAseq_info.xlsx",sheet = "PALIBR+AIM")
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) %<>% tolower()
-df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I") %>%
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% c("PALIBR_I","PALIBR_II")) %>%
         filter(sample != "Pt11_31")
+nrow(df_samples)
 # check missing data
-read.path = "data/scRNAseq/counts"
+read.path = "../scRNAseq-AIM/data/counts"
 current <- list.files(read.path)
-(current <- current[!grepl(".Rda|RData",current)])
+current <- current[!grepl(".Rda|RData",current)]
 (missing_data <- df_samples$sample.id[!(df_samples$sample.id %in% current)])
 
 #======1.1.2 record data quality before removing low quanlity cells =========================
@@ -58,8 +59,8 @@ QC["Estimated.Number.of.Cells",] %>% gsub(",","",.) %>% as.numeric %>% sum
 write.csv(QC,paste0(path,"metrics_summary.csv"))
 df_samples %<>% cbind(t(QC))
 rownames(df_samples) = df_samples$sample
-openxlsx::write.xlsx(df_samples, file =  paste0(path,"20210715_scRNAseq_info.xlsx"),
-                     colNames = TRUE,row.names = T,borders = "surrounding",colWidths = c(NA, "auto", "auto"))
+openxlsx::write.xlsx(df_samples, file =  paste0(path,"20220901_scRNAseq_info.xlsx"),
+                     colNames = TRUE,row.names = T,borders = "surrounding")
 
 ## Load the GEX dataset
 message("Loading the datasets")
@@ -83,15 +84,21 @@ message("mito.genes:")
 
 (mito.features <- grep(pattern = mito, x = rownames(object), value = TRUE))
 object[["percent.mt"]] <- PercentageFeatureSet(object = object, pattern = mito)
-object$orig.ident %<>% factor(levels = df_samples$`sample`)
+object$orig.ident %<>% factor(levels = df_samples$sample)
 Idents(object) = "orig.ident"
 g1 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
         VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
-                theme(axis.text.x = element_text(size=15,angle = 0,hjust = 0.5),legend.position="none")
+                theme(axis.text.x = element_text(size=4,angle = 45,hjust = 1,vjust = 1),
+                      legend.position="none",plot.title = element_text(hjust = 0.5))
 })
 save(g1,file= paste0(path,"g1","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
 
 #============1.2 scatter ======================
+object %<>% subset(nFeature_RNA > 500 #300
+                   & nCount_RNA > 1000 #500
+                   & percent.mt < 20 #50
+)
+
 meta_data = object@meta.data
 meta_data$discard = FALSE
 for(i in 1:length(df_samples$sample)){
@@ -107,23 +114,20 @@ for(i in 1:length(df_samples$sample)){
 object@meta.data = meta_data
 table(object$orig.ident, object$discard)
 
-object %<>% subset(subset = discard == FALSE
-                   &  nFeature_RNA > 300
-                   & nCount_RNA > 500
-                   & percent.mt < 50
-                   )
+object %<>% subset(subset = discard == FALSE)
 # FilterCellsgenerate Vlnplot before and after filteration
 Idents(object) = "orig.ident"
-Idents(object) %<>% factor(levels = df_samples$`sample`)
+Idents(object) %<>% factor(levels = df_samples$sample)
 
 g2 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
         VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
-                theme(axis.text.x = element_text(size=15,angle = 0,hjust = 0.5),legend.position="none")
+                theme(axis.text.x = element_text(size=4,angle = 45,hjust = 1,vjust = 1),
+                      legend.position="none",plot.title = element_text(hjust = 0.5))
 })
 save(g2,file= paste0(path,"g2","_",length(df_samples$sample),"_",gsub("-","",Sys.Date()),".Rda"))
 #load(paste0(save.path,"g2_58_20201009.Rda"))
 
-jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=14, height=7,res=600)
 print(plot_grid(g1[[1]]+ggtitle("nFeature_RNA before filteration")+
                         scale_y_log10(limits = c(100,10000))+
                         theme(plot.title = element_text(hjust = 0.5)),
@@ -131,15 +135,15 @@ print(plot_grid(g1[[1]]+ggtitle("nFeature_RNA before filteration")+
                         scale_y_log10(limits = c(100,10000))+
                         theme(plot.title = element_text(hjust = 0.5))))
 dev.off()
-jpeg(paste0(path,"S1_nUMI.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_nUMI.jpeg"), units="in", width=14, height=7,res=600)
 print(plot_grid(g1[[2]]+ggtitle("nCount_RNA before filteration")+
-                        scale_y_log10(limits = c(500,100000))+
+                        scale_y_log10(limits = c(100,100000))+
                         theme(plot.title = element_text(hjust = 0.5)),
                 g2[[2]]+ggtitle("nCount_RNA after filteration")+
-                        scale_y_log10(limits = c(500,100000))+
+                        scale_y_log10(limits = c(100,100000))+
                         theme(plot.title = element_text(hjust = 0.5))))
 dev.off()
-jpeg(paste0(path,"S1_mito.jpeg"), units="in", width=10, height=7,res=600)
+jpeg(paste0(path,"S1_mito.jpeg"), units="in", width=14, height=7,res=600)
 print(plot_grid(g1[[3]]+ggtitle("mito % before filteration")+
                         ylim(c(0,50))+
                         theme(plot.title = element_text(hjust = 0.5)),
@@ -150,4 +154,4 @@ dev.off()
 
 #====
 format(object.size(object),unit = "GB")
-saveRDS(object, file = "data/MCL_51_20210724.rds")
+saveRDS(object, file = "data/MCL_87_20220901.rds")

@@ -20,11 +20,41 @@ source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4
 
 # load data
 object = readRDS(file = "data/MCL_SCT_51_20210724.rds")
+
 df_samples <- readxl::read_excel("doc/20210715_scRNAseq_info.xlsx",sheet = "fastq")
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) %<>% tolower()
 df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I") %>%
         filter(sample != "Pt11_31")
+
+meta.data = object@meta.data
+meta.data$patient = plyr::mapvalues(meta.data$orig.ident,
+                                    from = df_samples$sample,
+                                    to = df_samples$patient)
+meta.data$response =  plyr::mapvalues(meta.data$orig.ident,
+                                      from = df_samples$sample,
+                                      to = df_samples$response)
+meta.data$treatment =  plyr::mapvalues(meta.data$orig.ident,
+                                       from = df_samples$sample,
+                                       to = df_samples$treatment)
+meta.data[meta.data$Doublets %in% c("Doublet-High Confidence","Doublet-Low Confidence"),"discard"] = TRUE
+meta.data[meta.data$cell.types %in% c("Erythrocytes","unknown","Nonhematopoietic cells"),"discard"] = TRUE
+meta.data[meta.data$orig.ident %in% "Pt2_30" & meta.data$cell.types %in% c("B_cells","MCL"),"discard"] = TRUE
+meta.data$Mean.Reads.per.Cell %<>% gsub(",","",.) %>% as.integer()
+meta.data$Number.of.Reads %<>% gsub(",","",.) %>% as.integer()
+meta.data$Sequencing.Saturation %<>% gsub("%","",.) %>% as.numeric()
+
+object$response %<>% factor(levels = c("Normal","Untreated","CR","PR","PD"))
+object$treatment %<>% factor(levels = c("Normal","Untreated","PALIBR+Ibrutinib"))
+
+
+colnames(object@meta.data)[grep("Frequency",colnames(object@meta.data))]="tcr.frequency"
+
+saveRDS(object@meta.data, file = "output/MCL_51_20210724_meta.data_v1.rds")
+
+table(colnames(object) == rownames(meta.data))
+
+
 table(object$orig.ident %in% df_samples$sample)
 table(df_samples$sample %in% object$orig.ident)
 

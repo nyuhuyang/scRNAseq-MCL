@@ -12,12 +12,15 @@ library(gplots)
 library(cowplot)
 library(eulerr)
 library(openxlsx)
-source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4_functions.R")
 
+
+
+#============= after running Differential_analysis.R Rsscript ===========
+
+# X4clusters =====
 path <- "Yang/PALIBR/51_samples/Fig. 3/"
 if(!dir.exists(path)) dir.create(path, recursive = T)
-#============= after running Differential_analysis.R Rsscript ===========
-# X4clusters =====
 choose = "X4cluster"
 (de_file_names = list.files("output/20210802_4clusters",pattern = "MCL_only_51-FC0_cluster"))
 idents.all = 1:4

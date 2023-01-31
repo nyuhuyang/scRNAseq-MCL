@@ -21,14 +21,13 @@ if(!dir.exists(path)) dir.create(path, recursive = T)
 # ######################################################################
 #======1.1 Setup the Seurat objects =========================
 # read sample summary list
-df_samples <- readxl::read_excel("output/20220901/20220901_scRNAseq_info.xlsx")
+df_samples <- readxl::read_excel("output/20230106/20230106_scRNAseq_info.xlsx")
 df_samples = as.data.frame(df_samples)
 colnames(df_samples) %<>% tolower()
-df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% c("PALIBR_I","PALIBR_II")) %>%
-    filter(sample != "Pt11_31")
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% c("PALIBR_I","PALIBR_II","AIM"))
 nrow(df_samples)
 #======1.2 load  Seurat =========================
-object = readRDS(file = "data/MCL_87_20220901.rds")
+object = readRDS(file = "data/MCL_120_20230106.rds")
 
 meta.data = object@meta.data
 for(i in 1:length(df_samples$sample)){
@@ -41,9 +40,9 @@ for(i in 1:length(df_samples$sample)){
     meta.data[cells,"phase"] = df_samples$phase[i]
     meta.data[cells,"project"] = df_samples$project[i]
     meta.data[cells,"date"] = as.character(df_samples$date[i])
-    #meta.data[cells,"Mean.Reads.per.Cell"] = df_samples$mean.reads.per.cell[i]
-    ##meta.data[cells,"Number.of.Reads"] = df_samples$number.of.reads[i]
-    #meta.data[cells,"Sequencing.Saturation"] = df_samples$sequencing.saturation[i]
+    meta.data[cells,"Mean.Reads.per.Cell"] = df_samples$mean.reads.per.cell[i]
+    meta.data[cells,"Number.of.Reads"] = df_samples$number.of.reads[i]
+    meta.data[cells,"Sequencing.Saturation"] = df_samples$sequencing.saturation[i]
 }
 meta.data$date %<>% as.character() %>% gsub(" .*","",.)
 meta.data$orig.ident %<>% factor(levels = df_samples$sample)
@@ -53,39 +52,39 @@ object@meta.data = meta.data
 Idents(object) = "orig.ident"
 
 # Determine the ‘dimensionality’ of the dataset  =========
-npcs = 100
+npcs = 150
 
 DefaultAssay(object) <- "RNA"
 object %<>% NormalizeData()
 object <- FindVariableFeatures(object = object, selection.method = "vst",
-                               num.bin = 20, nfeatures = 2000,
+                               num.bin = 20, nfeatures = 3000,
                                mean.cutoff = c(0.1, 8), dispersion.cutoff = c(1, Inf))
 object %<>% ScaleData(verbose = FALSE)
-object %<>% RunPCA(npcs = 100, verbose = FALSE)
+object %<>% RunPCA(npcs = npcs, verbose = FALSE)
 jpeg(paste0(path,"ElbowPlot_RNA.jpeg"), units="in", width=10, height=7,res=600)
-print(ElbowPlot(object,ndims = 100))
+print(ElbowPlot(object,ndims = npcs))
 dev.off()
 object <- JackStraw(object, num.replicate = 20,dims = npcs)
 object <- ScoreJackStraw(object, dims = 1:npcs)
 
-for(i in 0:9){
+for(i in 0:14){
     a = i*10+1; b = (i+1)*10
     jpeg(paste0(path,"JackStrawPlot_",a,"_",b,".jpeg"), units="in", width=10, height=7,res=600)
     print(JackStrawPlot(object, dims = a:b))
     dev.off()
-    Progress(i, 9)
+    Progress(i, 14)
 }
 p.values = object[["pca"]]@jackstraw@overall.p.values
 print(npcs <- max(which(p.values[,"Score"] <=0.05)))
-npcs <- 90
+
+npcs <- 110
 
 
 #======1.6 Performing SCTransform and integration =========================
 
 format(object.size(object),unit = "GB")
-options(future.globals.maxSize= object.size(object)*30)
+options(future.globals.maxSize= object.size(object)*15)
 object %<>% SCTransform(method = "glmGamPoi", vars.to.regress = "percent.mt", verbose = TRUE)
-DefaultAssay(object) <- "SCT"
 object %<>% ScaleData(verbose = FALSE)
 object %<>% RunPCA(verbose = T,npcs = npcs)
 
@@ -95,17 +94,15 @@ dev.off()
 
 
 object %<>% RunUMAP(reduction = "pca", dims = 1:npcs)
-
 object[["raw.umap"]] <- CreateDimReducObject(embeddings = object@reductions[["umap"]]@cell.embeddings,
                                              key = "rawUMAP_", assay = DefaultAssay(object))
 colnames(object[["raw.umap"]]@cell.embeddings) %<>% paste0("raw-",.)
 
 #======1.8 UMAP from harmony =========================
 
-npcs = 90
 jpeg(paste0(path,"S1_RunHarmony.jpeg"), units="in", width=10, height=7,res=600)
 system.time(object %<>% RunHarmony.1(group.by = "orig.ident", dims.use = 1:npcs,
-                                     theta = 2, plot_convergence = TRUE,do_pca = FALSE,
+                                     theta = 2, plot_convergence = TRUE,#do_pca = FALSE,
                                      nclust = 50, max.iter.cluster = 100))
 dev.off()
 
@@ -116,7 +113,7 @@ object[['RNA']]@scale.data = matrix(0,0,0)
 object[["SCT"]]@scale.data = matrix(0,0,0)
 format(object.size(object),unit = "GB")
 
-saveRDS(object, file = "data/MCL_87_20220901.rds")
+saveRDS(object, file = "data/MCL_120_20230106.rds")
 
 
 #=======1.9 save SCT only =======================================
@@ -126,10 +123,9 @@ format(object.size(object@assays$RNA),unit = "GB")
 object@assays[["RNA"]] = NULL
 format(object.size(object),unit = "GB")
 
-object[['RNA']]@scale.data = matrix(0,0,0)
 object[["SCT"]]@scale.data = matrix(0,0,0)
 object[["SCT"]]@counts = matrix(0,0,0)
 
-saveRDS(object, file = "data/MCL_SCT_87_20220901.rds")
+saveRDS(object, file = "data/MCL_120_SCT_20230106.rds")
 
 

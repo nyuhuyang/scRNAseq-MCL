@@ -20,17 +20,24 @@ if (length(slurm_arrayid)!=1)  stop("Exact one argument must be supplied!")
 i <- as.numeric(slurm_arrayid)
 print(paste0("slurm_arrayid=",i))
 
-object = readRDS(file = "data/MCL_SCT_51_20210724.rds")
+object = readRDS(file = "data/MCL_51_20210724.rds")
 DefaultAssay(object) = "SCT"
+meta.data <- readRDS(file = "output/MCL_B_51_20230113_meta.data.rds")
+if(all(rownames(meta.data) %in% colnames(object))){
+    print("all cellID within!")
+    object %<>% subset(cells = rownames(meta.data))
+    object@meta.data = meta.data
+}
 
 object = subset(object, subset =  Doublets == "Singlet"
                                 & X4cluster  %in% c("1","2","3","4")
 )
 
 
-step = 9
-# choose == "MCL_vs_B_cells"
-if(step == 0){  # need 32 GB
+step = c("MCL_vs_B_cells","X4clusters","X4clusters_vs_Normal","X4clusters_vs_B_cells",
+         "orig.ident_X4clusters_vs_orig.ident_X4clusters","longitudinal X4 clusters","MCL_vs_B_inX4Clusters",
+         "response_X4clusters_vs_rest in CR and PD","X4clusters_v1,2,3_vs_Normal")
+if(step == "MCL_vs_B_cells"){  # need 32 GB
         # load data
         samples = as.character(unique(object$orig.ident))
         samples = samples[!samples %in% c("N01","N02","N03","N04")]
@@ -48,10 +55,9 @@ if(step == 0){  # need 32 GB
 
         write.csv(MCL_markers,paste0(path,"MCL_B_",ident.1, "-vs-N01.csv"))
 }
-# choose == "X4clusters"
-if(step == 1){ # need 32 GB
+if(step == "X4clusters"){ # need 32 GB
 
-        object = subset(object, subset =  orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6"), invert = T)
+        #object = subset(object, subset =  orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6"), invert = T)
         object = subset(object, subset =  orig.ident %in% c("N01","N02","N03","N04"), invert = T)
 
         Idents(object) = "X4cluster"
@@ -67,8 +73,7 @@ if(step == 1){ # need 32 GB
                                                    test.use = "MAST"))
         write.csv(MCL_markers,paste0(path,"MCL_only_51-FC0_cluster",i,".csv"))
 }
-# choose == "X4clusters_vs_Normal"
-if(step == 2){ # need 32 GB
+if(step == "X4clusters_vs_Normal"){ # need 32 GB
         object = subset(object, subset =  orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6"), invert = T)
         object$X4clusters_normal = as.character(object$X4cluster)
         object@meta.data[object$orig.ident %in% c("N01","N02","N03"),
@@ -89,8 +94,7 @@ if(step == 2){ # need 32 GB
         write.csv(MCL_markers,paste0(path,"MCL_Normal_51-FC0.25_",i,"_",opts[i],".csv"))
 
 }
-# choose == "X4clusters_vs_B_cells"
-if(step == 3){ # need 32 GB
+if(step == "X4clusters_vs_B_cells"){ # need 32 GB
         opts = data.frame(only.pos = rep(c(T,  T,   T,   F),  each = 4),
                           logfc =  rep(c(0.25, 0.1, 0.05, 0), each = 4),
                           ident.1 = rep(paste0("C",1:4),      time = 4))
@@ -114,8 +118,7 @@ if(step == 3){ # need 32 GB
         write.csv(MCL_markers,paste0(path,"MCL_B_41-FC",opt$logfc,"_",opt$ident.1,".csv"))
 }
 
-# choose == "B_cells_vs_B_cells"
-if(step == 4){ # need 32 GB
+if(step == "B_cells_vs_B_cells"){ # need 32 GB
         opts = list(list(FALSE, 0, "N01"),
                    list(FALSE, 0, "N02"),
                    list(FALSE, 0, "N03"),
@@ -154,8 +157,8 @@ if(step == 4){ # need 32 GB
         write.csv(B_markers,paste0(path,"B_41-FC",opt$logfc,"_",
                                    paste(opt$specimens,collapse = "-"),".csv"))
 }
-# choose == "orig.ident_X4clusters_vs_Normal"
-if(step == 5){ # need 32 GB
+
+if(step == "orig.ident_X4clusters_vs_Normal"){ # need 32 GB
         object$orig.ident %<>% gsub("N01|N02|N03","Normal",.)
         Idents(object) = "orig.ident"
         object %<>% subset(idents = "N04",invert = T)
@@ -194,8 +197,8 @@ if(step == 5){ # need 32 GB
         print(g)
         dev.off()
 }
-# choose == "orig.ident_X4clusters_vs_orig.ident_X4clusters"
-if(step == 6){ # need 32 GB
+
+if(step == "orig.ident_X4clusters_vs_orig.ident_X4clusters"){ # need 32 GB
         opts = list(c("Pt11_LN1","Pt11_1"),
                     c("Pt11_LN1","Pt11_14"),
                     c("Pt11_LN1","Pt11_28"),
@@ -277,7 +280,7 @@ if(step == 6){ # need 32 GB
 }
 
 # Doheatmap for MCL longitudinal X4 clusters ================
-if(step == 7){
+if(step == "longitudinal X4 clusters"){
         opts = data.frame(group = rep(c("Untreated","Pt11","Pt17","Pt25","Pt27","PtB13"),  each = 4),
                           cluster = rep(paste0("C",1:4),6),
                           stringsAsFactors = F)
@@ -340,7 +343,7 @@ if(step == 7){
 # Dec 4, 2020
 # 2. Volcano plots comparing a) cluster 1 MCL cells with cluster 1 normal B cells,  and b) cluster 2 MCL cells with cluster 2 B cells.
 
-if(step == 8){
+if(step == 'MCL_vs_B_inX4Clusters'){
         path <- "Yang/Figure Sources/MCL_vs_B_inX4Clusters/"
         if(!dir.exists(path))dir.create(path, recursive = T)
 
@@ -432,7 +435,7 @@ if(step == 8){
 }
 
 # choose == "response_X4clusters_vs_rest in CR and PD"
-if(step == 8){ # need 32 GB
+if(step == "response_X4clusters_vs_rest in CR and PD"){ # need 32 GB
         object = subset(object, subset =  response %in% c("CR","PD"))
         object$response %<>% droplevels()
         object$response_X4clusters = paste0(object$response,"_",object$X4cluster)
@@ -453,4 +456,41 @@ if(step == 8){ # need 32 GB
         B_markers$cluster = opt
         B_markers$gene = rownames(B_markers)
         write.csv(B_markers, paste0(save.path,opt,"_FC0.1_.csv"))
+}
+
+if(step == "X4clusters_v1,2,3_vs_Normal"){ # need 32 GB
+    object %<>% subset(subset =  orig.ident %in% c("N04"), invert = T)
+
+    object$X4cluster_normal = as.character(object$X4cluster)
+    object$X4cluster_v2_normal = as.character(object$X4cluster_v2)
+    object$X4cluster_v3_normal = as.character(object$X4cluster_v3)
+    normal <- object$orig.ident %in% c("N01","N02","N03")
+    object@meta.data[normal,"X4clusters_normal"] = "Normal"
+    object@meta.data[normal,"X4cluster_v2_normal"] = "Normal"
+    object@meta.data[normal,"X4cluster_v3_normal"] = "Normal"
+
+    opts <- data.frame("X4cluster" = rep(as.character(1:4),3),
+                       "ident" = paste0(rep(c("X4cluster","X4cluster_v2","X4cluster_v3"),each = 4),"_normal")) #1~12
+    opt <- opts[i,]
+    print(opt)
+    Idents(object) = opt$ident
+    table(Idents(object))
+
+    print(paste(opt$X4cluster," vs. Normal in",opt$ident))
+    system.time(markers <- FindMarkers_UMI(object,
+                                           ident.1 = opt$X4cluster,
+                                           ident.2 = "Normal",
+                                           logfc.threshold = 0.1,
+                                           only.pos = TRUE,
+                                           test.use = "MAST",
+                                           latent.vars = "nFeature_SCT"))
+    markers$gene <- rownames(markers)
+    markers$cluster = opt$X4cluster
+    markers$ident = opt$ident
+
+    num = i
+    if(i < 10) num = paste0("0",num)
+
+    write.csv(markers,paste0(path,num,"_MCL_Normal_51-FC0.1_",opt$X4cluster,"_vs_Normal_in_",opt$ident,".csv"))
+
 }

@@ -1,9 +1,10 @@
 library(Seurat)
 library(dplyr)
 library(tidyr)
-library(kableExtra)
 library(magrittr)
-source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat3_functions.R")
+library(kableExtra)
+
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4_functions.R")
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path))dir.create(path, recursive = T)
 
@@ -80,104 +81,19 @@ format(object.size(object),unit = "GB")
 
 saveRDS(object, file = "data/MCL_SCT_51_20210724.rds")
 
-MCL = subset(object, subset =  UMAP_1 > 0
-                        & tSNE_2 < tSNE_1 +1
-                        & UMAP_2 <10
-                        & Doublets == "Singlet"
-                        & cell.types  %in% c("B_cells","MCL")
-)
 
-MCL %<>% FindNeighbors(reduction = "tsne",dims = 1:2,k.param = 20)
+df_samples <- readxl::read_excel("doc/20220901_scRNAseq_info.xlsx") %>% as.data.frame
+colnames(df_samples) %<>% tolower()
+df_samples %<>% filter(sequence %in% "GEX") %>% filter(phase %in% "PALIBR_I")
+nrow(df_samples)
+df_samples$date %<>% gsub(" UTC","",.) %>% as.character()
 
-save.path <- paste0(path,"serial_resolutions_tsne/")
-if(!dir.exists(save.path))dir.create(save.path, recursive = T)
-
-resolutions = c(seq(0.001,0.009, by = 0.001),seq(0.01,0.09, by = 0.01))
-for(i in 1:length(resolutions)){
-    MCL %<>% FindClusters(resolution = resolutions[i], algorithm = 1)
-    TSNEPlot.1(MCL, group.by=paste0("SCT_snn_res.",resolutions[i]),
-               split.by = paste0("SCT_snn_res.",resolutions[i]),pt.size = 0.3,label = T,
-               label.repel = T,alpha = 0.9,
-               do.return = F,
-               no.legend = T,label.size = 4, repel = T,
-               title = paste("res =",resolutions[i]),
-               do.print = T, save.path = save.path)
-    Progress(i,length(resolutions))
+meta.data <- readRDS(file = "output/MCL_51_20210724_meta.data_v2.rds")
+colnames(meta.data) %<>% sub("Phase","cell cycle phase",.)
+for(i in 1:length(df_samples$sample)){
+    cells <- meta.data$orig.ident %in% df_samples$sample[i]
+    print(table(cells))
+    meta.data[cells,"response"] = df_samples$response[i]
 }
 
-TSNEPlot.1(MCL, group.by=paste0("SCT_snn_res.",0.006),pt.size = 0.3,label = T,
-           label.repel = T,alpha = 0.9,
-           do.return = F,
-           no.legend = T,label.size = 4, repel = T,
-           title = paste("res =",0.006),
-           do.print = T, save.path = save.path)
-
-MCL$X4cluster = as.integer(MCL$SCT_snn_res.0.006)
-MCL = subset(MCL, subset =  X4cluster != 5)
-
-MCL$X4cluster %<>% gsub("6|7|8|9|10","1",.)
-MCL$SCT_snn_res.0.006 %<>% as.integer() %>% as.factor()
-
-object$X4cluster = object$cell.types
-object@meta.data[rownames(MCL@meta.data),"X4cluster"] = MCL$X4cluster
-saveRDS(object, file = "data/MCL_SCT_51_20210724.rds")
-
-
-
-exp_list <- vector("list", length = length(labels))
-names(exp_list) = labels
-for(i in seq_along(labels)){
-    sub_object <- subset(object, idents = labels[i])
-    Idents(sub_object) = "orig.ident"
-    cell.number.df <- as.data.frame.table(table(sub_object$orig.ident))
-    cell.number = cell.number.df$Freq
-    names(cell.number) = cell.number.df$Var1
-    exp = AverageExpression(sub_object, assays = "SCT")
-    exp_list[[labels[i]]] = rbind("cell.number" = cell.number, exp$SCT)
-    svMisc::progress(i/length(exp_list)*100)
-
-}
-
-openxlsx::write.xlsx(exp_list,
-                     file = paste0(path,"Expression_Cell.types.xlsx"),
-                     colNames = TRUE, rowNames = TRUE,
-                     borders = "surrounding",colWidths = c(NA, "auto", "auto"))
-
-for(i in seq_along(exp_list)){
-    write.table(exp_list[[i]],file = paste0(path,"Expression_",names(exp_list)[i],".txt"),
-                sep = "\t",row.names = TRUE)
-    svMisc::progress(i/length(exp_list)*100)
-}
-
-# Extend Data
-Idents(object) = "cell.types"
-object %<>% sortIdent()
-
-cell_Freq <- table(Idents(object)) %>% as.data.frame
-cell_Freq$Percent <- round(prop.table(cell_Freq$Freq),digits = 3) %>%
-    scales::percent()
-
-cell_Freq = cell_Freq[order(cell_Freq$Var1),]
-df_samples <- readxl::read_excel("doc/singler.colors.xlsx")
-cell_Freq$col = plyr::mapvalues(cell_Freq$Var1,
-                                from = na.omit(df_samples$Cell.types),
-                                to = na.omit(df_samples$singler.color2))
-cell_Freq$col %<>% as.character
-cell_Freq = cell_Freq[order(cell_Freq$Freq,decreasing = T),]
-cell_Freq$Var1 %<>% factor(levels = as.character(cell_Freq$Var1))
-colnames(cell_Freq)[1:2] = c("Cell_Type", "Cell_Number")
-cell_Freq$Cell_Type %<>% gsub("_"," ",.)
-
-
-jpeg(paste0(path,"cell_type_numbers.jpeg"), units="in", width=6, height=6,res=600)
-ggbarplot(cell_Freq, "Cell_Type", "Cell_Number",
-          fill = "Cell_Type", color = "black",xlab = "",
-          palette = cell_Freq$col,x.text.angle = 45,
-          ylab = "Cell Number",
-          label = cell_Freq$Percent,
-          sort.val = "desc",
-          width = 1, size = 0.5,
-          title = "Numbers of major cell types in total 74 samples")+NoLegend()+
-    theme(plot.title = element_text(hjust = 0.5,size=15))+
-    scale_y_continuous(expand = c(0, 0), limits = c(0,max(cell_Freq$Cell_Number)+4000))
-dev.off()
+saveRDS(meta.data,"output/MCL_51_20210724_meta.data_v2.rds")

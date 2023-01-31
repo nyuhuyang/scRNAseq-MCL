@@ -11,23 +11,18 @@ source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4
 path <- paste0("output/",gsub("-","",Sys.Date()),"/")
 if(!dir.exists(path)) dir.create(path, recursive = T)
 #====== 3.1 load data ==========================================
-object = readRDS(file = "data/MCL_SCT_87_20220901.rds")
-meta.data <- readRDS(file = "output/MCL_SCT_87_20220901_meta.data_v3.rds")
-if(all(colnames(object) == rownames(meta.data))){
-    print("all cellID match!")
-    object@meta.data = meta.data
-}
-
+object = readRDS(file = "data/MCL_120_SCT_20230106.rds")
 object@meta.data %<>% cbind(FetchData(object,"CCND1"))
 meta.data = object@meta.data
+
 rm(object);GC()
 ##############################
 # create singleR data frame
 ###############################
-reference = c("MCL+blue_encode","MCL+azimuth_PBMC","MCL_51+azimuth_PBMC")[1]
+reference = c("MCL+blue_encode","MCL+azimuth_PBMC")[1]
 
 if(reference == "MCL+blue_encode"){
-    pred = readRDS("output/MCL_87_20220901_blueEncode_singleR_pred.rds")
+    pred = readRDS("output/MCL_120_20230106_blueEncode_singleR_pred.rds")
     singlerDF = data.frame("label2.blue_encode" = pred$pruned.labels,
                            row.names = rownames(pred))
     table(rownames(pred) == rownames(meta.data))
@@ -80,12 +75,12 @@ if(reference == "MCL+blue_encode"){
                                                                     "#7570B3","#F2F2F2"))
     table(rownames(meta.data) == rownames(singlerDF))
     table(singlerDF$label1.blue_encode.colors)
-    meta.data %<>% cbind(singlerDF[,c("label1.blue_encode","label1.blue_encode.colors")])
+    meta.data %<>% cbind(singlerDF[,c("label2.blue_encode","label1.blue_encode","label1.blue_encode.colors")])
 
 }
 
 if(reference == "MCL+azimuth_PBMC"){
-    pred = readRDS("output/MCL_87_20220901_azimuth_MCL_singleR_pred.rds")
+    pred = readRDS("output/MCL_120_20230106_azimuth_MCL_singleR_pred.rds")
     singlerDF = data.frame("celltype.l3" = pred$pruned.labels,
                            row.names = rownames(pred))
     table(rownames(pred) == rownames(meta.data))
@@ -110,7 +105,7 @@ if(reference == "MCL+azimuth_PBMC"){
 
     # cell.types false positive results  ========
     #table(singlerDF$cell.types, meta.data$orig.ident) %>% kable %>% kable_styling()
-    normal_cells <- object$orig.ident %in% c("N01","N02","N03","N04")
+    normal_cells <- meta.data$orig.ident %in% c("N01","N02","N03","N04")
     singlerDF[normal_cells,"celltype.l1"] %<>% gsub("MCL","B",.)
     singlerDF[normal_cells,"celltype.l2"] %<>% gsub("MCL","B",.)
     singlerDF[normal_cells,"celltype.l3"] %<>% gsub("MCL","B",.)
@@ -121,13 +116,13 @@ if(reference == "MCL+azimuth_PBMC"){
     ##############################
     singlerDF$celltype.l1.colors = singlerDF$celltype.l1
     singlerDF$celltype.l1.colors %<>% plyr::mapvalues(from = c("B",
-                                                               "MCL_0", "MCL_C1",  "MCL_C2",  "MCL_C3",  "MCL_C4",
+                                                               "MCL",
                                                                "Mono",
                                                                "NK","other","DC",
                                                                "CD4 T","CD8 T",
                                                                "other T","unknown"),
                                                       to = c("#E6AB02",
-                                                             "#2055da","#40A635","#FE8205","#8861AC","#E83C2D",
+                                                             "#2055da",#"#40A635","#FE8205","#8861AC","#E83C2D",
                                                              "#ADDFEE",
                                                              "#A65628","#B3B3B3","#FDDAEC",
                                                              "#B3DE69","#F0027F",
@@ -216,5 +211,4 @@ if(reference == "MCL_51+azimuth_PBMC"){
     meta.data %<>% cbind(singlerDF)
     meta.data$CCND1 = NULL
 }
-meta.data <- meta.data[,-grep("X6cluster|X9cluster",colnames(meta.data))]
-saveRDS(meta.data, file = "output/MCL_SCT_87_20220901_meta.data_v3.rds")
+saveRDS(object@meta.data, file = "output/MCL_120_SCT_20230106_meta.data_v1.rds")

@@ -246,76 +246,153 @@ fgseaRes = FgseaDotPlot(stats=res, pathways=hallmark,
 write.csv(fgseaRes, file = paste0(read.path,"/3. CD4 T vs CD8 T/","Dotplot_FDR1_pval1.csv"))
 
 # support Figure 3
-save_path = "Yang/PALIBR/Fig. S3/"
-object = readRDS(file = "data/MCL_SCT_51_20210724.rds")
-DefaultAssay(object) = "SCT"
-B_cells_MCL = subset(object, subset =  Doublets == "Singlet"
-                     & X4cluster  %in% c("1","2","3","4")
-)
+save_path = "Yang/PALIBR/51_samples/Fig. S2/"
+if(!dir.exists(save_path)) dir.create(save_path, recursive = T)
 
-B_cells_MCL$orig.ident %<>% gsub("^N01|^N02|^N03","Normal",.)
-B_cells_MCL$X4clusters_normal = as.character(B_cells_MCL$X4cluster)
+object = readRDS(file = "data/MCL_51_20210724.rds")
+meta.data <- readRDS(file = "output/MCL_B_51_20230113_meta.data_v2.rds")
 
-B_cells_MCL@meta.data[B_cells_MCL$orig.ident %in% "Normal","X4clusters_normal"] = "Normal"
-Idents(B_cells_MCL) = "orig.ident"
 
-B_cells_MCL %<>% subset(idents = c("N04"), invert = T)
-Idents(B_cells_MCL) = "X4clusters_normal"
+if(all(rownames(meta.data) %in% colnames(object))){
+    print("all cellID within!")
+    object %<>% subset(cells = rownames(meta.data))
+    object@meta.data = meta.data
+}
 
-table(Idents(B_cells_MCL))
-choose = "X4cluster_vs_Normal"
+object %<>% subset(subset =  Doublets == "Singlet"
+                & X4cluster  %in% c("1","2","3","4"))
+object$X4cluster_normal = as.character(object$X4cluster)
+object@meta.data[object$orig.ident %in% c("N01","N02","N03"),
+                 "X4cluster_normal"] = "Normal"
+object@meta.data[(!object$X4cluster_normal %in% "Normal") & object$cell.types == "B_cells",
+                 "X4cluster_normal"] = "B cells"
+object %<>% subset(subset =  orig.ident == "N04" | X4cluster_normal == "B cells", invert = T)
+Idents(object) = "X4cluster_normal"
+object$X4cluster_normal %<>% factor(c("Normal","1","2","3","4"))
+table(object$X4cluster_normal)
 
-X4clusters_markers = read.csv(file = paste0("Yang/Figure Sources/51_samples/heatmaps_full/",choose,"/",choose,"_51-FC0.25.csv"))
-
-table(X4clusters_markers$cluster)
-X4clusters_markers$cluster %<>% factor(levels = 1:4)
-markers <- FilterGenes(B_cells_MCL,c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11"))
-# remove mito
-(MT_gene <- grep("^MT-",X4clusters_markers$gene))
-if(length(MT_gene)>0) X4clusters_markers = X4clusters_markers[-MT_gene,]
-# remove IGL, IGK, IGK
-(IG.gene <- grep(pattern = "^IGL|^IGK|^IGH", x = X4clusters_markers$gene))
-if(length(IG.gene)>0) X4clusters_markers = X4clusters_markers[-IG.gene,]
-
+csv_file_names <- list.files("output/20230203",pattern = "MCL_Normal_51-FC0.25",full.names = TRUE)
+degs <- pbapply::pblapply(csv_file_names, function(x) {
+    tmp <- read.csv(x,header = TRUE,row.names = 1)
+    tmp$cluster <- sub("\\.csv","",x) %>% sub(".*_","",.)
+    tmp$genes <- rownames(tmp)
+    tmp
+    }) %>%
+    bind_rows()
+degs <- degs[grep("^MT-",degs$gene,invert = TRUE),]
 Top_n = 40
-filter_by = "top40"
-top = switch (filter_by,
-              "top40"= X4clusters_markers %>% group_by(cluster) %>%
-                      top_n(Top_n, cluster) %>% top_n(Top_n, avg_log2FC),
-              "logFC0.01" = X4clusters_markers %>% group_by(cluster) %>%
-                      filter(avg_log2FC < 0.05 & avg_logFC > 0.01)
-)
-table(top$cluster)
-top = top[order(top$cluster),]
-#write.csv(top,paste0(path,choose,"/",filter_by,"_genes_heatmap.csv"))
-#write.csv(top,paste0(path,choose,"/avg_logFC0.01_genes_heatmap.csv"))
+top1 <- degs %>% group_by(cluster) %>%
+    arrange(desc(avg_log2FC), .by_group = TRUE) %>%
+    distinct() %>%
+    top_n(Top_n, avg_log2FC)
 
-features = c(as.character(top$gene),
-             tail(VariableFeatures(object = B_cells_MCL), 2),
+
+markers <- c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11")
+markers = markers[markers %in% rownames(object)]
+
+features = c(as.character(top1$genes),
+             tail(VariableFeatures(object = object), 2),
              markers)
-
-B_cells_MCL %<>% ScaleData(features=features)
+table(duplicated(features))
+sub_obj <- object[features,]
+Idents(sub_obj) = "X4cluster_normal"
+table(Idents(sub_obj))
+sub_obj %<>% ScaleData(features=features)
 featuresNum <- make.unique(features, sep = ".")
-B_cells_MCL %<>% MakeUniqueGenes(features = features)
-group.colors = c("#181ea4","#5f66ec","#f46072","#e6001c")
-B_cells_MCL$samples = B_cells_MCL$orig.ident
-B_cells_MCL@meta.data$X4clusters_normal %<>% factor(levels = c("Normal","1","2","3","4"))
-DoHeatmap.2(B_cells_MCL, features = featuresNum, #Top_n = Top_n,
-            do.print=T, do.return=F,
-            angle = 0,
-            group.by = c("X4clusters_normal","samples"),group.bar = T,
-            group1.colors = c("#31aa3a",group.colors),
+sub_obj %<>% MakeUniqueGenes(features = features)
+dim(sub_obj[["SCT"]]@scale.data)
+table(duplicated(rownames(sub_obj[["SCT"]]@scale.data)))
+table(featuresNum %in% rownames(sub_obj[["SCT"]]@scale.data))
+DoHeatmap.2(sub_obj, features = featuresNum, #Top_n = Top_n,
+            do.print=T,
+            angle = 45,
+            group.by = c("X4cluster_normal","orig.ident"), group.bar = T,
+            group1.colors = c('#B2DF8A','#40A635','#FE8205','#8861AC','#E83C2D'),
             group2.colors= Singler.colors,
             title.size = 16, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0.02, label=F, cex.row= 5,
             width=14, height=12,
-            pal_gsea = FALSE,
-            file.name = paste0("Heatmap_",filter_by,"_X4clusters_vs_Normal.jpeg"),
+            file.name = paste0("Fig S2. top",Top_n,"_X4cluster_normal_orig.ident.jpeg"),
             title =  paste("Top",Top_n, "DE genes in 4 B/MCL clusters"),
-            save.path = paste0(path,"heatmaps_full/",choose),
+            save.path = save_path,
             nrow = 5, ncol = 8, design = c(patchwork::area(1, 1, 5, 5),
                                            patchwork::area(3, 6, 3, 8)))
 
+DoHeatmap.2(sub_obj, features = featuresNum, #Top_n = Top_n,
+            do.print=T,
+            angle = 45,
+            group.by = c("X4cluster_normal","patient"), group.bar = T,
+            group1.colors = c('#B2DF8A','#40A635','#FE8205','#8861AC','#E83C2D'),
+            group2.colors= Singler.colors,
+            title.size = 16, no.legend = F,size=5,hjust = 0.5,
+            group.bar.height = 0.02, label=F, cex.row= 5,
+            width=14, height=12,
+            file.name = paste0("Fig S2. top",Top_n,"_X4cluster_normal_patient.jpeg"),
+            title =  paste("Top",Top_n, "DE genes in 4 B/MCL clusters"),
+            save.path = save_path,
+            nrow = 5, ncol = 8, design = c(patchwork::area(1, 1, 5, 5),
+                                           patchwork::area(3, 6, 3, 7)))
+
+
+Top_n = 150
+top <- degs %>%
+    group_by(cluster) %>%
+    arrange(desc(avg_log2FC),.by_group = TRUE) %>%
+    distinct() %>%
+    top_n(Top_n, avg_log2FC) %>%
+    ungroup()
+table(top$cluster)
+
+#write.table(top,file = paste0("output/20230131/top",Top_n,"_degs_X4cluster_v1.csv"),row.names = FALSE,quote = FALSE, col.names = FALSE)
+
+features = c(as.character(top$genes),
+             tail(VariableFeatures(object = object), 2),
+             markers)
+table(duplicated(features))
+sub_obj <- object[features,]
+Idents(sub_obj) = "X4cluster_normal"
+sub_obj %<>% ScaleData(features=features)
+featuresNum <- make.unique(features, sep = ".")
+sub_obj %<>% MakeUniqueGenes(features = features)
+dim(sub_obj[["SCT"]]@scale.data)
+table(duplicated(rownames(sub_obj[["SCT"]]@scale.data)))
+table(featuresNum %in% rownames(sub_obj[["SCT"]]@scale.data))
+DoHeatmap.2(sub_obj, features = featuresNum, #Top_n = Top_n,
+            do.print=T,
+            angle = 45,
+            group.by = c("X4cluster_normal","orig.ident"), group.bar = T,
+            group1.colors = c('#B2DF8A','#40A635','#FE8205','#8861AC','#E83C2D'),
+            group2.colors= Singler.colors,
+            title.size = 16, no.legend = F,size=5,hjust = 0.5,
+            group.bar.height = 0.02, label=F, cex.row= 1,
+            width=14, height=12,
+            file.name = paste0("Fig S2. top",Top_n,"_X4cluster_normal_orig.ident.jpeg"),
+            title =  paste("Top",Top_n, "DE genes in 4 B/MCL clusters"),
+            save.path = save_path,
+            nrow = 5, ncol = 8, design = c(patchwork::area(1, 1, 5, 5),
+                                           patchwork::area(3, 6, 3, 8)))
+
+DoHeatmap.2(sub_obj, features = featuresNum, #Top_n = Top_n,
+            do.print=T,
+            angle = 45,
+            group.by = c("X4cluster_normal","patient"), group.bar = T,
+            group1.colors = c('#B2DF8A','#40A635','#FE8205','#8861AC','#E83C2D'),
+            group2.colors= Singler.colors,
+            title.size = 16, no.legend = F,size=5,hjust = 0.5,
+            group.bar.height = 0.02, label=F, cex.row= 1,
+            width=14, height=12,
+            file.name = paste0("Fig S2. top",Top_n,"_X4cluster_normal_patient.jpeg"),
+            title =  paste("Top",Top_n, "DE genes in 4 B/MCL clusters"),
+            save.path = save_path,
+            nrow = 5, ncol = 8, design = c(patchwork::area(1, 1, 5, 5),
+                                           patchwork::area(3, 6, 3, 7)))
+
+openxlsx::write.xlsx(list("top40" = top1,"top150" = top), file =  paste0(path,"DEGs_X4cluster_normal.xlsx"),
+                     colNames = TRUE,rownames = T,borders = "surrounding")
+
+#write.csv(top,file = paste0("output/20230131/top",Top_n,"_degs_X4cluster_normal_v1.csv"),row.names = FALSE,quote = FALSE)
+openxlsx::write.xlsx(top, file =  paste0("output/20230131/top",Top_n,"_degs_X4cluster_normal_v1.xlsx"),
+                     colNames = TRUE,rownames = T,borders = "surrounding")
 
 #==== Figure 3S-F venn diagram ===========
 path <- "Yang/PALIBR/51_samples/Fig. 3/"
@@ -410,7 +487,7 @@ B_cells_MCL$orig.ident %<>% droplevels()
 sub_ob1 <- subset(B_cells_MCL, subset = orig.ident %in% c("Pt25_SB1","N01"))
 (group.by = c("Normal","1","2","3","4"))
 
-sub_ob1@meta.data$X4clusters_normal %<>% factor(levels = group.by)
+sub_ob1@meta.data$X4cluster_normal %<>% factor(levels = group.by)
 
 Idents(sub_ob1) = "X4cluster"
 Idents(sub_ob1) %<>% factor(levels = group.by)

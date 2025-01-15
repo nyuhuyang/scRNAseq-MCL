@@ -158,3 +158,37 @@ object[["SCT"]]@scale.data = matrix(0,0,0)
 saveRDS(object, file = "data/MCL_SCT_51_20210724.rds")
 
 
+############
+meta.data <- object@meta.data
+meta.data$response %<>% factor(levels = c("Normal","Untreated","Baseline","CR","PR","PD"))
+meta.data$additional_groups %<>% factor(levels = c("none","C2","C3"))
+
+meta.data$barcode <- rownames(meta.data)
+
+meta.data1 <- readRDS(file = "output/MCL_51_20210724_meta.data_v2.rds")
+meta.data1$barcode <- rownames(meta.data1)
+table(meta.data1$barcode %in% meta.data$barcode)
+meta.data1 <- meta.data1[meta.data1$barcode %in% meta.data$barcode,]
+meta.data_all <- dplyr::full_join(meta.data,meta.data1[,c("barcode","X4cluster")],by = "barcode")
+meta.data_all %<>% tibble::column_to_rownames(var = "barcode")
+
+if(all(colnames(object) == rownames(meta.data_all))){
+    print("all cellID match!")
+    object@meta.data = meta.data_all
+}
+
+
+#======1.5 Add Cell-cycle score =========================
+# Read in a list of cell cycle markers, from Tirosh et al, 2015
+cc.genes <- readLines(con = "../seurat_resources/regev_lab_cell_cycle_genes.txt")
+s.genes <- FilterGenes(object,cc.genes[1:43])
+g2m.genes <- FilterGenes(object,cc.genes[44:97])
+object <- CellCycleScoring(object = object, s.features = s.genes, g2m.features = g2m.genes,
+                           set.ident = FALSE)
+colnames(object@meta.data) %<>% sub("Phase","cell cycle phase",.)
+saveRDS(object@meta.data, file = "output/MCL_SCT_94_20240615_meta.data_v1.rds")
+
+plots <- UMAPPlot(object, group.by="label1.blue_encode",raster=FALSE,cols = cols)
+jpeg(paste0(path, "/", "umap.jpeg"), units="in", width=10, height=7,res=600)
+print(plots)
+dev.off()

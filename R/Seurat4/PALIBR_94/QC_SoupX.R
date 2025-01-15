@@ -1,0 +1,201 @@
+########################################################################
+#
+#  0 setup environment, install libraries if necessary, load libraries
+#
+# ######################################################################
+invisible(lapply(c("Seurat","dplyr","ggplot2","scater","magrittr","pbapply","SoupX",
+                   "cowplot","scDblFinder","BiocParallel"), function(x) {
+                       suppressPackageStartupMessages(library(x,character.only = T,quietly = TRUE))
+                   }))
+source("https://raw.githubusercontent.com/nyuhuyang/SeuratExtra/master/R/Seurat4_functions.R")
+path <- paste0("output/",gsub("-","",Sys.Date()),"/")
+if(!dir.exists(path)) dir.create(path, recursive = T)
+if(!dir.exists("data")) dir.create("data")
+if(!dir.exists("doc")) dir.create("doc")
+########################################################################
+#
+#  1 Data preprocessing
+#
+# ######################################################################
+#======1.1 Load the data files and Set up Seurat object =========================
+# read sample summary list
+df_samples <- readxl::read_excel("doc/20240525_scRNAseq_info_MD_SCK.xlsx",sheet = "PALIBR")
+df_samples = as.data.frame(df_samples)
+colnames(df_samples) %<>% tolower()
+nrow(df_samples)
+# check missing data
+read.path1 = "../scRNAseq-MCL/data/scRNAseq/counts"
+
+current <- c(list.files(read.path1),list.files(read.path2))
+
+current <- current[!grepl(".Rda|RData",current)]
+(missing_data <- df_samples$sample[!(df_samples$sample %in% current)])
+
+#======1.1.2 record data quality before removing low quanlity cells =========================
+# if args 2 is passed
+message("read metrics_summary")
+QC_list <- pbapply::pblapply(df_samples$sample, function(x){
+        phase <- df_samples$phase[df_samples$sample %in% x]
+        read.path <- switch (phase,
+                "PALIBR_I" = read.path1,
+                "PALBOR" = read.path1
+        )
+        tmp = read.csv(file = paste0(read.path,"/",x,
+                               "/outs/metrics_summary.csv"))
+        t(tmp)
+})
+names(QC_list) = df_samples$sample_id
+
+cbind.fill <- function(...){
+        nm <- list(...)
+        nm <- lapply(nm, as.matrix)
+        n <- max(sapply(nm, nrow))
+        do.call(cbind, lapply(nm, function (x)
+                rbind(x, matrix(NA, n-nrow(x), ncol(x)))))
+}
+
+QC <- do.call(cbind.fill, QC_list)
+colnames(QC) = df_samples$sample_id
+QC[is.na(QC)] = ""
+
+rownames(QC) = rownames(QC_list[[1]])
+QC["Estimated.Number.of.Cells",] %>% gsub(",","",.) %>% as.numeric %>% sum
+
+write.csv(QC,paste0(path,"metrics_summary.csv"))
+df_samples %<>% cbind(t(QC))
+rownames(df_samples) = df_samples$sample_id
+openxlsx::write.xlsx(df_samples, file =  paste0(path,"20240525_scRNAseq_info_MD_SCK.xlsx"),
+                     colNames = TRUE,rownames = TRUE,borders = "surrounding")
+
+## Load the GEX dataset
+message("Loading the datasets")
+#============== filtered counts & re-clustering ====================
+adj.matrix_list <- pbapply::pblapply(df_samples$sample_id, function(s){
+        phase <- df_samples$phase[df_samples$sample_id %in% s]
+        read.path <- switch (phase,
+                             "PALIBR_I" = read.path1,
+                             "PALBOR" = read.path1
+                             )
+        readDir <- file.path(read.path,as.character(s),"outs")
+        filt.matrix <- Seurat::Read10X(file.path(readDir, "filtered_feature_bc_matrix"),strip.suffix = TRUE)
+        raw.matrix <- Seurat::Read10X(file.path(readDir, "raw_feature_bc_matrix"),strip.suffix = TRUE)
+        soup.channel  <- SoupChannel(raw.matrix, filt.matrix)
+
+        obj <- CreateSeuratObject(filt.matrix,min.cells = 0,names.delim = "-",min.features = 0) %>%
+                SCTransform(method = "glmGamPoi",verbose = FALSE) %>%
+                #FindVariableFeatures(verbose = FALSE) %>%
+                RunPCA(verbose = FALSE) %>%
+                FindNeighbors(reduction = "pca",dims = 1:30) %>%
+                FindClusters(resolution = 0.8, algorithm = 1,verbose = F)
+
+
+        soup.channel  <- setClusters(soup.channel, setNames(obj$SCT_snn_res.0.8, colnames(obj)))
+        soup.channel  <- autoEstCont(soup.channel, priorRhoStdDev = 0.3)
+        adj.matrix  <- adjustCounts(soup.channel, roundToInt = T)
+        return(adj.matrix)
+})
+
+names(adj.matrix_list) = df_samples$sample_id
+
+for (s in df_samples$sample_id) {
+        colnames(adj.matrix_list[[s]]) = paste0(s,"-", colnames(adj.matrix_list[[s]]))
+}
+
+adj.matrix <- do.call(cbind, adj.matrix_list)
+saveRDS(object,file = "data/MCL_94_20240614_raw.rds")
+object <- readRDS(file = "data/MCL_94_20240614_raw.rds")
+#========1.1.3 g1 QC plots before filteration=================================
+object <- CreateSeuratObject(adj.matrix,
+                             min.cells = 0,names.delim = ".",min.features = 0)
+
+(mito <- "^MT-")
+message("mito.genes:")
+
+(mito.features <- grep(pattern = mito, x = rownames(object), value = TRUE))
+object[["percent.mt"]] <- PercentageFeatureSet(object = object, pattern = mito)
+object$orig.ident <- gsub("-.*","",colnames(object))
+object$orig.ident %<>% factor(levels = df_samples$sample_id)
+Idents(object) = "orig.ident"
+g1 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
+        VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
+                theme(axis.text.x = element_text(size=4,angle = 45,hjust = 1,vjust = 1),
+                      legend.position="none",plot.title = element_text(hjust = 0.5))
+})
+save(g1,file= paste0(path,"g1","_",length(df_samples$sample_id),"_",gsub("-","",Sys.Date()),".Rda"))
+
+#============1.2 scatter ======================
+object %<>% subset(nFeature_RNA > 300 #300
+                   & nCount_RNA > 500 #500
+                   & percent.mt < 50 #50
+)
+
+meta_data = object@meta.data
+meta_data$discard = FALSE
+for(i in 1:length(df_samples$sample_id)){
+    cell = rownames(meta_data)[meta_data$orig.ident %in% df_samples$sample_id[i]]
+    high.mito <- isOutlier(meta_data[cell,"percent.mt"], nmads=3, type="higher")
+    low.lib <- isOutlier(log10(meta_data[cell,"nCount_RNA"]), type="lower", nmad=3)
+    low.genes <- isOutlier(log10(meta_data[cell,"nFeature_RNA"]), type="lower", nmad=3)
+    seurat_subset <- subset(object, cells = cell)
+    sce = scDblFinder(
+        SingleCellExperiment(
+            list(counts=seurat_subset[["RNA"]]@data),
+        )
+    )
+    doublet_class <- sce$scDblFinder.class == "doublet"
+    discard <- high.mito | low.lib | low.genes | doublet_class
+    print(data.frame(HighMito= sum(high.mito),
+                     LowLib=sum(low.lib),
+                     LowNgenes=sum(low.genes),
+                     Doublets=sum(doublet_class),
+                     Discard=sum(discard)))
+    meta_data[cell,"discard"] = discard
+    meta_data[cell,"scDblFinder.score"] = sce$scDblFinder.score
+    meta_data[cell,"scDblFinder.class"] = sce$scDblFinder.class
+
+}
+object@meta.data = meta_data
+table(object$orig.ident, object$discard)
+
+object %<>% subset(subset = discard == FALSE)
+
+# FilterCellsgenerate Vlnplot before and after filteration
+Idents(object) = "orig.ident"
+Idents(object) %<>% factor(levels = df_samples$sample_id)
+
+g2 <- lapply(c("nFeature_RNA", "nCount_RNA", "percent.mt"), function(features){
+        VlnPlot(object = object, features = features, ncol = 1, pt.size = 0.01)+
+                theme(axis.text.x = element_text(size=4,angle = 45,hjust = 1,vjust = 1),
+                      legend.position="none",plot.title = element_text(hjust = 0.5))
+})
+save(g2,file= paste0(path,"g2","_",length(df_samples$sample_id),"_",gsub("-","",Sys.Date()),".Rda"))
+#load(paste0(save.path,"g2_58_20201009.Rda"))
+
+jpeg(paste0(path,"S1_nGene.jpeg"), units="in", width=14, height=7,res=600)
+print(plot_grid(g1[[1]]+ggtitle("nFeature_RNA before filteration")+
+                        scale_y_log10(limits = c(100,10000))+
+                        theme(plot.title = element_text(hjust = 0.5)),
+                g2[[1]]+ggtitle("nFeature_RNA after filteration")+
+                        scale_y_log10(limits = c(100,10000))+
+                        theme(plot.title = element_text(hjust = 0.5))))
+dev.off()
+jpeg(paste0(path,"S1_nUMI.jpeg"), units="in", width=14, height=7,res=600)
+print(plot_grid(g1[[2]]+ggtitle("nCount_RNA before filteration")+
+                        scale_y_log10(limits = c(100,100000))+
+                        theme(plot.title = element_text(hjust = 0.5)),
+                g2[[2]]+ggtitle("nCount_RNA after filteration")+
+                        scale_y_log10(limits = c(100,100000))+
+                        theme(plot.title = element_text(hjust = 0.5))))
+dev.off()
+jpeg(paste0(path,"S1_mito.jpeg"), units="in", width=14, height=7,res=600)
+print(plot_grid(g1[[3]]+ggtitle("mito % before filteration")+
+                        ylim(c(0,50))+
+                        theme(plot.title = element_text(hjust = 0.5)),
+                g2[[3]]+ggtitle("mito % after filteration")+
+                        ylim(c(0,50))+
+                        theme(plot.title = element_text(hjust = 0.5))))
+dev.off()
+
+#====
+format(object.size(object),unit = "GB")
+saveRDS(object, file = "data/MCL_94_20240614.rds")

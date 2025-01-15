@@ -500,3 +500,68 @@ TSNEPlot.1(sub_object,split.by ="orig.ident")
 
 
 monocle2_Pt25_25Pd = readRDS(file = "data/monocle2_Pt25_25Pd_DE.rds")
+
+# step == "X4clusters_v1,2,3_vs_Normal" ======================
+path <- paste0("output/",gsub("-","",Sys.Date()),"/")
+if(!dir.exists(path)) dir.create(path, recursive = T)
+csv_file_names <- list.files("output/20230131",pattern = "Normal_in_X4cluster_normal",full.names = TRUE)
+degs <- pbapply::pblapply(csv_file_names, function(x) read.csv(x,header = TRUE)) %>%
+    bind_rows()
+degs <- degs[grep("^MT-",degs$gene,invert = TRUE),]
+Top_n = 150
+top <- degs %>% arrange(desc(avg_log2FC),.by) %>%
+    group_by(cluster) %>%
+    distinct(gene,avg_log2FC,cluster) %>%
+    top_n(Top_n, avg_log2FC)
+
+degs %>% group_by(cluster) %>% top_n(Top_n,avg_log2FC) %>% .[["gene"]] -> Cluster_DEGs
+write.table(Cluster_DEGs,file = "output/20230131/top150_degs_X4cluster_v1.csv",row.names = FALSE,quote = FALSE, col.names = FALSE)
+object = readRDS(file = "data/MCL_51_20210724.rds")
+meta.data <- readRDS(file = "output/MCL_B_51_20230113_meta.data_v2.rds")
+
+
+if(all(rownames(meta.data) %in% colnames(object))){
+    print("all cellID within!")
+    object %<>% subset(cells = rownames(meta.data))
+    object@meta.data = meta.data
+}
+object %<>% subset(subset =  orig.ident %in% c("N04"), invert = T)
+object = subset(object, subset =  Doublets == "Singlet"
+                & X4cluster  %in% c("1","2","3","4"))
+object$X4cluster_normal = as.character(object$X4cluster)
+normal <- object$orig.ident %in% c("N01","N02","N03")
+object@meta.data[normal,"X4cluster_normal"] = "Normal"
+table(object$X4cluster_normal)
+
+
+
+markers <- c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11")
+markers = markers[markers %in% rownames(object)]
+
+features = c(as.character(Cluster_DEGs),
+             tail(VariableFeatures(object = object), 2),
+             markers)
+sub_obj <- object[features,]
+
+
+sub_obj %<>% ScaleData(features=features)
+featuresNum <- make.unique(features, sep = ".")
+sub_obj %<>% MakeUniqueGenes(features = features)
+sub_obj$X4cluster_normal %<>% factor(c("Normal","1","2","3","4"))
+Idents(sub_obj) <- "X4cluster_normal"
+DoHeatmap.2(object =sub_obj, group.by = c("X4cluster_normal","orig.ident"),
+            features = featuresNum,
+            do.print=T, angle = 45, group.bar = TRUE, title.size = 20, no.legend = FALSE,size=20,hjust = 0.5,
+            group.bar.height = 0.02, label=TRUE, cex.row= 4.5, legend.size = 12,width=28, height=25,
+            group1.colors = c('#B2DF8A','#40A635','#FE8205','#8861AC','#E83C2D'),
+            save.path = path,file.name = paste("Heatmap_top",Top_n,"_X4cluster_normal_orig.ident.jpeg"),
+            title = paste("Top",Top_n,"DE genes in X4cluster_normal and 4 B/MCL cells clusters"))
+
+DoHeatmap.2(object =sub_obj, group.by = c("X4cluster_normal","patient"),
+            features = featuresNum,
+            do.print=T, angle = 45, group.bar = TRUE, title.size = 20, no.legend = FALSE,size=20,hjust = 0.5,
+            group.bar.height = 0.02, label=TRUE, cex.row= 2, legend.size = 12,width=14, height=13,
+            group1.colors = c('#B2DF8A','#40A635','#FE8205','#8861AC','#E83C2D'),
+            save.path = path,file.name = paste("Heatmap_top",Top_n,"_X4cluster_normal_patient.jpeg"),
+            title = paste("Top",Top_n,"DE genes in X4cluster_normal and 4 B/MCL cells clusters"))
+

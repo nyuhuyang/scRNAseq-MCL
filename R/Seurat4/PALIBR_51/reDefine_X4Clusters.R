@@ -60,10 +60,21 @@ object$X4cluster_v3 <- plyr::mapvalues(object$UMAP_leiden_SCT_snn_res.0.05,
 saveRDS(object@meta.data, file = "output/MCL_B_51_20230113_meta.data.rds")
 
 #============= after running DE2 with X4cluster, v1, v2, v3 on PALIBR_I_51_MCL shinyApp ===========
+object = readRDS(file = "data/MCL_51_20210724.rds")
+meta.data <- readRDS(file = "output/MCL_B_51_20230113_meta.data.rds")
+
+if(all(rownames(meta.data) %in% colnames(object))){
+    print("all cellID within!")
+    object %<>% subset(cells = rownames(meta.data))
+    object@meta.data = meta.data
+}
+object %<>% subset(subset = X4cluster  %in% c("1","2","3","4"))
+
 excel_files <- list.files(path = "output/20230126",pattern = ".xlsx",full.names = TRUE)
 degs_list <- pbapply::pblapply(excel_files,function(FILE){
     readxl::read_excel(path = FILE)
 })
+Top_n = 150
 Cluster_DEGs <- pbapply::pblapply(c("1","2","3","4"),function(cl){
         deg1 <- degs_list[[1]] %>% filter(group == cl & avg_log2FC > 0.1 & p_val_adj < 0.01) %>%
             .[["genes"]]
@@ -71,33 +82,34 @@ Cluster_DEGs <- pbapply::pblapply(c("1","2","3","4"),function(cl){
             .[["genes"]]
         deg3 <- degs_list[[3]] %>% filter(group == cl & avg_log2FC > 0.1 & p_val_adj < 0.01) %>%
             .[["genes"]]
-        head(intersect(intersect(deg1,deg2),deg3),150)
-    }) %>% unlist
+        head(intersect(intersect(deg1,deg2),deg3),Top_n)
+}) %>% unlist %>% grep("^MT-",.,invert = TRUE,value = TRUE)
 write.table(Cluster_DEGs,file = "output/20230126/top150_degs.csv",row.names = FALSE,quote = FALSE, col.names = FALSE)
 
 
-Top_n = 150
+Top_n = 40
 markers <- c("CCND1","CD19","CD5","CDK4","RB1","BTK","SOX11")
 markers = markers[markers %in% rownames(object)]
-top = bind_rows(degs_list) %>% group_by(group) %>% top_n(Top_n, avg_log2FC)
-
+degs <- bind_rows(degs_list)
+top <- bind_rows(degs_list) %>% group_by(group) %>%
+    distinct(genes,avg_log2FC) %>%
+    top_n(Top_n, avg_log2FC)
+top <- top[grep("^MT-",top$genes,invert = TRUE),]
+table(top$group)
 features = c(as.character(top$genes),
              tail(VariableFeatures(object = object), 2),
              markers)
-object <- object[features,object$response != "Normal"]
+sub_obj <- object[features,object$response != "Normal"]
 
 
 ident <- "X4cluster"
-Idents(object) <- ident
-sub_obj <- object[,object@meta.data[,ident] %in% c("1","2","3","4")]
+Idents(sub_obj) <- ident
 X4 <- sub_obj@meta.data[,ident]
 C2 <- sub_obj$orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6") & sub_obj$X4cluster %in% c("1","2","3")
 C4 <- sub_obj$orig.ident %in% c("Pt25_25","Pt25_AMB25") & sub_obj$X4cluster %in% "2"
 
 sub_obj@meta.data[C2,ident] <- "2"
 sub_obj@meta.data[C4,ident] <- "4"
-
-
 
 X4_1 <- sub_obj@meta.data[,ident]
 table(X4,X4_1)
@@ -106,51 +118,63 @@ sub_obj %<>% ScaleData(features=features)
 featuresNum <- make.unique(features, sep = ".")
 sub_obj %<>% MakeUniqueGenes(features = features)
 
+
 DoHeatmap.2(object =sub_obj, group.by = c(ident,"orig.ident"),
             features = featuresNum,
             do.print=T, angle = 45, group.bar = TRUE, title.size = 20, no.legend = FALSE,size=20,hjust = 0.5,
-            group.bar.height = 0.02, label=TRUE, cex.row= 6, legend.size = 12,width=28, height=25,
+            group.bar.height = 0.02, label=TRUE, cex.row= 8, legend.size = 12,width=14, height=12,
             group1.colors = c('#40A635','#FE8205','#8861AC','#E83C2D'),
-            save.path = path,file.name = paste("Heatmap_top",Top_n,"_",ident,"_orig.ident_legend.jpeg"),
-            title = paste("Top",Top_n,"DE genes in 4, B/MCL cells",ident))
+            save.path = path,file.name = paste0("Heatmap_top",Top_n,"_",ident,"_orig.ident_legend.jpeg"),
+            title = paste("Top",Top_n,"DE genes in 4 B/MCL cells clusters"))
 
 DoHeatmap.2(object =sub_obj, group.by = c(ident,"patient"),
             features = featuresNum,
             do.print=T, angle = 45, group.bar = TRUE, title.size = 20, no.legend = FALSE,size=20,hjust = 0.5,
-            group.bar.height = 0.02, label=TRUE, cex.row= 3, legend.size = 12,width=10, height=13,
+            group.bar.height = 0.02, label=TRUE, cex.row= 4, legend.size = 12,width=14, height=13,
             group1.colors = c('#40A635','#FE8205','#8861AC','#E83C2D'),
             save.path = path,file.name = paste("Heatmap_top",Top_n,"_",ident,"_patient_legend~.jpeg"),
-            title = paste("Top",Top_n,"DE genes in 4, B/MCL cells",ident))
-
-
-sub_obj <- object[,object@meta.data[,ident] %in% c("1","2","3","4") & object$patient %in% c("N01","Pt03","Pt25") ]
-group3.colors = colorRampPalette(brewer.pal(12,"Paired"))(3)
-DoHeatmap.2(object =sub_obj, group.by = c(ident,"orig.ident","patient"),
-            features = featuresNum, Top_n = Top_n,
-            do.print=T, angle = 45, group.bar = TRUE, title.size = 20, no.legend = FALSE,size=5,hjust = 0.5,
-            group.bar.height = 0.02, label=TRUE, cex.row= 10, legend.size = 10,width=11, height=11,
-            pal_gsea = FALSE,group1.colors = c('#40A635','#FE8205','#8861AC','#E83C2D'),
-            group2.colors = Singler.colors,
-            save.path = path,file.name = paste("Heatmap_top",Top_n,"_",ident,"_legend.jpeg"),
-            title = paste("Top",Top_n,"DE genes in 4, B/MCL cells",ident))
+            title = paste("Top",Top_n,"DE genes in 4 B/MCL cells clusters"))
 
 
 
+#Top_n = 150
+DoHeatmap.2(object =sub_obj, group.by = c(ident,"orig.ident"),
+            features = featuresNum,
+            do.print=T, angle = 45, group.bar = TRUE, title.size = 20, no.legend = FALSE,size=20,hjust = 0.5,
+            group.bar.height = 0.02, label=TRUE, cex.row= 4.5, legend.size = 12,width=28, height=25,
+            group1.colors = c('#40A635','#FE8205','#8861AC','#E83C2D'),
+            save.path = path,file.name = paste0("Heatmap_top",Top_n,"_",ident,"_orig.ident_legend.jpeg"),
+            title = paste("Top",Top_n,"DE genes in 4 B/MCL cells clusters"))
+
+DoHeatmap.2(object =sub_obj, group.by = c(ident,"patient"),
+            features = featuresNum,
+            do.print=T, angle = 45, group.bar = TRUE, title.size = 20, no.legend = FALSE,size=20,hjust = 0.5,
+            group.bar.height = 0.02, label=TRUE, cex.row= 2, legend.size = 12,width=14, height=13,
+            group1.colors = c('#40A635','#FE8205','#8861AC','#E83C2D'),
+            save.path = path,file.name = paste("Heatmap_top",Top_n,"_",ident,"_patient_legend~.jpeg"),
+            title = paste("Top",Top_n,"DE genes in 4 B/MCL cells clusters"))
 
 
-
-UMAPPlot.1(sub_obj,group.by = ident,cols = c('#40A635','#FE8205','#8861AC','#E83C2D'),do.print  = T)
-TSNEPlot.1(sub_obj,group.by = ident,cols = c('#40A635','#FE8205','#8861AC','#E83C2D'),do.print  = T,
+UMAPPlot.1(object,group.by = ident,cols = c('#40A635','#FE8205','#8861AC','#E83C2D'),do.print  = T)
+TSNEPlot.1(object,group.by = ident,cols = c('#40A635','#FE8205','#8861AC','#E83C2D'),do.print  = T,
            width=8, height=10)
-DoHeatmap.1(object =sub_obj, features = featuresNum, Top_n = Top_n,group.by = "X4cluster",
+DoHeatmap.1(object =object, features = featuresNum, Top_n = Top_n,group.by = "X4cluster",
             do.print=T, angle = 0, group.bar = F, title.size = 20, no.legend = F,size=5,hjust = 0.5,
             group.bar.height = 0, label=TRUE, cex.row= 3, legend.size = 0,width=6.5, height=10,
             pal_gsea = FALSE,
             save.path = path,file.name = "Heatmap_top40_4cluster.jpeg",
             title = paste("Top",Top_n,"DE genes in 4, B/MCL cells cluster"))
 
+meta.data <- readRDS(file = "output/MCL_B_51_20230113_meta.data.rds")
+C2 <- meta.data$orig.ident %in% c("Pt3_BMA72_6","Pt3_72_6") & meta.data$X4cluster %in% c("1","2","3")
+C4 <- meta.data$orig.ident %in% c("Pt25_25","Pt25_AMB25") & meta.data$X4cluster %in% "2"
 
-
+X4 <- meta.data[,"X4cluster"]
+meta.data[C2,"X4cluster"] <- "2"
+meta.data[C4,"X4cluster"] <- "4"
+X4_1 <- meta.data[,"X4cluster"]
+table(X4,X4_1)
+saveRDS(meta.data, file = "output/MCL_B_51_20230113_meta.data_v2.rds")
 
 #============= after running DE2 with orig.ident_SCT_snn_res.0.05 on PALIBR_I_51_MCL shinyApp ===========
 DEGs <- readxl::read_excel("output/20230118/2023-01-18-SCT_snn_res.0.05_0_1_2_3 PtU01_PtU02_PtU03_PtU04_Pt01_Pt02_Pt09_Pt10_Pt11_Pt13_Pt15_Pt16_Pt17_Pt18_Pt19_Pt20_Pt25_Pt27_Pt28_PtB13 .xlsx")
